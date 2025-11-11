@@ -1,24 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/auth/login_screen.dart';
+import '../features/auth/register_screen.dart';
+import '../features/auth/role_selection_screen.dart';
+
 final appRouter = GoRouter(
   routes: <RouteBase>[
     GoRoute(
       path: '/',
       builder: (BuildContext context, GoRouterState state) {
-        return const _RoutePlaceholder(title: 'Welcome');
+        return const RoleSelectionScreen();
       },
     ),
     GoRoute(
       path: '/login',
       builder: (BuildContext context, GoRouterState state) {
-        return const _RoutePlaceholder(title: 'Login');
+        return const LoginScreen();
       },
     ),
     GoRoute(
       path: '/register',
       builder: (BuildContext context, GoRouterState state) {
-        return const _RoutePlaceholder(title: 'Register');
+        final roleFromQuery = state.uri.queryParameters['role'];
+        final role = (state.extra ?? roleFromQuery) as String?;
+        return RegisterScreen(role: role);
       },
     ),
     GoRoute(
