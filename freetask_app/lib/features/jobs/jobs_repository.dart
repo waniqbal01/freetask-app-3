@@ -107,6 +107,21 @@ class JobsRepository {
     return true;
   }
 
+  Future<bool> setDispute(String jobId, String reason) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    final index = _jobs.indexWhere((Job job) => job.id == jobId);
+    if (index == -1) {
+      return false;
+    }
+
+    final job = _jobs[index];
+    _jobs[index] = job.copyWith(
+      isDisputed: true,
+      disputeReason: reason,
+    );
+    return true;
+  }
+
   List<Job> getClientJobs() {
     return List<Job>.unmodifiable(
       _jobs

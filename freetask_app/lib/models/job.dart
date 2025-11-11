@@ -9,9 +9,15 @@ class Job {
     required this.serviceTitle,
     required this.amount,
     this.status = JobStatus.pending,
+    this.isDisputed = false,
+    this.disputeReason,
   });
 
-  Job copyWith({JobStatus? status}) {
+  Job copyWith({
+    JobStatus? status,
+    bool? isDisputed,
+    String? disputeReason,
+  }) {
     return Job(
       id: id,
       clientId: clientId,
@@ -20,6 +26,8 @@ class Job {
       serviceTitle: serviceTitle,
       amount: amount,
       status: status ?? this.status,
+      isDisputed: isDisputed ?? this.isDisputed,
+      disputeReason: disputeReason ?? this.disputeReason,
     );
   }
 
@@ -30,4 +38,6 @@ class Job {
   final String serviceTitle;
   final double amount;
   final JobStatus status;
+  final bool isDisputed;
+  final String? disputeReason;
 }

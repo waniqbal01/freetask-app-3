@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../payments/escrow_service.dart';
 import 'jobs_repository.dart';
 
 class JobCheckoutScreen extends StatefulWidget {
@@ -43,21 +44,29 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       _isSubmitting = true;
     });
 
-    final job = await jobsRepository.createOrder(serviceId, amount);
+    try {
+      final job = await jobsRepository.createOrder(serviceId, amount);
+      await escrowService.hold(job.id, job.amount);
 
-    if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
-    setState(() {
-      _isSubmitting = false;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Order ${job.id} dicipta. Status: Pending.',
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Order ${job.id} dicipta. Dana RM${job.amount.toStringAsFixed(2)} dipegang dalam escrow.',
+          ),
         ),
-      ),
-    );
+      );
+    } finally {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isSubmitting = false;
+      });
+    }
   }
 
   @override
