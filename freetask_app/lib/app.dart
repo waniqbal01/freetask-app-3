@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'core/router.dart';
+import 'core/notifications/notification_service.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -16,6 +17,7 @@ class App extends StatelessWidget {
         appBarTheme: const AppBarTheme(centerTitle: true),
       ),
       routerConfig: appRouter,
+      scaffoldMessengerKey: notificationService.messengerKey,
     );
   }
 }

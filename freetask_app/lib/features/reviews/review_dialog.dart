@@ -1,0 +1,115 @@
+import 'package:flutter/material.dart';
+
+import 'reviews_repository.dart';
+
+class ReviewDialog extends StatefulWidget {
+  const ReviewDialog({
+    super.key,
+    required this.jobId,
+    required this.serviceTitle,
+  });
+
+  final String jobId;
+  final String serviceTitle;
+
+  @override
+  State<ReviewDialog> createState() => _ReviewDialogState();
+}
+
+class _ReviewDialogState extends State<ReviewDialog> {
+  final TextEditingController _commentController = TextEditingController();
+  int _rating = 5;
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Review untuk ${widget.serviceTitle}'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const Text('Penilaian'),
+            const SizedBox(height: 8),
+            Row(
+              children: List<Widget>.generate(5, (int index) {
+                final starIndex = index + 1;
+                final isSelected = starIndex <= _rating;
+                return IconButton(
+                  icon: Icon(
+                    isSelected ? Icons.star : Icons.star_border,
+                    color: Colors.amber,
+                  ),
+                  onPressed: _isSubmitting
+                      ? null
+                      : () {
+                          setState(() {
+                            _rating = starIndex;
+                          });
+                        },
+                );
+              }),
+            ),
+            const SizedBox(height: 12),
+            const Text('Komen (pilihan)'),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _commentController,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: 'Kongsi pengalaman anda...',
+              ),
+              enabled: !_isSubmitting,
+            ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(false),
+          child: const Text('Batal'),
+        ),
+        FilledButton(
+          onPressed: _isSubmitting ? null : _handleSubmit,
+          child: _isSubmitting
+              ? const SizedBox(
+                  height: 16,
+                  width: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Hantar'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _handleSubmit() async {
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    final success = await reviewsRepository.submit(
+      widget.jobId,
+      _rating,
+      _commentController.text,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = false;
+    });
+
+    Navigator.of(context).pop(success);
+  }
+}

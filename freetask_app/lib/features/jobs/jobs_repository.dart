@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import '../../core/notifications/notification_service.dart';
 import '../../models/job.dart';
 import '../services/services_repository.dart';
 
@@ -72,6 +73,10 @@ class JobsRepository {
     }
 
     _jobs[index] = job.copyWith(status: JobStatus.inProgress);
+    notificationService.pushLocal(
+      'Job Diterima',
+      'Job ${job.serviceTitle} kini In Progress.',
+    );
     return true;
   }
 
@@ -88,6 +93,10 @@ class JobsRepository {
     }
 
     _jobs[index] = job.copyWith(status: JobStatus.rejected);
+    notificationService.pushLocal(
+      'Job Ditolak',
+      'Job ${job.serviceTitle} telah ditolak oleh freelancer.',
+    );
     return true;
   }
 
@@ -136,6 +145,14 @@ class JobsRepository {
           .where((Job job) => job.freelancerId == _currentFreelancerId)
           .toList(growable: false),
     );
+  }
+
+  Job? getJobById(String jobId) {
+    try {
+      return _jobs.firstWhere((Job job) => job.id == jobId);
+    } on StateError {
+      return null;
+    }
   }
 }
 
