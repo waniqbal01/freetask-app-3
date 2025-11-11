@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/admin/admin_dashboard_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/auth/role_selection_screen.dart';
@@ -78,6 +79,12 @@ final appRouter = GoRouter(
       builder: (BuildContext context, GoRouterState state) {
         final jobDraft = state.extra as Map<String, dynamic>?;
         return CheckoutScreen(jobDraft: jobDraft);
+      },
+    ),
+    GoRoute(
+      path: '/admin',
+      builder: (BuildContext context, GoRouterState state) {
+        return const AdminDashboardScreen();
       },
     ),
   ],
