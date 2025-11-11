@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/auth/role_selection_screen.dart';
+import '../features/checkout/checkout_screen.dart';
+import '../features/services/service_detail_screen.dart';
+import '../features/services/service_list_screen.dart';
 
 final appRouter = GoRouter(
   routes: <RouteBase>[
@@ -30,20 +33,27 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/home',
       builder: (BuildContext context, GoRouterState state) {
-        return const _RoutePlaceholder(title: 'Home');
+        return const ServiceListScreen();
       },
     ),
     GoRoute(
       path: '/service/:id',
       builder: (BuildContext context, GoRouterState state) {
         final serviceId = state.pathParameters['id'] ?? 'unknown';
-        return _RoutePlaceholder(title: 'Service: $serviceId');
+        return ServiceDetailScreen(serviceId: serviceId);
       },
     ),
     GoRoute(
       path: '/chat',
       builder: (BuildContext context, GoRouterState state) {
         return const _RoutePlaceholder(title: 'Chat');
+      },
+    ),
+    GoRoute(
+      path: '/checkout',
+      builder: (BuildContext context, GoRouterState state) {
+        final jobDraft = state.extra as Map<String, dynamic>?;
+        return CheckoutScreen(jobDraft: jobDraft);
       },
     ),
   ],
