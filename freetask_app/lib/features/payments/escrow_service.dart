@@ -4,6 +4,20 @@ import '../../core/notifications/notification_service.dart';
 
 enum EscrowStatus { held, released, refunded }
 
+class EscrowRecordSummary {
+  const EscrowRecordSummary({
+    required this.jobId,
+    required this.amount,
+    required this.status,
+    required this.updatedAt,
+  });
+
+  final String jobId;
+  final double amount;
+  final EscrowStatus status;
+  final DateTime updatedAt;
+}
+
 class _EscrowRecord {
   _EscrowRecord({
     required this.amount,
@@ -81,6 +95,19 @@ class EscrowService {
   }
 
   bool get isEmpty => _records.isEmpty;
+
+  List<EscrowRecordSummary> getAllRecords() {
+    return _records.entries
+        .map(
+          (MapEntry<String, _EscrowRecord> entry) => EscrowRecordSummary(
+            jobId: entry.key,
+            amount: entry.value.amount,
+            status: entry.value.status,
+            updatedAt: entry.value.updatedAt,
+          ),
+        )
+        .toList(growable: false);
+  }
 }
 
 final escrowService = EscrowService();

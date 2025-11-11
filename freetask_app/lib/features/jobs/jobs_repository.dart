@@ -147,6 +147,10 @@ class JobsRepository {
     );
   }
 
+  List<Job> getAllJobs() {
+    return List<Job>.unmodifiable(_jobs);
+  }
+
   Job? getJobById(String jobId) {
     try {
       return _jobs.firstWhere((Job job) => job.id == jobId);
