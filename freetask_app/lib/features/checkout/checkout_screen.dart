@@ -26,7 +26,7 @@ class CheckoutScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             if (draft.isEmpty)
-              const Text('Tiada job draft untuk dipaparkan.')
+              const Text('Tiada data')
             else ...[
               Text('Servis: ${draft['title'] ?? '-'}'),
               const SizedBox(height: 8),

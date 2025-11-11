@@ -1,6 +1,8 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/utils/error_utils.dart';
 import 'auth_repository.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -48,9 +50,21 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       }
     } catch (error) {
-      setState(() {
-        _errorMessage = 'Ralat: $error';
-      });
+      if (error is DioException) {
+        final message = resolveDioErrorMessage(error);
+        if (mounted) {
+          setState(() {
+            _errorMessage = message;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message)),
+          );
+        }
+      } else {
+        setState(() {
+          _errorMessage = 'Ralat: $error';
+        });
+      }
     } finally {
       if (mounted) {
         setState(() {

@@ -89,13 +89,14 @@ class ChatRepository {
   Future<void> sendImage({
     required String chatId,
     required String sender,
-    required String imagePath,
+    required String imageUrl,
   }) async {
     try {
       await _dio.post<void>(
         '/chats/$chatId/messages',
         data: <String, dynamic>{
-          'image_path': imagePath,
+          'image_url': imageUrl,
+          'image_path': imageUrl,
           'sender': sender,
         },
         options: await _authorizedOptions(),

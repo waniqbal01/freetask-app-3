@@ -17,6 +17,7 @@ class ReviewDialog extends StatefulWidget {
 }
 
 class _ReviewDialogState extends State<ReviewDialog> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _commentController = TextEditingController();
   int _rating = 5;
   bool _isSubmitting = false;
@@ -32,44 +33,53 @@ class _ReviewDialogState extends State<ReviewDialog> {
     return AlertDialog(
       title: Text('Review untuk ${widget.serviceTitle}'),
       content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const Text('Penilaian'),
-            const SizedBox(height: 8),
-            Row(
-              children: List<Widget>.generate(5, (int index) {
-                final starIndex = index + 1;
-                final isSelected = starIndex <= _rating;
-                return IconButton(
-                  icon: Icon(
-                    isSelected ? Icons.star : Icons.star_border,
-                    color: Colors.amber,
-                  ),
-                  onPressed: _isSubmitting
-                      ? null
-                      : () {
-                          setState(() {
-                            _rating = starIndex;
-                          });
-                        },
-                );
-              }),
-            ),
-            const SizedBox(height: 12),
-            const Text('Komen (pilihan)'),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _commentController,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'Kongsi pengalaman anda...',
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Text('Penilaian'),
+              const SizedBox(height: 8),
+              Row(
+                children: List<Widget>.generate(5, (int index) {
+                  final starIndex = index + 1;
+                  final isSelected = starIndex <= _rating;
+                  return IconButton(
+                    icon: Icon(
+                      isSelected ? Icons.star : Icons.star_border,
+                      color: Colors.amber,
+                    ),
+                    onPressed: _isSubmitting
+                        ? null
+                        : () {
+                            setState(() {
+                              _rating = starIndex;
+                            });
+                          },
+                  );
+                }),
               ),
-              enabled: !_isSubmitting,
-            ),
-          ],
+              const SizedBox(height: 12),
+              const Text('Komen (pilihan)'),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _commentController,
+                maxLines: 4,
+                enabled: !_isSubmitting,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: 'Kongsi pengalaman anda...',
+                ),
+                validator: (String? value) {
+                  if (value != null && value.isNotEmpty && value.trim().length < 10) {
+                    return 'Komen mesti sekurang-kurangnya 10 aksara.';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
         ),
       ),
       actions: <Widget>[
@@ -92,6 +102,9 @@ class _ReviewDialogState extends State<ReviewDialog> {
   }
 
   Future<void> _handleSubmit() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
     setState(() {
       _isSubmitting = true;
     });

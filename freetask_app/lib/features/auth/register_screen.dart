@@ -1,6 +1,10 @@
+import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/utils/error_utils.dart';
+import '../../services/upload_service.dart';
 import 'auth_repository.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -21,6 +25,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _rateController = TextEditingController();
 
   bool _isSubmitting = false;
+  bool _isUploadingAvatar = false;
   String? _errorMessage;
 
   @override
@@ -71,13 +76,66 @@ class _RegisterScreenState extends State<RegisterScreen> {
         });
       }
     } catch (error) {
-      setState(() {
-        _errorMessage = 'Ralat: $error';
-      });
+      if (error is DioException) {
+        final message = resolveDioErrorMessage(error);
+        if (mounted) {
+          setState(() {
+            _errorMessage = message;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message)),
+          );
+        }
+      } else {
+        setState(() {
+          _errorMessage = 'Ralat: $error';
+        });
+      }
     } finally {
       if (mounted) {
         setState(() {
           _isSubmitting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handlePickAvatar() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image);
+    final path = result?.files.single.path;
+    if (path == null) {
+      return;
+    }
+
+    setState(() {
+      _isUploadingAvatar = true;
+    });
+
+    try {
+      final url = await uploadService.uploadFile(path);
+      _avatarController.text = url;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Avatar berjaya dimuat naik.')),
+        );
+      }
+    } on DioException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(resolveDioErrorMessage(error))),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        final message = error is StateError ? error.message : error.toString();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingAvatar = false;
         });
       }
     }
@@ -120,13 +178,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _avatarController,
-                decoration: const InputDecoration(
-                  labelText: 'Pautan avatar (URL)',
-                  border: OutlineInputBorder(),
+                readOnly: true,
+                onTap: () {
+                  if (_isUploadingAvatar) {
+                    return;
+                  }
+                  FocusScope.of(context).requestFocus(FocusNode());
+                  _handlePickAvatar();
+                },
+                decoration: InputDecoration(
+                  labelText: 'Avatar (URL)',
+                  border: const OutlineInputBorder(),
+                  suffixIcon: _isUploadingAvatar
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      : IconButton(
+                          icon: const Icon(Icons.upload_file),
+                          onPressed: _isUploadingAvatar ? null : _handlePickAvatar,
+                        ),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Pautan avatar diperlukan';
+                    return 'Avatar diperlukan';
                   }
                   return null;
                 },

@@ -1,7 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../payments/escrow_service.dart';
 import 'jobs_repository.dart';
+import '../../core/utils/error_utils.dart';
 
 class JobCheckoutScreen extends StatefulWidget {
   const JobCheckoutScreen({super.key, this.serviceSummary});
@@ -58,6 +60,20 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
             'Order ${job.id} dicipta. Dana RM${job.amount.toStringAsFixed(2)} dipegang dalam escrow.',
           ),
         ),
+      );
+    } on DioException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(resolveDioErrorMessage(error))),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ralat mencipta order: $error')),
       );
     } finally {
       if (!mounted) {

@@ -1,8 +1,10 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../models/service.dart';
 import 'services_repository.dart';
+import '../../core/utils/error_utils.dart';
 
 class ServiceDetailScreen extends StatefulWidget {
   const ServiceDetailScreen({required this.serviceId, super.key});
@@ -45,9 +47,26 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
+          if (snapshot.hasError) {
+            final error = snapshot.error;
+            if (error is DioException) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                final messenger = ScaffoldMessenger.maybeOf(context);
+                if (messenger != null) {
+                  messenger.showSnackBar(
+                    SnackBar(content: Text(resolveDioErrorMessage(error))),
+                  );
+                }
+              });
+            }
+            return const Center(
+              child: Text('Ralat memuat servis.'),
+            );
+          }
+
           if (!snapshot.hasData || snapshot.data == null) {
             return const Center(
-              child: Text('Servis tidak ditemui.'),
+              child: Text('Tiada data'),
             );
           }
 

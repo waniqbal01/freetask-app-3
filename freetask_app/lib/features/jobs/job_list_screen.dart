@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/job.dart';
@@ -5,6 +6,7 @@ import '../payments/escrow_service.dart';
 import '../reviews/review_dialog.dart';
 import '../reviews/reviews_repository.dart';
 import 'jobs_repository.dart';
+import '../../core/utils/error_utils.dart';
 
 class JobListScreen extends StatefulWidget {
   const JobListScreen({super.key});
@@ -58,23 +60,47 @@ class _JobListScreenState extends State<JobListScreen> {
       _isProcessing = true;
     });
 
-    final success = await action();
+    try {
+      final success = await action();
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _isProcessing = false;
-    });
+      setState(() {
+        _isProcessing = false;
+      });
 
-    if (success) {
-      _refreshJobs();
+      if (success) {
+        _refreshJobs();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(successMessage)),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tindakan tidak berjaya. Cuba lagi.'),
+          ),
+        );
+      }
+    } on DioException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isProcessing = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(successMessage)),
+        SnackBar(content: Text(resolveDioErrorMessage(error))),
       );
-    } else {
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isProcessing = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Tindakan tidak berjaya. Cuba lagi.'),
+          content: Text('Ralat melaksanakan tindakan.'),
         ),
       );
     }
@@ -247,7 +273,6 @@ class _JobListScreenState extends State<JobListScreen> {
   Widget _buildJobsTab({
     required Future<List<Job>> future,
     required bool isClientView,
-    required String emptyMessage,
     required Future<void> Function() onRefresh,
   }) {
     return FutureBuilder<List<Job>>(
@@ -257,13 +282,24 @@ class _JobListScreenState extends State<JobListScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(
-            child: Text('Ralat memuat job: ${snapshot.error}'),
+          final error = snapshot.error;
+          if (error is DioException) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              final messenger = ScaffoldMessenger.maybeOf(context);
+              if (messenger != null) {
+                messenger.showSnackBar(
+                  SnackBar(content: Text(resolveDioErrorMessage(error))),
+                );
+              }
+            });
+          }
+          return const Center(
+            child: Text('Ralat memuat job.'),
           );
         }
         final jobs = snapshot.data ?? <Job>[];
         if (jobs.isEmpty) {
-          return Center(child: Text(emptyMessage));
+          return const Center(child: Text('Tiada data'));
         }
         return RefreshIndicator(
           onRefresh: onRefresh,
@@ -301,13 +337,11 @@ class _JobListScreenState extends State<JobListScreen> {
             _buildJobsTab(
               future: _clientJobsFuture,
               isClientView: true,
-              emptyMessage: 'Tiada job sebagai client.',
               onRefresh: _refreshClientJobs,
             ),
             _buildJobsTab(
               future: _freelancerJobsFuture,
               isClientView: false,
-              emptyMessage: 'Tiada job sebagai freelancer.',
               onRefresh: _refreshFreelancerJobs,
             ),
           ],
