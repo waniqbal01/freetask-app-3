@@ -1,126 +1,91 @@
 import 'dart:async';
 
-class Service {
-  const Service({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.category,
-    required this.price,
-    required this.rating,
-    required this.deliveryDays,
-    required this.includes,
-  });
+import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-  final String id;
-  final String title;
-  final String description;
-  final String category;
-  final double price;
-  final double rating;
-  final int deliveryDays;
-  final List<String> includes;
-}
+import '../../models/service.dart';
+import '../../services/http_client.dart';
+import '../auth/auth_repository.dart';
 
 class ServicesRepository {
-  ServicesRepository();
+  ServicesRepository({FlutterSecureStorage? secureStorage, Dio? dio})
+      : _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+        _dio = dio ?? HttpClient().dio;
 
-  static final List<Service> _mockServices = <Service>[
-    const Service(
-      id: 'design-001',
-      title: 'Logo Design Premium',
-      description: 'Reka bentuk logo profesional dengan 3 konsep dan revisi tanpa had.',
-      category: 'Design',
-      price: 350.0,
-      rating: 4.9,
-      deliveryDays: 5,
-      includes: <String>[
-        '3 konsep awal',
-        'Fail sumber vektor',
-        'Mockup persembahan',
-        'Revisi tanpa had',
-      ],
-    ),
-    const Service(
-      id: 'writing-002',
-      title: 'Penulisan Artikel SEO',
-      description: 'Artikel 1500 patah perkataan dengan penyelidikan kata kunci dan SEO on-page.',
-      category: 'Penulisan',
-      price: 220.0,
-      rating: 4.7,
-      deliveryDays: 3,
-      includes: <String>[
-        'Penyelidikan kata kunci',
-        'Artikel 1500 patah perkataan',
-        'Optimasi meta tag',
-        '2 kali semakan',
-      ],
-    ),
-    const Service(
-      id: 'dev-003',
-      title: 'Landing Page Responsif',
-      description: 'Landing page moden dengan integrasi borang dan analitik asas.',
-      category: 'Pembangunan',
-      price: 780.0,
-      rating: 4.8,
-      deliveryDays: 7,
-      includes: <String>[
-        'Reka bentuk responsif',
-        'Integrasi borang hubungi',
-        'Pemasangan analitik asas',
-        'Tutorial pengurusan kandungan',
-      ],
-    ),
-    const Service(
-      id: 'marketing-004',
-      title: 'Kempen Media Sosial 1 Bulan',
-      description: 'Pengurusan 3 platform media sosial dengan kandungan tersusun.',
-      category: 'Pemasaran',
-      price: 650.0,
-      rating: 4.6,
-      deliveryDays: 30,
-      includes: <String>[
-        'Kalender kandungan bulanan',
-        '12 posting grafik',
-        '4 video pendek',
-        'Laporan prestasi mingguan',
-      ],
-    ),
-  ];
+  final FlutterSecureStorage _secureStorage;
+  final Dio _dio;
 
   Future<List<Service>> getServices({String? query, String? category}) async {
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-
-    final lowerQuery = query?.toLowerCase().trim();
-    final filtered = _mockServices.where((Service service) {
-      final matchesQuery = lowerQuery == null || lowerQuery.isEmpty
-          ? true
-          : service.title.toLowerCase().contains(lowerQuery) ||
-              service.description.toLowerCase().contains(lowerQuery);
-      final matchesCategory =
-          category == null || category.isEmpty || category == 'Semua'
-              ? true
-              : service.category.toLowerCase() == category.toLowerCase();
-      return matchesQuery && matchesCategory;
-    }).toList();
-
-    filtered.sort((Service a, Service b) => a.title.compareTo(b.title));
-    return filtered;
-  }
-
-  Future<Service?> getServiceById(String id) async {
-    await Future<void>.delayed(const Duration(milliseconds: 200));
     try {
-      return _mockServices.firstWhere((Service service) => service.id == id);
-    } on StateError {
-      return null;
+      final response = await _dio.get<List<dynamic>>(
+        '/services',
+        queryParameters: <String, dynamic>{
+          if (query != null && query.isNotEmpty) 'q': query,
+          if (category != null && category.isNotEmpty && category != 'Semua')
+            'category': category,
+        },
+        options: await _authorizedOptions(),
+      );
+      final data = response.data ?? <dynamic>[];
+      return data
+          .whereType<Map<String, dynamic>>()
+          .map(Service.fromJson)
+          .toList(growable: false);
+    } on DioException catch (error) {
+      await _handleDioError(error);
+      rethrow;
     }
   }
 
-  List<String> getCategories() {
-    final categories = _mockServices.map((Service service) => service.category).toSet().toList()
-      ..sort();
-    return categories;
+  Future<Service?> getServiceById(String id) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/services/$id',
+        options: await _authorizedOptions(),
+      );
+      final data = response.data;
+      if (data == null) {
+        return null;
+      }
+      return Service.fromJson(data);
+    } on DioException catch (error) {
+      await _handleDioError(error);
+      if (error.response?.statusCode == 404) {
+        return null;
+      }
+      rethrow;
+    }
+  }
+
+  Future<List<String>> getCategories() async {
+    try {
+      final response = await _dio.get<List<dynamic>>(
+        '/services/categories',
+        options: await _authorizedOptions(),
+      );
+      final categories = response.data ?? <dynamic>[];
+      return categories
+          .map((dynamic value) => value.toString())
+          .where((String value) => value.isNotEmpty)
+          .toList(growable: false);
+    } on DioException catch (error) {
+      await _handleDioError(error);
+      rethrow;
+    }
+  }
+
+  Future<Options> _authorizedOptions() async {
+    final token = await _secureStorage.read(key: AuthRepository.tokenStorageKey);
+    if (token == null || token.isEmpty) {
+      throw StateError('Token tidak ditemui. Sila log masuk semula.');
+    }
+    return Options(headers: <String, String>{'Authorization': 'Bearer $token'});
+  }
+
+  Future<void> _handleDioError(DioException error) async {
+    if (error.response?.statusCode == 401) {
+      await authRepository.logout();
+    }
   }
 }
 

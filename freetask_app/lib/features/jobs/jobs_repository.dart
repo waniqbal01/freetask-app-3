@@ -1,161 +1,179 @@
 import 'dart:async';
-import 'dart:math';
+
+import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../core/notifications/notification_service.dart';
 import '../../models/job.dart';
-import '../services/services_repository.dart';
+import '../../services/http_client.dart';
+import '../auth/auth_repository.dart';
 
 class JobsRepository {
-  JobsRepository();
+  JobsRepository({FlutterSecureStorage? secureStorage, Dio? dio})
+      : _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+        _dio = dio ?? HttpClient().dio;
 
-  static const String _currentClientId = 'client-demo';
-  static const String _currentFreelancerId = 'freelancer-andi';
-
-  final List<Job> _jobs = <Job>[
-    Job(
-      id: 'job-001',
-      clientId: 'client-demo',
-      freelancerId: 'freelancer-andi',
-      serviceId: 'design-001',
-      serviceTitle: 'Logo Design Premium',
-      amount: 350.0,
-      status: JobStatus.pending,
-    ),
-    Job(
-      id: 'job-002',
-      clientId: 'client-demo',
-      freelancerId: 'freelancer-andi',
-      serviceId: 'writing-002',
-      serviceTitle: 'Penulisan Artikel SEO',
-      amount: 220.0,
-      status: JobStatus.inProgress,
-    ),
-    Job(
-      id: 'job-003',
-      clientId: 'client-demo',
-      freelancerId: 'freelancer-andi',
-      serviceId: 'dev-003',
-      serviceTitle: 'Landing Page Responsif',
-      amount: 780.0,
-      status: JobStatus.completed,
-    ),
-  ];
+  final FlutterSecureStorage _secureStorage;
+  final Dio _dio;
 
   Future<Job> createOrder(String serviceId, double amount) async {
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-
-    final service = await servicesRepository.getServiceById(serviceId);
-    final id = 'job-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(999)}';
-    final job = Job(
-      id: id,
-      clientId: _currentClientId,
-      freelancerId: _currentFreelancerId,
-      serviceId: serviceId,
-      serviceTitle: service?.title ?? 'Servis $serviceId',
-      amount: amount,
-      status: JobStatus.pending,
-    );
-
-    _jobs.insert(0, job);
-    return job;
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/jobs',
+        data: <String, dynamic>{
+          'service_id': serviceId,
+          'amount': amount,
+        },
+        options: await _authorizedOptions(),
+      );
+      final data = response.data ?? <String, dynamic>{};
+      final job = Job.fromJson(data);
+      return job;
+    } on DioException catch (error) {
+      await _handleDioError(error);
+      rethrow;
+    }
   }
 
   Future<bool> acceptJob(String jobId) async {
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-    final index = _jobs.indexWhere((Job job) => job.id == jobId);
-    if (index == -1) {
-      return false;
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/jobs/$jobId/accept',
+        options: await _authorizedOptions(),
+      );
+      final data = response.data;
+      if (data != null) {
+        final job = Job.fromJson(data);
+        notificationService.pushLocal(
+          'Job Diterima',
+          'Job ${job.serviceTitle} kini In Progress.',
+        );
+      }
+      return true;
+    } on DioException catch (error) {
+      await _handleDioError(error);
+      if (error.response?.statusCode == 409) {
+        return false;
+      }
+      rethrow;
     }
-
-    final job = _jobs[index];
-    if (job.status != JobStatus.pending) {
-      return false;
-    }
-
-    _jobs[index] = job.copyWith(status: JobStatus.inProgress);
-    notificationService.pushLocal(
-      'Job Diterima',
-      'Job ${job.serviceTitle} kini In Progress.',
-    );
-    return true;
   }
 
   Future<bool> rejectJob(String jobId) async {
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-    final index = _jobs.indexWhere((Job job) => job.id == jobId);
-    if (index == -1) {
-      return false;
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/jobs/$jobId/reject',
+        options: await _authorizedOptions(),
+      );
+      final data = response.data;
+      if (data != null) {
+        final job = Job.fromJson(data);
+        notificationService.pushLocal(
+          'Job Ditolak',
+          'Job ${job.serviceTitle} telah ditolak oleh freelancer.',
+        );
+      }
+      return true;
+    } on DioException catch (error) {
+      await _handleDioError(error);
+      if (error.response?.statusCode == 409) {
+        return false;
+      }
+      rethrow;
     }
-
-    final job = _jobs[index];
-    if (job.status != JobStatus.pending) {
-      return false;
-    }
-
-    _jobs[index] = job.copyWith(status: JobStatus.rejected);
-    notificationService.pushLocal(
-      'Job Ditolak',
-      'Job ${job.serviceTitle} telah ditolak oleh freelancer.',
-    );
-    return true;
   }
 
   Future<bool> markCompleted(String jobId) async {
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-    final index = _jobs.indexWhere((Job job) => job.id == jobId);
-    if (index == -1) {
-      return false;
+    try {
+      await _dio.post<void>(
+        '/jobs/$jobId/complete',
+        options: await _authorizedOptions(),
+      );
+      return true;
+    } on DioException catch (error) {
+      await _handleDioError(error);
+      if (error.response?.statusCode == 409) {
+        return false;
+      }
+      rethrow;
     }
-
-    final job = _jobs[index];
-    if (job.status != JobStatus.inProgress) {
-      return false;
-    }
-
-    _jobs[index] = job.copyWith(status: JobStatus.completed);
-    return true;
   }
 
   Future<bool> setDispute(String jobId, String reason) async {
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-    final index = _jobs.indexWhere((Job job) => job.id == jobId);
-    if (index == -1) {
-      return false;
-    }
-
-    final job = _jobs[index];
-    _jobs[index] = job.copyWith(
-      isDisputed: true,
-      disputeReason: reason,
-    );
-    return true;
-  }
-
-  List<Job> getClientJobs() {
-    return List<Job>.unmodifiable(
-      _jobs
-          .where((Job job) => job.clientId == _currentClientId)
-          .toList(growable: false),
-    );
-  }
-
-  List<Job> getFreelancerJobs() {
-    return List<Job>.unmodifiable(
-      _jobs
-          .where((Job job) => job.freelancerId == _currentFreelancerId)
-          .toList(growable: false),
-    );
-  }
-
-  List<Job> getAllJobs() {
-    return List<Job>.unmodifiable(_jobs);
-  }
-
-  Job? getJobById(String jobId) {
     try {
-      return _jobs.firstWhere((Job job) => job.id == jobId);
-    } on StateError {
-      return null;
+      await _dio.post<void>(
+        '/jobs/$jobId/dispute',
+        data: <String, dynamic>{'reason': reason},
+        options: await _authorizedOptions(),
+      );
+      return true;
+    } on DioException catch (error) {
+      await _handleDioError(error);
+      rethrow;
+    }
+  }
+
+  Future<List<Job>> getClientJobs() async {
+    return _fetchJobs(<String, dynamic>{'filter': 'client'});
+  }
+
+  Future<List<Job>> getFreelancerJobs() async {
+    return _fetchJobs(<String, dynamic>{'filter': 'freelancer'});
+  }
+
+  Future<List<Job>> getAllJobs() async {
+    return _fetchJobs(<String, dynamic>{'filter': 'all'});
+  }
+
+  Future<Job?> getJobById(String jobId) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/jobs/$jobId',
+        options: await _authorizedOptions(),
+      );
+      final data = response.data;
+      if (data == null) {
+        return null;
+      }
+      return Job.fromJson(data);
+    } on DioException catch (error) {
+      await _handleDioError(error);
+      if (error.response?.statusCode == 404) {
+        return null;
+      }
+      rethrow;
+    }
+  }
+
+  Future<List<Job>> _fetchJobs(Map<String, dynamic> queryParameters) async {
+    try {
+      final response = await _dio.get<List<dynamic>>(
+        '/jobs',
+        queryParameters: queryParameters,
+        options: await _authorizedOptions(),
+      );
+      final data = response.data ?? <dynamic>[];
+      return data
+          .whereType<Map<String, dynamic>>()
+          .map(Job.fromJson)
+          .toList(growable: false);
+    } on DioException catch (error) {
+      await _handleDioError(error);
+      rethrow;
+    }
+  }
+
+  Future<Options> _authorizedOptions() async {
+    final token = await _secureStorage.read(key: AuthRepository.tokenStorageKey);
+    if (token == null || token.isEmpty) {
+      throw StateError('Token tidak ditemui. Sila log masuk semula.');
+    }
+    return Options(headers: <String, String>{'Authorization': 'Bearer $token'});
+  }
+
+  Future<void> _handleDioError(DioException error) async {
+    if (error.response?.statusCode == 401) {
+      await authRepository.logout();
     }
   }
 }

@@ -13,6 +13,31 @@ class Job {
     this.disputeReason,
   });
 
+  factory Job.fromJson(Map<String, dynamic> json) {
+    return Job(
+      id: json['id']?.toString() ?? '',
+      clientId: json['client_id']?.toString() ??
+          json['clientId']?.toString() ??
+          '',
+      freelancerId: json['freelancer_id']?.toString() ??
+          json['freelancerId']?.toString() ??
+          '',
+      serviceId: json['service_id']?.toString() ??
+          json['serviceId']?.toString() ??
+          '',
+      serviceTitle: json['service_title']?.toString() ??
+          json['serviceTitle']?.toString() ??
+          'Servis ${json['service_id']?.toString() ?? json['serviceId']?.toString() ?? ''}',
+      amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      status: _parseStatus(json['status']),
+      isDisputed: json['is_disputed'] as bool? ??
+          json['isDisputed'] as bool? ??
+          false,
+      disputeReason: json['dispute_reason']?.toString() ??
+          json['disputeReason']?.toString(),
+    );
+  }
+
   Job copyWith({
     JobStatus? status,
     bool? isDisputed,
@@ -40,4 +65,24 @@ class Job {
   final JobStatus status;
   final bool isDisputed;
   final String? disputeReason;
+
+  static JobStatus _parseStatus(dynamic value) {
+    if (value is JobStatus) {
+      return value;
+    }
+    final normalized = value?.toString().toLowerCase();
+    switch (normalized) {
+      case 'inprogress':
+      case 'in_progress':
+      case 'in-progress':
+        return JobStatus.inProgress;
+      case 'completed':
+        return JobStatus.completed;
+      case 'rejected':
+        return JobStatus.rejected;
+      case 'pending':
+      default:
+        return JobStatus.pending;
+    }
+  }
 }

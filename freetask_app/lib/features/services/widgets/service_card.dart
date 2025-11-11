@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../services_repository.dart';
+import '../../../models/service.dart';
 
 class ServiceCard extends StatelessWidget {
   const ServiceCard({

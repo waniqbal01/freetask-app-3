@@ -5,6 +5,18 @@ class ChatThread {
     required this.participantName,
   });
 
+  factory ChatThread.fromJson(Map<String, dynamic> json) {
+    return ChatThread(
+      id: json['id']?.toString() ?? '',
+      jobTitle: json['job_title']?.toString() ??
+          json['jobTitle']?.toString() ??
+          '',
+      participantName: json['participant_name']?.toString() ??
+          json['participantName']?.toString() ??
+          '',
+    );
+  }
+
   final String id;
   final String jobTitle;
   final String participantName;
@@ -18,6 +30,18 @@ class ChatMessage {
     this.imagePath,
     required this.timestamp,
   }) : assert(text != null || imagePath != null, 'Message must have text or image.');
+
+  factory ChatMessage.fromJson(Map<String, dynamic> json) {
+    return ChatMessage(
+      id: json['id']?.toString() ?? '',
+      sender: json['sender']?.toString() ?? '',
+      text: json['text']?.toString(),
+      imagePath: json['image_path']?.toString() ??
+          json['imagePath']?.toString(),
+      timestamp: DateTime.tryParse(json['timestamp']?.toString() ?? '') ??
+          DateTime.now(),
+    );
+  }
 
   final String id;
   final String sender;

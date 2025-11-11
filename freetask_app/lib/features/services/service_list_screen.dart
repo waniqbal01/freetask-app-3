@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../models/service.dart';
 import 'services_repository.dart';
 import 'widgets/service_card.dart';
 
@@ -16,15 +17,15 @@ class ServiceListScreen extends StatefulWidget {
 class _ServiceListScreenState extends State<ServiceListScreen> {
   final TextEditingController _searchController = TextEditingController();
   late Future<List<Service>> _servicesFuture;
-  late List<String> _categories;
+  List<String> _categories = const <String>['Semua'];
   String _selectedCategory = 'Semua';
   Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
-    _categories = <String>['Semua', ...servicesRepository.getCategories()];
     _servicesFuture = servicesRepository.getServices();
+    _loadCategories();
     _searchController.addListener(_onSearchChanged);
   }
 
@@ -47,6 +48,23 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
         category: _selectedCategory,
       );
     });
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final categories = await servicesRepository.getCategories();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _categories = <String>['Semua', ...categories];
+        if (!_categories.contains(_selectedCategory)) {
+          _selectedCategory = 'Semua';
+        }
+      });
+    } catch (_) {
+      // Biarkan kategori kekal kepada lalai jika permintaan gagal.
+    }
   }
 
   @override

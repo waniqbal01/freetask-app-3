@@ -28,10 +28,15 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
   @override
   Widget build(BuildContext context) {
     final asyncMessages = ref.watch(chatMessagesProvider(widget.chatId));
-    final thread = ref
-        .watch(chatThreadsProvider)
-        .firstWhere(
-          (ChatThread element) => element.id == widget.chatId,
+    final thread = ref.watch(chatThreadsProvider).maybeWhen(
+          data: (List<ChatThread> threads) => threads.firstWhere(
+            (ChatThread element) => element.id == widget.chatId,
+            orElse: () => const ChatThread(
+              id: 'unknown',
+              jobTitle: 'Chat',
+              participantName: 'Pengguna',
+            ),
+          ),
           orElse: () => const ChatThread(
             id: 'unknown',
             jobTitle: 'Chat',

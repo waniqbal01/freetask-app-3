@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../models/service.dart';
 import 'services_repository.dart';
 
 class ServiceDetailScreen extends StatefulWidget {
