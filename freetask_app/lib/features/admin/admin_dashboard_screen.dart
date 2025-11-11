@@ -1,8 +1,10 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/job.dart';
 import '../jobs/jobs_repository.dart';
 import '../payments/escrow_service.dart';
+import '../../core/utils/error_utils.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -101,7 +103,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(16),
-          child: Text('Tiada job direkodkan.'),
+          child: Text('Tiada data'),
         ),
       );
     }
@@ -206,7 +208,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(16),
-          child: Text('Tiada rekod escrow buat masa ini.'),
+          child: Text('Tiada data'),
         ),
       );
     }
@@ -264,7 +266,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(16),
-          child: Text('Tiada dispute aktif.'),
+          child: Text('Tiada data'),
         ),
       );
     }
@@ -326,11 +328,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               children: [
                 _buildSectionTitle('Jobs'),
                 if (snapshot.hasError)
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Text('Ralat memuat job: ${snapshot.error}'),
-                    ),
+                  Builder(
+                    builder: (BuildContext context) {
+                      final error = snapshot.error;
+                      if (error is DioException) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          final messenger = ScaffoldMessenger.maybeOf(context);
+                          if (messenger != null) {
+                            messenger.showSnackBar(
+                              SnackBar(content: Text(resolveDioErrorMessage(error))),
+                            );
+                          }
+                        });
+                      }
+                      return const Card(
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Text('Ralat memuat job.'),
+                        ),
+                      );
+                    },
                   )
                 else
                   _buildJobsSection(jobs),

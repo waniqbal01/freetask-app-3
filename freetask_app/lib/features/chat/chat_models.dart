@@ -27,16 +27,17 @@ class ChatMessage {
     required this.id,
     required this.sender,
     this.text,
-    this.imagePath,
+    this.imageUrl,
     required this.timestamp,
-  }) : assert(text != null || imagePath != null, 'Message must have text or image.');
+  }) : assert(text != null || imageUrl != null, 'Message must have text or image.');
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
     return ChatMessage(
       id: json['id']?.toString() ?? '',
       sender: json['sender']?.toString() ?? '',
       text: json['text']?.toString(),
-      imagePath: json['image_path']?.toString() ??
+      imageUrl: json['image_url']?.toString() ??
+          json['image_path']?.toString() ??
           json['imagePath']?.toString(),
       timestamp: DateTime.tryParse(json['timestamp']?.toString() ?? '') ??
           DateTime.now(),
@@ -46,8 +47,8 @@ class ChatMessage {
   final String id;
   final String sender;
   final String? text;
-  final String? imagePath;
+  final String? imageUrl;
   final DateTime timestamp;
 
-  bool get hasImage => imagePath != null && imagePath!.isNotEmpty;
+  bool get hasImage => imageUrl != null && imageUrl!.isNotEmpty;
 }

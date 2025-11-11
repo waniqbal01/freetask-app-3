@@ -1,7 +1,10 @@
+import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/utils/error_utils.dart';
+import '../../services/upload_service.dart';
 import 'chat_models.dart';
 import 'chat_repository.dart';
 
@@ -64,7 +67,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
               data: (List<ChatMessage> messages) {
                 if (messages.isEmpty) {
                   return const Center(
-                    child: Text('Belum ada mesej. Mulakan perbualan!'),
+                    child: Text('Tiada data'),
                   );
                 }
                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -101,19 +104,31 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                             if (message.hasImage) ...<Widget>[
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  color: Colors.black12,
+                                child: Image.network(
+                                  message.imageUrl!,
                                   width: 160,
                                   height: 160,
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    'Gambar: ${message.imagePath}',
-                                    style: TextStyle(
-                                      color: textColor,
-                                      fontSize: 12,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (
+                                    BuildContext context,
+                                    Object error,
+                                    StackTrace? stackTrace,
+                                  ) {
+                                    return Container(
+                                      width: 160,
+                                      height: 160,
+                                      color: Colors.black12,
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        'Gagal memuat gambar',
+                                        style: TextStyle(
+                                          color: textColor,
+                                          fontSize: 12,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -131,9 +146,19 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (Object error, StackTrace stackTrace) => Center(
-                child: Text('Ralat memuat mesej: $error'),
-              ),
+              error: (Object error, StackTrace stackTrace) {
+                if (error is DioException) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) {
+                      return;
+                    }
+                    _showSnackBar(resolveDioErrorMessage(error));
+                  });
+                }
+                return const Center(
+                  child: Text('Ralat memuat mesej.'),
+                );
+              },
             ),
           ),
           _MessageComposer(
@@ -150,12 +175,25 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     if (text.trim().isEmpty) {
       return;
     }
-    await ref.read(chatRepositoryProvider).sendText(
-          chatId: widget.chatId,
-          sender: 'me',
-          text: text.trim(),
-        );
-    _controller.clear();
+    final trimmed = text.trim();
+    try {
+      await ref.read(chatRepositoryProvider).sendText(
+            chatId: widget.chatId,
+            sender: 'me',
+            text: trimmed,
+          );
+      _controller.clear();
+    } on DioException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showSnackBar(resolveDioErrorMessage(error));
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      _showSnackBar('Ralat menghantar mesej.');
+    }
   }
 
   Future<void> _handleSendImage() async {
@@ -164,11 +202,31 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     if (path == null) {
       return;
     }
-    await ref.read(chatRepositoryProvider).sendImage(
-          chatId: widget.chatId,
-          sender: 'me',
-          imagePath: path,
-        );
+    try {
+      final imageUrl = await uploadService.uploadFile(path);
+      await ref.read(chatRepositoryProvider).sendImage(
+            chatId: widget.chatId,
+            sender: 'me',
+            imageUrl: imageUrl,
+          );
+    } on DioException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showSnackBar(resolveDioErrorMessage(error));
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      final message = error is StateError ? error.message : error.toString();
+      _showSnackBar(message);
+    }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 }
 

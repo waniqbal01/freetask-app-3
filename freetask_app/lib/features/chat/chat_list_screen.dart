@@ -1,7 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/utils/error_utils.dart';
 import 'chat_repository.dart';
 
 class ChatListScreen extends ConsumerWidget {
@@ -16,7 +18,7 @@ class ChatListScreen extends ConsumerWidget {
         if (threads.isEmpty) {
           return Scaffold(
             appBar: AppBar(title: const Text('Chat')),
-            body: const Center(child: Text('Tiada chat buat masa ini.')),
+            body: const Center(child: Text('Tiada data')),
           );
         }
 
@@ -43,10 +45,22 @@ class ChatListScreen extends ConsumerWidget {
         appBar: AppBar(title: Text('Chat')),
         body: Center(child: CircularProgressIndicator()),
       ),
-      error: (Object error, StackTrace stackTrace) => Scaffold(
-        appBar: AppBar(title: const Text('Chat')),
-        body: Center(child: Text('Ralat memuat chat: $error')),
-      ),
+      error: (Object error, StackTrace stackTrace) {
+        if (error is DioException) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final messenger = ScaffoldMessenger.maybeOf(context);
+            if (messenger != null) {
+              messenger.showSnackBar(
+                SnackBar(content: Text(resolveDioErrorMessage(error))),
+              );
+            }
+          });
+        }
+        return Scaffold(
+          appBar: AppBar(title: const Text('Chat')),
+          body: const Center(child: Text('Ralat memuat chat.')),
+        );
+      },
     );
   }
 }
