@@ -1,0 +1,144 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import 'services_repository.dart';
+import 'widgets/service_card.dart';
+
+class ServiceListScreen extends StatefulWidget {
+  const ServiceListScreen({super.key});
+
+  @override
+  State<ServiceListScreen> createState() => _ServiceListScreenState();
+}
+
+class _ServiceListScreenState extends State<ServiceListScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  late Future<List<Service>> _servicesFuture;
+  late List<String> _categories;
+  String _selectedCategory = 'Semua';
+  Timer? _debounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _categories = <String>['Semua', ...servicesRepository.getCategories()];
+    _servicesFuture = servicesRepository.getServices();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), _fetchServices);
+  }
+
+  void _fetchServices() {
+    setState(() {
+      _servicesFuture = servicesRepository.getServices(
+        query: _searchController.text,
+        category: _selectedCategory,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Servis'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(120),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Cari servis...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: _selectedCategory,
+                  decoration: InputDecoration(
+                    labelText: 'Kategori',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  items: _categories
+                      .map(
+                        (String category) => DropdownMenuItem<String>(
+                          value: category,
+                          child: Text(category),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (String? value) {
+                    if (value == null) {
+                      return;
+                    }
+                    setState(() {
+                      _selectedCategory = value;
+                    });
+                    _fetchServices();
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      body: FutureBuilder<List<Service>>(
+        future: _servicesFuture,
+        builder: (BuildContext context, AsyncSnapshot<List<Service>> snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Text('Ralat memuatkan servis: ${snapshot.error}'),
+            );
+          }
+
+          final services = snapshot.data ?? <Service>[];
+
+          if (services.isEmpty) {
+            return const Center(
+              child: Text('Tiada servis ditemui.'),
+            );
+          }
+
+          return ListView.separated(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            itemCount: services.length,
+            separatorBuilder: (BuildContext context, int index) =>
+                const SizedBox(height: 12),
+            itemBuilder: (BuildContext context, int index) {
+              final service = services[index];
+              return ServiceCard(
+                service: service,
+                onView: () => context.push('/service/${service.id}'),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
