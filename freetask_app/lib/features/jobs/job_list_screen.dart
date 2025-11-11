@@ -14,22 +14,39 @@ class JobListScreen extends StatefulWidget {
 }
 
 class _JobListScreenState extends State<JobListScreen> {
-  List<Job> _clientJobs = <Job>[];
-  List<Job> _freelancerJobs = <Job>[];
+  late Future<List<Job>> _clientJobsFuture;
+  late Future<List<Job>> _freelancerJobsFuture;
   bool _isProcessing = false;
 
   @override
   void initState() {
     super.initState();
-    _clientJobs = jobsRepository.getClientJobs();
-    _freelancerJobs = jobsRepository.getFreelancerJobs();
+    _loadJobs();
+  }
+
+  void _loadJobs() {
+    _clientJobsFuture = jobsRepository.getClientJobs();
+    _freelancerJobsFuture = jobsRepository.getFreelancerJobs();
   }
 
   void _refreshJobs() {
+    setState(_loadJobs);
+  }
+
+  Future<void> _refreshClientJobs() async {
+    final future = jobsRepository.getClientJobs();
     setState(() {
-      _clientJobs = jobsRepository.getClientJobs();
-      _freelancerJobs = jobsRepository.getFreelancerJobs();
+      _clientJobsFuture = future;
     });
+    await future;
+  }
+
+  Future<void> _refreshFreelancerJobs() async {
+    final future = jobsRepository.getFreelancerJobs();
+    setState(() {
+      _freelancerJobsFuture = future;
+    });
+    await future;
   }
 
   Future<void> _handleAction(
@@ -227,6 +244,44 @@ class _JobListScreenState extends State<JobListScreen> {
     );
   }
 
+  Widget _buildJobsTab({
+    required Future<List<Job>> future,
+    required bool isClientView,
+    required String emptyMessage,
+    required Future<void> Function() onRefresh,
+  }) {
+    return FutureBuilder<List<Job>>(
+      future: future,
+      builder: (BuildContext context, AsyncSnapshot<List<Job>> snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Text('Ralat memuat job: ${snapshot.error}'),
+          );
+        }
+        final jobs = snapshot.data ?? <Job>[];
+        if (jobs.isEmpty) {
+          return Center(child: Text(emptyMessage));
+        }
+        return RefreshIndicator(
+          onRefresh: onRefresh,
+          child: ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: jobs.length,
+            itemBuilder: (BuildContext context, int index) {
+              return _buildJobCard(
+                jobs[index],
+                isClientView: isClientView,
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -243,28 +298,18 @@ class _JobListScreenState extends State<JobListScreen> {
         ),
         body: TabBarView(
           children: [
-            _clientJobs.isEmpty
-                ? const Center(child: Text('Tiada job sebagai client.'))
-                : ListView.builder(
-                    itemCount: _clientJobs.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      return _buildJobCard(
-                        _clientJobs[index],
-                        isClientView: true,
-                      );
-                    },
-                  ),
-            _freelancerJobs.isEmpty
-                ? const Center(child: Text('Tiada job sebagai freelancer.'))
-                : ListView.builder(
-                    itemCount: _freelancerJobs.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      return _buildJobCard(
-                        _freelancerJobs[index],
-                        isClientView: false,
-                      );
-                    },
-                  ),
+            _buildJobsTab(
+              future: _clientJobsFuture,
+              isClientView: true,
+              emptyMessage: 'Tiada job sebagai client.',
+              onRefresh: _refreshClientJobs,
+            ),
+            _buildJobsTab(
+              future: _freelancerJobsFuture,
+              isClientView: false,
+              emptyMessage: 'Tiada job sebagai freelancer.',
+              onRefresh: _refreshFreelancerJobs,
+            ),
           ],
         ),
       ),

@@ -1,7 +1,11 @@
 import 'dart:async';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/notifications/notification_service.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+import '../../services/http_client.dart';
+import '../auth/auth_repository.dart';
 import 'chat_models.dart';
 
 final chatRepositoryProvider = Provider<ChatRepository>((Ref ref) {
@@ -10,9 +14,9 @@ final chatRepositoryProvider = Provider<ChatRepository>((Ref ref) {
   return repository;
 });
 
-final chatThreadsProvider = Provider<List<ChatThread>>((Ref ref) {
+final chatThreadsProvider = FutureProvider<List<ChatThread>>((Ref ref) async {
   final repository = ref.watch(chatRepositoryProvider);
-  return repository.chatThreads;
+  return repository.fetchThreads();
 });
 
 final chatMessagesProvider = StreamProvider.family<List<ChatMessage>, String>(
@@ -22,32 +26,41 @@ final chatMessagesProvider = StreamProvider.family<List<ChatMessage>, String>(
 });
 
 class ChatRepository {
-  ChatRepository();
+  ChatRepository({FlutterSecureStorage? secureStorage, Dio? dio})
+      : _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+        _dio = dio ?? HttpClient().dio;
 
-  final List<ChatThread> _threads = <ChatThread>[
-    const ChatThread(
-      id: 'chat-1',
-      jobTitle: 'Pembersihan Rumah',
-      participantName: 'Ali',
-    ),
-    const ChatThread(
-      id: 'chat-2',
-      jobTitle: 'Servis Aircond',
-      participantName: 'Siti',
-    ),
-  ];
-
+  final FlutterSecureStorage _secureStorage;
+  final Dio _dio;
+  List<ChatThread> _threads = <ChatThread>[];
   final Map<String, List<ChatMessage>> _messages = <String, List<ChatMessage>>{};
   final Map<String, StreamController<List<ChatMessage>>> _controllers =
       <String, StreamController<List<ChatMessage>>>{};
 
-  List<ChatThread> get chatThreads => List<ChatThread>.unmodifiable(_threads);
+  Future<List<ChatThread>> fetchThreads() async {
+    try {
+      final response = await _dio.get<List<dynamic>>(
+        '/chats',
+        options: await _authorizedOptions(),
+      );
+      final data = response.data ?? <dynamic>[];
+      _threads = data
+          .whereType<Map<String, dynamic>>()
+          .map(ChatThread.fromJson)
+          .toList(growable: false);
+      return _threads;
+    } on DioException catch (error) {
+      await _handleError(error);
+      rethrow;
+    }
+  }
 
   Stream<List<ChatMessage>> streamMessages(String chatId) {
     final controller = _controllers.putIfAbsent(
       chatId,
       () => StreamController<List<ChatMessage>>.broadcast(),
     );
+    unawaited(_loadMessages(chatId));
     controller.add(List<ChatMessage>.unmodifiable(_messages[chatId] ?? <ChatMessage>[]));
     return controller.stream;
   }
@@ -57,13 +70,20 @@ class ChatRepository {
     required String sender,
     required String text,
   }) async {
-    final message = ChatMessage(
-      id: _generateMessageId(),
-      sender: sender,
-      text: text,
-      timestamp: DateTime.now(),
-    );
-    _addMessage(chatId, message);
+    try {
+      await _dio.post<void>(
+        '/chats/$chatId/messages',
+        data: <String, dynamic>{
+          'text': text,
+          'sender': sender,
+        },
+        options: await _authorizedOptions(),
+      );
+      await _loadMessages(chatId);
+    } on DioException catch (error) {
+      await _handleError(error);
+      rethrow;
+    }
   }
 
   Future<void> sendImage({
@@ -71,13 +91,20 @@ class ChatRepository {
     required String sender,
     required String imagePath,
   }) async {
-    final message = ChatMessage(
-      id: _generateMessageId(),
-      sender: sender,
-      imagePath: imagePath,
-      timestamp: DateTime.now(),
-    );
-    _addMessage(chatId, message);
+    try {
+      await _dio.post<void>(
+        '/chats/$chatId/messages',
+        data: <String, dynamic>{
+          'image_path': imagePath,
+          'sender': sender,
+        },
+        options: await _authorizedOptions(),
+      );
+      await _loadMessages(chatId);
+    } on DioException catch (error) {
+      await _handleError(error);
+      rethrow;
+    }
   }
 
   void dispose() {
@@ -86,31 +113,41 @@ class ChatRepository {
     }
   }
 
-  void _addMessage(String chatId, ChatMessage message) {
-    final messages = _messages.putIfAbsent(chatId, () => <ChatMessage>[]);
-    messages.add(message);
-    final controller = _controllers.putIfAbsent(
-      chatId,
-      () => StreamController<List<ChatMessage>>.broadcast(),
-    );
-    controller.add(List<ChatMessage>.unmodifiable(messages));
-    if (message.sender != 'me') {
-      final thread = _threads.firstWhere(
-        (ChatThread element) => element.id == chatId,
-        orElse: () => ChatThread(
-          id: chatId,
-          jobTitle: 'Chat',
-          participantName: message.sender,
-        ),
+  Future<void> _loadMessages(String chatId) async {
+    try {
+      final response = await _dio.get<List<dynamic>>(
+        '/chats/$chatId/messages',
+        options: await _authorizedOptions(),
       );
-      notificationService.pushLocal(
-        'Mesej baharu dari ${message.sender}',
-        'Chat ${thread.jobTitle} ada mesej baharu.',
+      final data = response.data ?? <dynamic>[];
+      final messages = data
+          .whereType<Map<String, dynamic>>()
+          .map(ChatMessage.fromJson)
+          .toList(growable: false)
+        ..sort((ChatMessage a, ChatMessage b) => a.timestamp.compareTo(b.timestamp));
+      _messages[chatId] = messages;
+      final controller = _controllers.putIfAbsent(
+        chatId,
+        () => StreamController<List<ChatMessage>>.broadcast(),
       );
+      controller.add(List<ChatMessage>.unmodifiable(messages));
+    } on DioException catch (error) {
+      await _handleError(error);
+      rethrow;
     }
   }
 
-  String _generateMessageId() {
-    return DateTime.now().microsecondsSinceEpoch.toString();
+  Future<Options> _authorizedOptions() async {
+    final token = await _secureStorage.read(key: AuthRepository.tokenStorageKey);
+    if (token == null || token.isEmpty) {
+      throw StateError('Token tidak ditemui. Sila log masuk semula.');
+    }
+    return Options(headers: <String, String>{'Authorization': 'Bearer $token'});
+  }
+
+  Future<void> _handleError(DioException error) async {
+    if (error.response?.statusCode == 401) {
+      await authRepository.logout();
+    }
   }
 }

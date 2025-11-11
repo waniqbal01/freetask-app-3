@@ -12,7 +12,7 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  List<Job> _jobs = <Job>[];
+  late Future<List<Job>> _jobsFuture;
   List<EscrowRecordSummary> _escrowRecords = <EscrowRecordSummary>[];
   Map<String, EscrowRecordSummary> _escrowByJob = <String, EscrowRecordSummary>{};
 
@@ -23,7 +23,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   void _loadData() {
-    _jobs = jobsRepository.getAllJobs();
+    _jobsFuture = jobsRepository.getAllJobs();
     _escrowRecords = escrowService.getAllRecords();
     _escrowByJob = <String, EscrowRecordSummary>{
       for (final record in _escrowRecords) record.jobId: record,
@@ -32,6 +32,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Future<void> _refreshDashboard() async {
     setState(_loadData);
+    await _jobsFuture;
   }
 
   String _jobStatusLabel(JobStatus status) {
@@ -95,8 +96,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildJobsSection() {
-    if (_jobs.isEmpty) {
+  Widget _buildJobsSection(List<Job> jobs) {
+    if (jobs.isEmpty) {
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(16),
@@ -108,7 +109,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final Map<JobStatus, int> statusCounts = <JobStatus, int>{
       for (final status in JobStatus.values) status: 0,
     };
-    for (final job in _jobs) {
+    for (final job in jobs) {
       statusCounts[job.status] = (statusCounts[job.status] ?? 0) + 1;
     }
 
@@ -134,7 +135,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   .toList(),
             ),
             const SizedBox(height: 16),
-            ..._jobs.map((Job job) {
+            ...jobs.map((Job job) {
               final EscrowRecordSummary? escrow = _escrowByJob[job.id];
               final String escrowLabel =
                   escrow != null ? _escrowStatusLabel(escrow.status) : 'Tiada';
@@ -255,9 +256,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildDisputesSection() {
+  Widget _buildDisputesSection(List<Job> jobs) {
     final List<Job> disputes =
-        _jobs.where((Job job) => job.isDisputed).toList(growable: false);
+        jobs.where((Job job) => job.isDisputed).toList(growable: false);
 
     if (disputes.isEmpty) {
       return const Card(
@@ -308,22 +309,41 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
       ),
-      body: RefreshIndicator(
-        onRefresh: _refreshDashboard,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: [
-            _buildSectionTitle('Jobs'),
-            _buildJobsSection(),
-            const SizedBox(height: 24),
-            _buildSectionTitle('Payments'),
-            _buildPaymentsSection(),
-            const SizedBox(height: 24),
-            _buildSectionTitle('Disputes'),
-            _buildDisputesSection(),
-          ],
-        ),
+      body: FutureBuilder<List<Job>>(
+        future: _jobsFuture,
+        builder: (BuildContext context, AsyncSnapshot<List<Job>> snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final List<Job> jobs = snapshot.data ?? <Job>[];
+
+          return RefreshIndicator(
+            onRefresh: _refreshDashboard,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                _buildSectionTitle('Jobs'),
+                if (snapshot.hasError)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text('Ralat memuat job: ${snapshot.error}'),
+                    ),
+                  )
+                else
+                  _buildJobsSection(jobs),
+                const SizedBox(height: 24),
+                _buildSectionTitle('Payments'),
+                _buildPaymentsSection(),
+                const SizedBox(height: 24),
+                _buildSectionTitle('Disputes'),
+                _buildDisputesSection(jobs),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

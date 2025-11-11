@@ -27,7 +27,7 @@ class ReviewsRepository {
 
   Future<bool> submit(String jobId, int rating, String comment) async {
     await Future<void>.delayed(const Duration(milliseconds: 200));
-    final job = jobsRepository.getJobById(jobId);
+    final job = await jobsRepository.getJobById(jobId);
     if (job == null) {
       return false;
     }
