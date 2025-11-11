@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import '../../core/notifications/notification_service.dart';
+
 enum EscrowStatus { held, released, refunded }
 
 class _EscrowRecord {
@@ -50,6 +52,10 @@ class EscrowService {
     _records[jobId] = record.copyWith(
       status: EscrowStatus.released,
       updatedAt: DateTime.now(),
+    );
+    notificationService.pushLocal(
+      'Pembayaran Dilepaskan',
+      'Dana untuk job $jobId telah dilepaskan.',
     );
   }
 

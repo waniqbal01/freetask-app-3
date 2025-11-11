@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../models/job.dart';
 import '../payments/escrow_service.dart';
+import '../reviews/review_dialog.dart';
+import '../reviews/reviews_repository.dart';
 import 'jobs_repository.dart';
 
 class JobListScreen extends StatefulWidget {
@@ -61,6 +63,22 @@ class _JobListScreenState extends State<JobListScreen> {
     }
   }
 
+  Future<void> _openReviewDialog(Job job) async {
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => ReviewDialog(
+        jobId: job.id,
+        serviceTitle: job.serviceTitle,
+      ),
+    );
+    if (submitted == true && mounted) {
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Terima kasih atas review anda!')),
+      );
+    }
+  }
+
   String _statusLabel(JobStatus status) {
     switch (status) {
       case JobStatus.pending:
@@ -91,6 +109,7 @@ class _JobListScreenState extends State<JobListScreen> {
   Widget _buildJobCard(Job job, {required bool isClientView}) {
     final statusText = _statusLabel(job.status);
     final statusColor = _statusColor(job.status, context);
+    final alreadyReviewed = reviewsRepository.hasSubmittedReview(job.id);
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Padding(
@@ -180,6 +199,26 @@ class _JobListScreenState extends State<JobListScreen> {
                       .textTheme
                       .bodySmall
                       ?.copyWith(color: Colors.orange.shade700),
+                ),
+              ),
+            if (isClientView && job.status == JobStatus.completed)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: alreadyReviewed
+                      ? Chip(
+                          avatar: const Icon(
+                            Icons.check_circle,
+                            color: Colors.green,
+                          ),
+                          label: const Text('Review dihantar'),
+                        )
+                      : TextButton.icon(
+                          onPressed: () => _openReviewDialog(job),
+                          icon: const Icon(Icons.rate_review_outlined),
+                          label: const Text('Tulis review'),
+                        ),
                 ),
               ),
           ],

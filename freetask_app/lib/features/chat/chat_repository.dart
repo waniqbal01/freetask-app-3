@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/notifications/notification_service.dart';
 import 'chat_models.dart';
 
 final chatRepositoryProvider = Provider<ChatRepository>((Ref ref) {
@@ -93,6 +94,20 @@ class ChatRepository {
       () => StreamController<List<ChatMessage>>.broadcast(),
     );
     controller.add(List<ChatMessage>.unmodifiable(messages));
+    if (message.sender != 'me') {
+      final thread = _threads.firstWhere(
+        (ChatThread element) => element.id == chatId,
+        orElse: () => ChatThread(
+          id: chatId,
+          jobTitle: 'Chat',
+          participantName: message.sender,
+        ),
+      );
+      notificationService.pushLocal(
+        'Mesej baharu dari ${message.sender}',
+        'Chat ${thread.jobTitle} ada mesej baharu.',
+      );
+    }
   }
 
   String _generateMessageId() {
