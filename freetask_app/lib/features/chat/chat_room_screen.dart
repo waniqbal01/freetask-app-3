@@ -1,0 +1,221 @@
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'chat_models.dart';
+import 'chat_repository.dart';
+
+class ChatRoomScreen extends ConsumerStatefulWidget {
+  const ChatRoomScreen({super.key, required this.chatId});
+
+  final String chatId;
+
+  @override
+  ConsumerState<ChatRoomScreen> createState() => _ChatRoomScreenState();
+}
+
+class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
+  final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final asyncMessages = ref.watch(chatMessagesProvider(widget.chatId));
+    final thread = ref
+        .watch(chatThreadsProvider)
+        .firstWhere(
+          (ChatThread element) => element.id == widget.chatId,
+          orElse: () => const ChatThread(
+            id: 'unknown',
+            jobTitle: 'Chat',
+            participantName: 'Pengguna',
+          ),
+        );
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(thread.jobTitle),
+            Text(
+              'Bersama ${thread.participantName}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+      body: Column(
+        children: <Widget>[
+          Expanded(
+            child: asyncMessages.when(
+              data: (List<ChatMessage> messages) {
+                if (messages.isEmpty) {
+                  return const Center(
+                    child: Text('Belum ada mesej. Mulakan perbualan!'),
+                  );
+                }
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (_scrollController.hasClients) {
+                    _scrollController.jumpTo(
+                      _scrollController.position.maxScrollExtent,
+                    );
+                  }
+                });
+                return ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16),
+                  itemCount: messages.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    final message = messages[index];
+                    final isMe = message.sender == 'me';
+                    final bubbleColor = isMe
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.grey.shade300;
+                    final textColor = isMe ? Colors.white : Colors.grey.shade800;
+                    return Align(
+                      alignment:
+                          isMe ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 6),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: bubbleColor,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            if (message.hasImage) ...<Widget>[
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  color: Colors.black12,
+                                  width: 160,
+                                  height: 160,
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    'Gambar: ${message.imagePath}',
+                                    style: TextStyle(
+                                      color: textColor,
+                                      fontSize: 12,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                            ],
+                            if (message.text != null)
+                              Text(
+                                message.text!,
+                                style: TextStyle(color: textColor),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (Object error, StackTrace stackTrace) => Center(
+                child: Text('Ralat memuat mesej: $error'),
+              ),
+            ),
+          ),
+          _MessageComposer(
+            controller: _controller,
+            onSendText: _handleSendText,
+            onSendImage: _handleSendImage,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleSendText(String text) async {
+    if (text.trim().isEmpty) {
+      return;
+    }
+    await ref.read(chatRepositoryProvider).sendText(
+          chatId: widget.chatId,
+          sender: 'me',
+          text: text.trim(),
+        );
+    _controller.clear();
+  }
+
+  Future<void> _handleSendImage() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image);
+    final path = result?.files.single.path;
+    if (path == null) {
+      return;
+    }
+    await ref.read(chatRepositoryProvider).sendImage(
+          chatId: widget.chatId,
+          sender: 'me',
+          imagePath: path,
+        );
+  }
+}
+
+class _MessageComposer extends StatelessWidget {
+  const _MessageComposer({
+    required this.controller,
+    required this.onSendText,
+    required this.onSendImage,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onSendText;
+  final VoidCallback onSendImage;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          border: Border(
+            top: BorderSide(color: Colors.grey.shade300),
+          ),
+        ),
+        child: Row(
+          children: <Widget>[
+            IconButton(
+              icon: const Icon(Icons.photo),
+              onPressed: onSendImage,
+            ),
+            Expanded(
+              child: TextField(
+                controller: controller,
+                textInputAction: TextInputAction.send,
+                decoration: const InputDecoration(
+                  hintText: 'Tulis mesej...',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                onSubmitted: onSendText,
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.send),
+              onPressed: () => onSendText(controller.text),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

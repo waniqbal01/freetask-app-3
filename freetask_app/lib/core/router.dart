@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/auth/role_selection_screen.dart';
+import '../features/chat/chat_list_screen.dart';
+import '../features/chat/chat_room_screen.dart';
 import '../features/checkout/checkout_screen.dart';
 import '../features/jobs/checkout_screen.dart';
 import '../features/jobs/job_list_screen.dart';
@@ -48,7 +50,14 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/chat',
       builder: (BuildContext context, GoRouterState state) {
-        return const _RoutePlaceholder(title: 'Chat');
+        return const ChatListScreen();
+      },
+    ),
+    GoRoute(
+      path: '/chat/:id',
+      builder: (BuildContext context, GoRouterState state) {
+        final chatId = state.pathParameters['id'] ?? 'unknown';
+        return ChatRoomScreen(chatId: chatId);
       },
     ),
     GoRoute(
@@ -73,22 +82,3 @@ final appRouter = GoRouter(
     ),
   ],
 );
-
-class _RoutePlaceholder extends StatelessWidget {
-  const _RoutePlaceholder({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(
-        child: Text(
-          title,
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-      ),
-    );
-  }
-}
