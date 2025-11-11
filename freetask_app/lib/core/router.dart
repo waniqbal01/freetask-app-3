@@ -5,6 +5,8 @@ import '../features/auth/login_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/auth/role_selection_screen.dart';
 import '../features/checkout/checkout_screen.dart';
+import '../features/jobs/checkout_screen.dart';
+import '../features/jobs/job_list_screen.dart';
 import '../features/services/service_detail_screen.dart';
 import '../features/services/service_list_screen.dart';
 
@@ -47,6 +49,19 @@ final appRouter = GoRouter(
       path: '/chat',
       builder: (BuildContext context, GoRouterState state) {
         return const _RoutePlaceholder(title: 'Chat');
+      },
+    ),
+    GoRoute(
+      path: '/jobs',
+      builder: (BuildContext context, GoRouterState state) {
+        return const JobListScreen();
+      },
+    ),
+    GoRoute(
+      path: '/jobs/checkout',
+      builder: (BuildContext context, GoRouterState state) {
+        final summary = state.extra as Map<String, dynamic>?;
+        return JobCheckoutScreen(serviceSummary: summary);
       },
     ),
     GoRoute(
