@@ -30,7 +30,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       'includes': service.includes,
     };
 
-    context.push('/checkout', extra: jobDraft);
+    context.push('/jobs/checkout', extra: jobDraft);
   }
 
   @override
