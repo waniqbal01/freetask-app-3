@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../payments/escrow_service.dart';
+
 class CheckoutScreen extends StatelessWidget {
   const CheckoutScreen({super.key, this.jobDraft});
 
@@ -50,10 +52,26 @@ class CheckoutScreen extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
+                  final jobId = (draft['jobId'] ?? draft['serviceId'])?.toString();
+                  final price = draft['price'];
+
+                  if (jobId == null || jobId.isEmpty || price is! num) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Maklumat job tidak lengkap untuk escrow.'),
+                      ),
+                    );
+                    return;
+                  }
+
+                  await escrowService.hold(jobId, price.toDouble());
+
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Checkout belum tersedia dalam versi demo.'),
+                    SnackBar(
+                      content: Text(
+                        'Dana RM${price.toStringAsFixed(2)} dipegang dalam escrow untuk $jobId.',
+                      ),
                     ),
                   );
                 },

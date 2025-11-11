@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/job.dart';
+import '../payments/escrow_service.dart';
 import 'jobs_repository.dart';
 
 class JobListScreen extends StatefulWidget {
@@ -123,8 +124,15 @@ class _JobListScreenState extends State<JobListScreen> {
                     onPressed: _isProcessing
                         ? null
                         : () => _handleAction(
-                              () => jobsRepository.markCompleted(job.id),
-                              'Job ditandakan selesai.',
+                              () async {
+                                final success =
+                                    await jobsRepository.markCompleted(job.id);
+                                if (success) {
+                                  await escrowService.release(job.id);
+                                }
+                                return success;
+                              },
+                              'Job ditandakan selesai. Dana dilepaskan kepada freelancer.',
                             ),
                     child: const Text('Mark as Completed'),
                   )
@@ -135,8 +143,15 @@ class _JobListScreenState extends State<JobListScreen> {
                         onPressed: _isProcessing
                             ? null
                             : () => _handleAction(
-                                  () => jobsRepository.rejectJob(job.id),
-                                  'Job telah ditolak.',
+                                  () async {
+                                    final success =
+                                        await jobsRepository.rejectJob(job.id);
+                                    if (success) {
+                                      await escrowService.refund(job.id);
+                                    }
+                                    return success;
+                                  },
+                                  'Job telah ditolak dan dana dipulangkan.',
                                 ),
                         child: const Text('Reject'),
                       ),
@@ -156,6 +171,17 @@ class _JobListScreenState extends State<JobListScreen> {
                   const SizedBox.shrink(),
               ],
             ),
+            if (job.isDisputed)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'Dispute: ${job.disputeReason ?? 'Tiada maklumat tambahan.'}',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: Colors.orange.shade700),
+                ),
+              ),
           ],
         ),
       ),
