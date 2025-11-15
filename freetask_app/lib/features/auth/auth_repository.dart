@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -17,6 +15,8 @@ class AuthRepository {
   final Dio _dio;
   AppUser? _cachedUser;
 
+  AppUser? get currentUser => _cachedUser;
+
   Future<bool> login(String email, String password) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
@@ -31,7 +31,7 @@ class AuthRepository {
       if (token == null || token.isEmpty) {
         return false;
       }
-      await _secureStorage.write(key: tokenStorageKey, value: token);
+      await _saveToken(token);
       final userJson = data?['user'];
       if (userJson is Map<String, dynamic>) {
         _cachedUser = AppUser.fromJson(userJson);
@@ -40,7 +40,6 @@ class AuthRepository {
     } on DioException catch (error) {
       if (error.response?.statusCode == 401) {
         await logout();
-        return false;
       }
       rethrow;
     }
@@ -50,34 +49,34 @@ class AuthRepository {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         '/auth/register',
-        data: payload,
+        data: _buildRegisterPayload(payload),
       );
       final data = response.data;
       final token = data?['token']?.toString();
-      if (token == null || token.isEmpty) {
-        return false;
+      if (token != null && token.isNotEmpty) {
+        await _saveToken(token);
       }
-      await _secureStorage.write(key: tokenStorageKey, value: token);
       final userJson = data?['user'];
       if (userJson is Map<String, dynamic>) {
         _cachedUser = AppUser.fromJson(userJson);
+      } else {
+        _cachedUser = null;
       }
       return true;
     } on DioException catch (error) {
       if (error.response?.statusCode == 401) {
         await logout();
-        return false;
       }
       rethrow;
     }
   }
 
-  Future<AppUser?> me() async {
+  Future<AppUser?> getCurrentUser() async {
     if (_cachedUser != null) {
       return _cachedUser;
     }
 
-    final token = await _secureStorage.read(key: tokenStorageKey);
+    final token = await getSavedToken();
     if (token == null || token.isEmpty) {
       return null;
     }
@@ -103,6 +102,10 @@ class AuthRepository {
     }
   }
 
+  Future<String?> getSavedToken() {
+    return _secureStorage.read(key: tokenStorageKey);
+  }
+
   Future<void> logout() async {
     final token = await _secureStorage.read(key: tokenStorageKey);
     try {
@@ -122,6 +125,40 @@ class AuthRepository {
 
   Map<String, String> _bearerHeader(String token) {
     return <String, String>{'Authorization': 'Bearer $token'};
+  }
+
+  Future<void> _saveToken(String token) {
+    return _secureStorage.write(key: tokenStorageKey, value: token);
+  }
+
+  Map<String, dynamic> _buildRegisterPayload(Map<String, dynamic> payload) {
+    final data = <String, dynamic>{
+      'email': payload['email'],
+      'password': payload['password'],
+      'name': payload['name'],
+      'role': payload['role'],
+    };
+
+    void addOptional(String key) {
+      final value = payload[key];
+      if (value == null) {
+        return;
+      }
+      if (value is String && value.trim().isEmpty) {
+        return;
+      }
+      if (value is Iterable && value.isEmpty) {
+        return;
+      }
+      data[key] = value;
+    }
+
+    addOptional('avatar');
+    addOptional('bio');
+    addOptional('skills');
+    addOptional('rate');
+
+    return data;
   }
 }
 

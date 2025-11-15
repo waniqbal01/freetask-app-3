@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/utils/error_utils.dart';
+import 'auth_redirect.dart';
 import 'auth_repository.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -17,6 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isSubmitting = false;
+  bool _obscurePassword = true;
   String? _errorMessage;
 
   @override
@@ -36,14 +38,22 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorMessage = null;
     });
 
+    final email = _emailController.text.trim().toLowerCase();
+    final password = _passwordController.text;
+
     try {
       final success = await authRepository.login(
-        _emailController.text.trim(),
-        _passwordController.text,
+        email,
+        password,
       );
 
       if (success && mounted) {
-        context.pushReplacement('/home');
+        final user = authRepository.currentUser;
+        if (user != null) {
+          goToRoleHome(context, user.role);
+        } else {
+          context.go('/home');
+        }
       } else if (mounted) {
         setState(() {
           _errorMessage = 'Log masuk gagal. Sila cuba lagi.';
@@ -112,10 +122,22 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
+                obscureText: _obscurePassword,
+                decoration: InputDecoration(
                   labelText: 'Kata laluan',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                    ),
+                  ),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -147,7 +169,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 16),
               TextButton(
-                onPressed: () => context.go('/register'),
+                onPressed: () => context.go('/'),
                 child: const Text('Belum ada akaun? Daftar'),
               ),
             ],

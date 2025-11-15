@@ -3,8 +3,10 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/notifications/notification_service.dart';
 import '../../core/utils/error_utils.dart';
 import '../../services/upload_service.dart';
+import 'auth_redirect.dart';
 import 'auth_repository.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -18,7 +20,10 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
   final _nameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _avatarController = TextEditingController();
   final _bioController = TextEditingController();
   final _skillsController = TextEditingController();
@@ -30,7 +35,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
+    _emailController.dispose();
     _nameController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _avatarController.dispose();
     _bioController.dispose();
     _skillsController.dispose();
@@ -48,28 +56,62 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _errorMessage = null;
     });
 
+    final email = _emailController.text.trim().toLowerCase();
+    final password = _passwordController.text;
+    final avatar = _avatarController.text.trim();
+
     final payload = <String, dynamic>{
       'role': role,
       'name': _nameController.text.trim(),
-      'avatar': _avatarController.text.trim(),
+      'email': email,
+      'password': password,
     };
 
+    if (avatar.isNotEmpty) {
+      payload['avatar'] = avatar;
+    }
+
     if (role == 'Freelancer') {
-      payload.addAll(<String, dynamic>{
-        'bio': _bioController.text.trim(),
-        'skills': _skillsController.text
+      final bio = _bioController.text.trim();
+      final skillsRaw = _skillsController.text.trim();
+      final rateText = _rateController.text.trim();
+
+      if (bio.isNotEmpty) {
+        payload['bio'] = bio;
+      }
+
+      if (skillsRaw.isNotEmpty) {
+        final skills = skillsRaw
             .split(',')
             .map((skill) => skill.trim())
             .where((skill) => skill.isNotEmpty)
-            .toList(),
-        'rate': double.tryParse(_rateController.text.trim()) ?? 0,
-      });
+            .toList();
+        if (skills.isNotEmpty) {
+          payload['skills'] = skills;
+        }
+      }
+
+      if (rateText.isNotEmpty) {
+        final parsedRate = double.tryParse(rateText);
+        if (parsedRate != null) {
+          payload['rate'] = parsedRate;
+        }
+      }
     }
 
     try {
       final success = await authRepository.register(payload);
       if (success && mounted) {
-        context.pushReplacement('/home');
+        final user = authRepository.currentUser;
+        if (user != null) {
+          goToRoleHome(context, user.role);
+        } else {
+          notificationService.pushLocal(
+            'Berjaya',
+            'Pendaftaran berjaya, sila log masuk.',
+          );
+          context.go('/login');
+        }
       } else if (mounted) {
         setState(() {
           _errorMessage = 'Pendaftaran gagal. Sila cuba lagi.';
@@ -163,6 +205,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 24),
               TextFormField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Email diperlukan';
+                  }
+                  if (!value.contains('@')) {
+                    return 'Email tidak sah';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
                   labelText: 'Nama penuh',
@@ -171,6 +231,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Nama diperlukan';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Kata laluan',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Kata laluan diperlukan';
+                  }
+                  if (value.length < 6) {
+                    return 'Kata laluan perlu sekurang-kurangnya 6 aksara';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _confirmPasswordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Sahkan kata laluan',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Sila sahkan kata laluan';
+                  }
+                  if (value != _passwordController.text) {
+                    return 'Kata laluan tidak sepadan';
                   }
                   return null;
                 },
@@ -203,12 +299,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           onPressed: _isUploadingAvatar ? null : _handlePickAvatar,
                         ),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Avatar diperlukan';
-                  }
-                  return null;
-                },
               ),
               if (isFreelancer) ...[
                 const SizedBox(height: 16),
@@ -219,12 +309,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     border: OutlineInputBorder(),
                   ),
                   maxLines: 3,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Bio diperlukan untuk freelancer';
-                    }
-                    return null;
-                  },
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -233,12 +317,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     labelText: 'Kemahiran (dipisah dengan koma)',
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Sila senaraikan kemahiran anda';
-                    }
-                    return null;
-                  },
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -250,7 +328,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Kadar diperlukan';
+                      return null;
                     }
                     final parsed = double.tryParse(value);
                     if (parsed == null) {
