@@ -4,6 +4,21 @@ String resolveDioErrorMessage(
   DioException error, {
   String fallback = 'Ralat rangkaian berlaku. Sila cuba lagi.',
 }) {
+  final statusCode = error.response?.statusCode;
+  final path = error.requestOptions.path;
+
+  if (statusCode == 401 && path.contains('/auth/login')) {
+    return 'Email atau kata laluan salah.';
+  }
+
+  if (statusCode == 409 && path.contains('/auth/register')) {
+    return 'Email ini sudah berdaftar. Sila log masuk.';
+  }
+
+  if (statusCode == 400) {
+    return 'Sila semak semula maklumat yang diisi.';
+  }
+
   final responseData = error.response?.data;
 
   if (responseData is Map<String, dynamic>) {

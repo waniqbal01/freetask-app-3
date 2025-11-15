@@ -5,6 +5,7 @@ import '../features/admin/admin_dashboard_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/auth/role_selection_screen.dart';
+import '../features/auth/startup_screen.dart';
 import '../features/chat/chat_list_screen.dart';
 import '../features/chat/chat_room_screen.dart';
 import '../features/checkout/checkout_screen.dart';
@@ -14,7 +15,14 @@ import '../features/services/service_detail_screen.dart';
 import '../features/services/service_list_screen.dart';
 
 final appRouter = GoRouter(
+  initialLocation: '/startup',
   routes: <RouteBase>[
+    GoRoute(
+      path: '/startup',
+      builder: (BuildContext context, GoRouterState state) {
+        return const StartupScreen();
+      },
+    ),
     GoRoute(
       path: '/',
       builder: (BuildContext context, GoRouterState state) {
