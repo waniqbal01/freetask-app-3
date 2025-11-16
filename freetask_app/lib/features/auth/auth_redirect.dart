@@ -2,12 +2,13 @@ import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 String resolveHomeRouteForRole(String? role) {
-  switch (role) {
-    case 'Freelancer':
+  final normalizedRole = role?.toUpperCase();
+  switch (normalizedRole) {
+    case 'FREELANCER':
       return '/jobs';
-    case 'Admin':
+    case 'ADMIN':
       return '/admin';
-    case 'Client':
+    case 'CLIENT':
       return '/home';
     default:
       return '/home';

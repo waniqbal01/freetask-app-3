@@ -60,8 +60,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final password = _passwordController.text;
     final avatar = _avatarController.text.trim();
 
+    final apiRole = role.toUpperCase();
+    final isFreelancerRole = apiRole == 'FREELANCER';
+
     final payload = <String, dynamic>{
-      'role': role,
+      'role': apiRole,
       'name': _nameController.text.trim(),
       'email': email,
       'password': password,
@@ -71,7 +74,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       payload['avatar'] = avatar;
     }
 
-    if (role == 'Freelancer') {
+    if (isFreelancerRole) {
       final bio = _bioController.text.trim();
       final skillsRaw = _skillsController.text.trim();
       final rateText = _rateController.text.trim();
@@ -185,8 +188,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveRole = widget.role ?? 'Client';
-    final isFreelancer = effectiveRole == 'Freelancer';
+    final initialRole = widget.role ?? 'Client';
+    final normalizedRole =
+        initialRole.toLowerCase() == 'freelancer' ? 'Freelancer' : 'Client';
+    final isFreelancer = normalizedRole == 'Freelancer';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Daftar Akaun')),
@@ -198,7 +203,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Daftar sebagai $effectiveRole',
+                'Daftar sebagai $normalizedRole',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -347,7 +352,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ],
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: _isSubmitting ? null : () => _handleRegister(effectiveRole),
+                onPressed: _isSubmitting
+                    ? null
+                    : () => _handleRegister(normalizedRole),
                 child: _isSubmitting
                     ? const SizedBox(
                         height: 20,
