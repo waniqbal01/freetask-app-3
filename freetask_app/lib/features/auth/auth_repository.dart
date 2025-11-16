@@ -27,7 +27,7 @@ class AuthRepository {
         },
       );
       final data = response.data;
-      final token = data?['token']?.toString();
+      final token = data?['accessToken']?.toString();
       if (token == null || token.isEmpty) {
         return false;
       }
@@ -52,7 +52,7 @@ class AuthRepository {
         data: _buildRegisterPayload(payload),
       );
       final data = response.data;
-      final token = data?['token']?.toString();
+      final token = data?['accessToken']?.toString();
       if (token != null && token.isNotEmpty) {
         await _saveToken(token);
       }
