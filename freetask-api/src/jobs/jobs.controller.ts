@@ -10,9 +10,9 @@ import {
 } from '@nestjs/common';
 import { JobsService } from './jobs.service';
 import { CreateJobDto } from './dto/create-job.dto';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { GetUser } from '../common/decorators/get-user.decorator';
-import { AuthUser } from '../auth/types/auth-user.type';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { GetUser } from '../auth/get-user.decorator';
+import { UserRole } from '@prisma/client';
 
 @Controller('jobs')
 @UseGuards(JwtAuthGuard)
@@ -20,37 +20,41 @@ export class JobsController {
   constructor(private readonly jobsService: JobsService) {}
 
   @Post()
-  create(@GetUser() user: AuthUser, @Body() dto: CreateJobDto) {
-    return this.jobsService.create(user.id, user.role, dto);
+  create(
+    @GetUser('userId') userId: number,
+    @GetUser('role') role: UserRole,
+    @Body() dto: CreateJobDto,
+  ) {
+    return this.jobsService.create(userId, role, dto);
   }
 
   @Get()
-  findAll(@GetUser() user: AuthUser) {
-    return this.jobsService.findAllForUser(user.id);
+  findAll(@GetUser('userId') userId: number) {
+    return this.jobsService.findAllForUser(userId);
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number, @GetUser() user: AuthUser) {
-    return this.jobsService.findOneForUser(id, user.id);
+  findOne(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
+    return this.jobsService.findOneForUser(id, userId);
   }
 
   @Patch(':id/accept')
-  accept(@Param('id', ParseIntPipe) id: number, @GetUser() user: AuthUser) {
-    return this.jobsService.acceptJob(id, user.id);
+  accept(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
+    return this.jobsService.acceptJob(id, userId);
   }
 
   @Patch(':id/reject')
-  reject(@Param('id', ParseIntPipe) id: number, @GetUser() user: AuthUser) {
-    return this.jobsService.rejectJob(id, user.id);
+  reject(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
+    return this.jobsService.rejectJob(id, userId);
   }
 
   @Patch(':id/complete')
-  complete(@Param('id', ParseIntPipe) id: number, @GetUser() user: AuthUser) {
-    return this.jobsService.completeJob(id, user.id);
+  complete(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
+    return this.jobsService.completeJob(id, userId);
   }
 
   @Patch(':id/dispute')
-  dispute(@Param('id', ParseIntPipe) id: number, @GetUser() user: AuthUser) {
-    return this.jobsService.disputeJob(id, user.id);
+  dispute(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
+    return this.jobsService.disputeJob(id, userId);
   }
 }
