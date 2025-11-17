@@ -64,11 +64,16 @@ export class JobsService {
   }
 
   async acceptJob(id: number, userId: number) {
+    // Kept for backward compatibility; delegates to startJob to use new status flow.
+    return this.startJob(id, userId);
+  }
+
+  async startJob(id: number, userId: number) {
     const job = await this.ensureJobForFreelancer(id, userId);
     if (job.status !== JobStatus.PENDING) {
-      throw new ForbiddenException('Only pending jobs can be accepted');
+      throw new ForbiddenException('Only pending jobs can be started');
     }
-    return this.updateStatus(id, JobStatus.ACCEPTED);
+    return this.updateStatus(id, JobStatus.IN_PROGRESS);
   }
 
   async rejectJob(id: number, userId: number) {
@@ -81,8 +86,8 @@ export class JobsService {
 
   async completeJob(id: number, userId: number) {
     const job = await this.ensureJobParticipant(id, userId);
-    if (job.status !== JobStatus.ACCEPTED) {
-      throw new ForbiddenException('Only accepted jobs can be completed');
+    if (job.status !== JobStatus.IN_PROGRESS) {
+      throw new ForbiddenException('Only in-progress jobs can be completed');
     }
     return this.updateStatus(id, JobStatus.COMPLETED);
   }

@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/job.dart';
-import '../payments/escrow_service.dart';
 import '../reviews/review_dialog.dart';
 import '../reviews/reviews_repository.dart';
 import 'jobs_repository.dart';
@@ -125,7 +124,7 @@ class _JobListScreenState extends State<JobListScreen> {
   String _statusLabel(JobStatus status) {
     switch (status) {
       case JobStatus.pending:
-        return 'Pending';
+        return 'Booked';
       case JobStatus.inProgress:
         return 'In Progress';
       case JobStatus.completed:
@@ -187,14 +186,9 @@ class _JobListScreenState extends State<JobListScreen> {
                         ? null
                         : () => _handleAction(
                               () async {
-                                final success =
-                                    await jobsRepository.markCompleted(job.id);
-                                if (success) {
-                                  await escrowService.release(job.id);
-                                }
-                                return success;
+                                return jobsRepository.markCompleted(job.id);
                               },
-                              'Job ditandakan selesai. Dana dilepaskan kepada freelancer.',
+                              'Job ditandakan selesai. Status kini Completed.',
                             ),
                     child: const Text('Mark as Completed'),
                   )
@@ -206,15 +200,12 @@ class _JobListScreenState extends State<JobListScreen> {
                             ? null
                             : () => _handleAction(
                                   () async {
-                                    final success =
-                                        await jobsRepository.rejectJob(job.id);
-                                    if (success) {
-                                      await escrowService.refund(job.id);
-                                    }
-                                    return success;
-                                  },
-                                  'Job telah ditolak dan dana dipulangkan.',
-                                ),
+                                final success =
+                                    await jobsRepository.rejectJob(job.id);
+                                return success;
+                              },
+                              'Job telah ditolak dan dikemas kini.',
+                            ),
                         child: const Text('Reject'),
                       ),
                       const SizedBox(width: 8),
@@ -222,10 +213,10 @@ class _JobListScreenState extends State<JobListScreen> {
                         onPressed: _isProcessing
                             ? null
                             : () => _handleAction(
-                                  () => jobsRepository.acceptJob(job.id),
-                                  'Job diterima! Status kini In Progress.',
+                                  () => jobsRepository.startJob(job.id),
+                                  'Job dimulakan! Status kini In Progress.',
                                 ),
-                        child: const Text('Accept'),
+                        child: const Text('Start Job'),
                       ),
                     ],
                   )

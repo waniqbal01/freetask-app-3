@@ -72,6 +72,7 @@ class Job {
     }
     final normalized = value?.toString().toLowerCase();
     switch (normalized) {
+      case 'accepted':
       case 'inprogress':
       case 'in_progress':
       case 'in-progress':
