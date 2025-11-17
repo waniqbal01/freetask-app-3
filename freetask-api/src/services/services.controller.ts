@@ -36,7 +36,7 @@ export class ServicesController {
   }
 
   @Get('categories')
-  categories() {
+  categories(): Promise<string[]> {
     return this.servicesService.categories();
   }
 

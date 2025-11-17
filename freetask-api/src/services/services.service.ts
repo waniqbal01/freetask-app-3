@@ -72,13 +72,16 @@ export class ServicesService {
     return { success: true };
   }
 
-  async categories() {
+  async categories(): Promise<string[]> {
     const results = await this.prisma.service.findMany({
       distinct: ['category'],
       select: { category: true },
       orderBy: { category: 'asc' },
     });
-    return results.map((item) => item.category);
+
+    return results
+      .map((item) => item.category)
+      .filter((category): category is string => Boolean(category));
   }
 
   private async ensureOwner(serviceId: number, userId: number) {
