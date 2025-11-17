@@ -42,12 +42,12 @@ export class JobsService {
 
   async findAllForUser(
     userId: number,
-    scope?: 'client' | 'freelancer' | 'all',
+    filter?: 'client' | 'freelancer' | 'all',
   ) {
     const where: Prisma.JobWhereInput =
-      scope === 'client'
+      filter === 'client'
         ? { clientId: userId }
-        : scope === 'freelancer'
+        : filter === 'freelancer'
         ? { freelancerId: userId }
         : { OR: [{ clientId: userId }, { freelancerId: userId }] };
 

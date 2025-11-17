@@ -24,7 +24,7 @@ class ServicesRepository {
           if (category != null && category.isNotEmpty && category != 'Semua')
             'category': category,
         },
-        options: await _authorizedOptions(),
+        options: await _authorizedOptions(requireAuth: false),
       );
       final data = response.data ?? <dynamic>[];
       return data
@@ -41,7 +41,7 @@ class ServicesRepository {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         '/services/$id',
-        options: await _authorizedOptions(),
+        options: await _authorizedOptions(requireAuth: false),
       );
       final data = response.data;
       if (data == null) {
@@ -61,7 +61,7 @@ class ServicesRepository {
     try {
       final response = await _dio.get<List<dynamic>>(
         '/services/categories',
-        options: await _authorizedOptions(),
+        options: await _authorizedOptions(requireAuth: false),
       );
       final categories = response.data ?? <dynamic>[];
       return categories
@@ -74,10 +74,13 @@ class ServicesRepository {
     }
   }
 
-  Future<Options> _authorizedOptions() async {
+  Future<Options> _authorizedOptions({bool requireAuth = true}) async {
     final token = await _secureStorage.read(key: AuthRepository.tokenStorageKey);
     if (token == null || token.isEmpty) {
-      throw StateError('Token tidak ditemui. Sila log masuk semula.');
+      if (requireAuth) {
+        throw StateError('Token tidak ditemui. Sila log masuk semula.');
+      }
+      return Options();
     }
     return Options(headers: <String, String>{'Authorization': 'Bearer $token'});
   }

@@ -131,6 +131,8 @@ class _JobListScreenState extends State<JobListScreen> {
         return 'Completed';
       case JobStatus.rejected:
         return 'Rejected';
+      case JobStatus.disputed:
+        return 'Disputed';
     }
   }
 
@@ -145,6 +147,8 @@ class _JobListScreenState extends State<JobListScreen> {
         return Colors.green;
       case JobStatus.rejected:
         return Colors.red;
+      case JobStatus.disputed:
+        return Colors.orange;
     }
   }
 
