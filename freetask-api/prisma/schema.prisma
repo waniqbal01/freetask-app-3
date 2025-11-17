@@ -28,6 +28,10 @@ model User {
   password     String
   name         String
   role         UserRole
+  avatarUrl    String?
+  bio          String?
+  skills       Json?
+  rate         Decimal?      @db.Decimal(10, 2)
   services     Service[]
   jobsAsClient Job[]         @relation("ClientJobs")
   jobsAsFreelancer Job[]     @relation("FreelancerJobs")
