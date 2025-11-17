@@ -21,6 +21,8 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
 
   String get _serviceId => (_summary['serviceId'] ?? '') as String;
 
+  String get _description => _summary['description']?.toString() ?? '';
+
   double? get _amount {
     final value = _summary['price'];
     if (value is num) {
@@ -32,8 +34,9 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
   Future<void> _createOrder() async {
     final serviceId = _serviceId;
     final amount = _amount;
+    final description = _description;
 
-    if (serviceId.isEmpty || amount == null) {
+    if (serviceId.isEmpty || amount == null || description.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Maklumat servis tidak lengkap.'),
@@ -47,7 +50,8 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
     });
 
     try {
-      final job = await jobsRepository.createOrder(serviceId, amount);
+      final job =
+          await jobsRepository.createOrder(serviceId, amount, description);
       await escrowService.hold(job.id, job.amount);
 
       if (!mounted) {
