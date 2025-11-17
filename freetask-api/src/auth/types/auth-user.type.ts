@@ -1,3 +1,3 @@
-import { User } from '@prisma/client';
+import { AppUser } from '../../users/types/app-user.type';
 
-export type AuthUser = Omit<User, 'password'>;
+export type AuthUser = AppUser;

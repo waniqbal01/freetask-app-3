@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthUser } from './types/auth-user.type';
+import { toAppUser } from '../users/user.mapper';
 
 @Injectable()
 export class AuthService {
@@ -30,6 +31,10 @@ export class AuthService {
         password: hashed,
         name: dto.name,
         role: dto.role,
+        avatarUrl: dto.avatarUrl,
+        bio: dto.bio,
+        skills: dto.skills,
+        rate: dto.rate,
       },
     });
 
@@ -60,7 +65,7 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException();
     }
-    return this.sanitizeUser(user);
+    return toAppUser(user);
   }
 
   private async buildAuthResponse(user: User): Promise<{ accessToken: string; user: AuthUser }> {
@@ -68,13 +73,7 @@ export class AuthService {
     const accessToken = await this.jwtService.signAsync(payload);
     return {
       accessToken,
-      user: this.sanitizeUser(user),
+      user: toAppUser(user),
     };
-  }
-
-  private sanitizeUser(user: User): AuthUser {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...rest } = user;
-    return rest;
   }
 }
