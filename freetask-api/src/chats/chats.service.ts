@@ -1,7 +1,8 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
-import { ChatMessagePreviewDto, ChatThreadDto } from './dto/chat-thread.dto';
+import { ChatMessageDto } from './dto/chat-message.dto';
+import { ChatThreadDto } from './dto/chat-thread.dto';
 
 @Injectable()
 export class ChatsService {
@@ -19,47 +20,24 @@ export class ChatsService {
         freelancer: {
           select: { id: true, name: true },
         },
-        messages: {
-          take: 1,
-          orderBy: { createdAt: 'desc' },
-          include: {
-            sender: { select: { id: true, name: true } },
-          },
-        },
       },
       orderBy: { updatedAt: 'desc' },
     });
 
     return jobs.map((job) => {
-      const lastMessageEntity = job.messages[0];
-      const lastMessage: ChatMessagePreviewDto | undefined = lastMessageEntity
-        ? {
-            id: lastMessageEntity.id,
-            content: lastMessageEntity.content,
-            senderId: lastMessageEntity.senderId,
-            senderName: lastMessageEntity.sender.name,
-            createdAt: lastMessageEntity.createdAt,
-          }
-        : undefined;
-
       const participantName = job.clientId === userId ? job.freelancer.name : job.client.name;
 
       return {
         id: job.id,
-        jobId: job.id,
         jobTitle: job.title,
         participantName,
-        clientName: job.client.name,
-        freelancerName: job.freelancer.name,
-        status: job.status,
-        lastMessage,
       } satisfies ChatThreadDto;
     });
   }
 
-  async listMessages(jobId: number, userId: number) {
+  async listMessages(jobId: number, userId: number): Promise<ChatMessageDto[]> {
     await this.ensureJobParticipant(jobId, userId);
-    return this.prisma.chatMessage.findMany({
+    const messages = await this.prisma.chatMessage.findMany({
       where: { jobId },
       orderBy: { createdAt: 'asc' },
       include: {
@@ -68,11 +46,21 @@ export class ChatsService {
         },
       },
     });
+
+    return messages.map(
+      (message) =>
+        ({
+          id: message.id,
+          sender: message.sender.name,
+          text: message.content,
+          timestamp: message.createdAt,
+        }) satisfies ChatMessageDto,
+    );
   }
 
-  async postMessage(jobId: number, userId: number, dto: CreateMessageDto) {
+  async postMessage(jobId: number, userId: number, dto: CreateMessageDto): Promise<ChatMessageDto> {
     await this.ensureJobParticipant(jobId, userId);
-    return this.prisma.chatMessage.create({
+    const message = await this.prisma.chatMessage.create({
       data: {
         content: dto.content,
         jobId,
@@ -84,6 +72,13 @@ export class ChatsService {
         },
       },
     });
+
+    return {
+      id: message.id,
+      sender: message.sender.name,
+      text: message.content,
+      timestamp: message.createdAt,
+    } satisfies ChatMessageDto;
   }
 
   private async ensureJobParticipant(jobId: number, userId: number) {

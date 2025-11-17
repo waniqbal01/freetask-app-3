@@ -179,7 +179,6 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     try {
       await ref.read(chatRepositoryProvider).sendText(
             chatId: widget.chatId,
-            sender: 'me',
             text: trimmed,
           );
       _controller.clear();
@@ -206,7 +205,6 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
       final imageUrl = await uploadService.uploadFile(path);
       await ref.read(chatRepositoryProvider).sendImage(
             chatId: widget.chatId,
-            sender: 'me',
             imageUrl: imageUrl,
           );
     } on DioException catch (error) {
