@@ -93,7 +93,7 @@ async function main() {
     data: {
       title: 'Logo Design for Startup',
       description: 'Need a modern logo for a tech startup.',
-      status: JobStatus.ACCEPTED,
+      status: JobStatus.IN_PROGRESS,
       serviceId: services[0].id,
       clientId: clients[0].id,
       freelancerId: freelancers[0].id,

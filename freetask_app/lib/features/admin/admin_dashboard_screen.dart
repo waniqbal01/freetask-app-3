@@ -40,7 +40,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   String _jobStatusLabel(JobStatus status) {
     switch (status) {
       case JobStatus.pending:
-        return 'Pending';
+        return 'Booked';
       case JobStatus.inProgress:
         return 'In Progress';
       case JobStatus.completed:

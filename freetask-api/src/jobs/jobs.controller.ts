@@ -43,6 +43,11 @@ export class JobsController {
     return this.jobsService.acceptJob(id, userId);
   }
 
+  @Patch(':id/start')
+  start(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
+    return this.jobsService.startJob(id, userId);
+  }
+
   @Patch(':id/reject')
   reject(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
     return this.jobsService.rejectJob(id, userId);

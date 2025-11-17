@@ -57,7 +57,7 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Order ${job.id} dicipta. Dana RM${job.amount.toStringAsFixed(2)} dipegang dalam escrow.',
+            'Order ${job.id} dicipta. Dana (demo) RM${job.amount.toStringAsFixed(2)} dipegang untuk status Booked.',
           ),
         ),
       );
