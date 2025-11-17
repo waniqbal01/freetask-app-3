@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { JobsService } from './jobs.service';
 import { CreateJobDto } from './dto/create-job.dto';
@@ -30,8 +31,11 @@ export class JobsController {
   }
 
   @Get()
-  findAll(@GetUser('userId') userId: number) {
-    return this.jobsService.findAllForUser(userId);
+  findAll(
+    @GetUser('userId') userId: number,
+    @Query('scope') scope?: 'client' | 'freelancer' | 'all',
+  ) {
+    return this.jobsService.findAllForUser(userId, scope);
   }
 
   @Get(':id')
