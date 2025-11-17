@@ -28,7 +28,7 @@ class Job {
       serviceTitle: json['service_title']?.toString() ??
           json['serviceTitle']?.toString() ??
           'Servis ${json['service_id']?.toString() ?? json['serviceId']?.toString() ?? ''}',
-      amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      amount: _parseAmount(json['amount']),
       status: _parseStatus(json['status']),
       isDisputed: json['is_disputed'] as bool? ??
           json['isDisputed'] as bool? ??
@@ -84,5 +84,15 @@ class Job {
       default:
         return JobStatus.pending;
     }
+  }
+
+  static double _parseAmount(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    if (value is String) {
+      return double.tryParse(value) ?? 0;
+    }
+    return 0;
   }
 }
