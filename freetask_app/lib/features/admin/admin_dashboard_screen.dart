@@ -47,6 +47,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return 'Completed';
       case JobStatus.rejected:
         return 'Rejected';
+      case JobStatus.disputed:
+        return 'Disputed';
     }
   }
 
@@ -61,6 +63,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return Colors.green;
       case JobStatus.rejected:
         return Colors.redAccent;
+      case JobStatus.disputed:
+        return Colors.orange;
     }
   }
 

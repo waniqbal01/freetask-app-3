@@ -1,4 +1,4 @@
-enum JobStatus { pending, inProgress, completed, rejected }
+enum JobStatus { pending, inProgress, completed, rejected, disputed }
 
 class Job {
   Job({
@@ -70,19 +70,22 @@ class Job {
     if (value is JobStatus) {
       return value;
     }
-    final normalized = value?.toString().toLowerCase();
+    final normalized = value?.toString().toUpperCase();
     switch (normalized) {
-      case 'accepted':
-      case 'inprogress':
-      case 'in_progress':
-      case 'in-progress':
+      case 'PENDING':
+        return JobStatus.pending;
+      case 'IN_PROGRESS':
+      case 'IN-PROGRESS':
+      case 'INPROGRESS':
         return JobStatus.inProgress;
-      case 'completed':
+      case 'COMPLETED':
         return JobStatus.completed;
-      case 'rejected':
+      case 'REJECTED':
         return JobStatus.rejected;
-      case 'pending':
+      case 'DISPUTED':
+        return JobStatus.disputed;
       default:
+        print('Unknown job status received: $value. Falling back to pending.');
         return JobStatus.pending;
     }
   }

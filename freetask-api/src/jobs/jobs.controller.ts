@@ -32,10 +32,10 @@ export class JobsController {
 
   @Get()
   findAll(
-    @GetUser('userId') userId: number,
-    @Query('scope') scope?: 'client' | 'freelancer' | 'all',
+    @GetUser('id') userId: number,
+    @Query('filter') filter?: 'client' | 'freelancer' | 'all',
   ) {
-    return this.jobsService.findAllForUser(userId, scope);
+    return this.jobsService.findAllForUser(userId, filter);
   }
 
   @Get(':id')
