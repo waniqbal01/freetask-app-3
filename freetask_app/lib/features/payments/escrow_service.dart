@@ -2,6 +2,8 @@ import 'dart:async';
 
 import '../../core/notifications/notification_service.dart';
 
+/// Lightweight, in-memory mock for escrow state while backend endpoints are
+/// pending. This should not be treated as a persistent source of truth.
 enum EscrowStatus { held, released, refunded }
 
 class EscrowRecordSummary {
