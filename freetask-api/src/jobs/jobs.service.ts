@@ -6,6 +6,7 @@ import {
 import { JobStatus, Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateJobDto } from './dto/create-job.dto';
+import { DisputeJobDto } from './dto/dispute-job.dto';
 
 @Injectable()
 export class JobsService {
@@ -92,9 +93,16 @@ export class JobsService {
     return this.updateStatus(id, JobStatus.COMPLETED);
   }
 
-  async disputeJob(id: number, userId: number) {
+  async disputeJob(id: number, userId: number, dto: DisputeJobDto) {
     await this.ensureJobParticipant(id, userId);
-    return this.updateStatus(id, JobStatus.DISPUTED);
+    return this.prisma.job.update({
+      where: { id },
+      data: {
+        status: JobStatus.DISPUTED,
+        disputeReason: dto.reason,
+      },
+      include: this.jobInclude,
+    });
   }
 
   private updateStatus(id: number, status: JobStatus) {

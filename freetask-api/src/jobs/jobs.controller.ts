@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { JobsService } from './jobs.service';
 import { CreateJobDto } from './dto/create-job.dto';
+import { DisputeJobDto } from './dto/dispute-job.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { GetUser } from '../auth/get-user.decorator';
 import { UserRole } from '@prisma/client';
@@ -59,7 +60,11 @@ export class JobsController {
   }
 
   @Patch(':id/dispute')
-  dispute(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
-    return this.jobsService.disputeJob(id, userId);
+  dispute(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('userId') userId: number,
+    @Body() dto: DisputeJobDto,
+  ) {
+    return this.jobsService.disputeJob(id, userId, dto);
   }
 }
