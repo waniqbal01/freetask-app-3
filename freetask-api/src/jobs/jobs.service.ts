@@ -40,11 +40,19 @@ export class JobsService {
     });
   }
 
-  async findAllForUser(userId: number) {
+  async findAllForUser(
+    userId: number,
+    scope?: 'client' | 'freelancer' | 'all',
+  ) {
+    const where: Prisma.JobWhereInput =
+      scope === 'client'
+        ? { clientId: userId }
+        : scope === 'freelancer'
+        ? { freelancerId: userId }
+        : { OR: [{ clientId: userId }, { freelancerId: userId }] };
+
     return this.prisma.job.findMany({
-      where: {
-        OR: [{ clientId: userId }, { freelancerId: userId }],
-      },
+      where,
       orderBy: { createdAt: 'desc' },
       include: this.jobInclude,
     });
