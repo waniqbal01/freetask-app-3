@@ -1,16 +1,14 @@
 # freetask_app
 
-A new Flutter project created for the FreeTask application.
+Flutter client for the FreeTask marketplace.
 
-## Getting Started
+## Data sources
 
-This project is a starting point for a Flutter application.
+- **Backend (primary)**: authentication, profile, services, jobs, and chat all
+  fetch from the API via `Dio`.
+- **In-memory (temporary mocks)**: only `ReviewsRepository` and
+  `EscrowService` keep local state for the MVP until their backend endpoints
+  are available.
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+No other mock repositories should be added; new data flows should be wired to
+the backend first.

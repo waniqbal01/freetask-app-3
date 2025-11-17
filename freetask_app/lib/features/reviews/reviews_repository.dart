@@ -2,6 +2,8 @@ import 'dart:async';
 
 import '../jobs/jobs_repository.dart';
 
+/// In-memory review storage used only as a temporary mock until the reviews
+/// API is ready. Do not replace backend data with seeded values here.
 class Review {
   Review({
     required this.jobId,

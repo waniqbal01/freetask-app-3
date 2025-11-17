@@ -59,7 +59,7 @@ class CheckoutScreen extends StatelessWidget {
                   if (jobId == null || jobId.isEmpty || price is! num) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Maklumat job tidak lengkap untuk escrow.'),
+                        content: Text('Maklumat job tidak lengkap untuk demo escrow.'),
                       ),
                     );
                     return;
@@ -70,7 +70,7 @@ class CheckoutScreen extends StatelessWidget {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        'Dana RM${price.toStringAsFixed(2)} dipegang dalam escrow untuk $jobId.',
+                        'Dana (demo) RM${price.toStringAsFixed(2)} dipegang untuk status Booked job $jobId.',
                       ),
                     ),
                   );

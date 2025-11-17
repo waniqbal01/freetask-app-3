@@ -3,9 +3,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { JobStatus, UserRole } from '@prisma/client';
+import { JobStatus, Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateJobDto } from './dto/create-job.dto';
+import { DisputeJobDto } from './dto/dispute-job.dto';
 
 @Injectable()
 export class JobsService {
@@ -23,10 +24,14 @@ export class JobsService {
       throw new NotFoundException('Service not found');
     }
 
+    const amount =
+      dto.amount !== undefined ? new Prisma.Decimal(dto.amount) : service.price;
+
     return this.prisma.job.create({
       data: {
         title: dto.title ?? service.title,
         description: dto.description,
+        amount,
         serviceId: service.id,
         clientId: userId,
         freelancerId: service.freelancerId,
@@ -35,11 +40,19 @@ export class JobsService {
     });
   }
 
-  async findAllForUser(userId: number) {
+  async findAllForUser(
+    userId: number,
+    filter?: 'client' | 'freelancer' | 'all',
+  ) {
+    const where: Prisma.JobWhereInput =
+      filter === 'client'
+        ? { clientId: userId }
+        : filter === 'freelancer'
+        ? { freelancerId: userId }
+        : { OR: [{ clientId: userId }, { freelancerId: userId }] };
+
     return this.prisma.job.findMany({
-      where: {
-        OR: [{ clientId: userId }, { freelancerId: userId }],
-      },
+      where,
       orderBy: { createdAt: 'desc' },
       include: this.jobInclude,
     });
@@ -60,11 +73,16 @@ export class JobsService {
   }
 
   async acceptJob(id: number, userId: number) {
+    // Kept for backward compatibility; delegates to startJob to use new status flow.
+    return this.startJob(id, userId);
+  }
+
+  async startJob(id: number, userId: number) {
     const job = await this.ensureJobForFreelancer(id, userId);
     if (job.status !== JobStatus.PENDING) {
-      throw new ForbiddenException('Only pending jobs can be accepted');
+      throw new ForbiddenException('Only pending jobs can be started');
     }
-    return this.updateStatus(id, JobStatus.ACCEPTED);
+    return this.updateStatus(id, JobStatus.IN_PROGRESS);
   }
 
   async rejectJob(id: number, userId: number) {
@@ -77,15 +95,22 @@ export class JobsService {
 
   async completeJob(id: number, userId: number) {
     const job = await this.ensureJobParticipant(id, userId);
-    if (job.status !== JobStatus.ACCEPTED) {
-      throw new ForbiddenException('Only accepted jobs can be completed');
+    if (job.status !== JobStatus.IN_PROGRESS) {
+      throw new ForbiddenException('Only in-progress jobs can be completed');
     }
     return this.updateStatus(id, JobStatus.COMPLETED);
   }
 
-  async disputeJob(id: number, userId: number) {
+  async disputeJob(id: number, userId: number, dto: DisputeJobDto) {
     await this.ensureJobParticipant(id, userId);
-    return this.updateStatus(id, JobStatus.DISPUTED);
+    return this.prisma.job.update({
+      where: { id },
+      data: {
+        status: JobStatus.DISPUTED,
+        disputeReason: dto.reason,
+      },
+      include: this.jobInclude,
+    });
   }
 
   private updateStatus(id: number, status: JobStatus) {

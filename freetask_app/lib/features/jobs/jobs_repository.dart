@@ -16,13 +16,18 @@ class JobsRepository {
   final FlutterSecureStorage _secureStorage;
   final Dio _dio;
 
-  Future<Job> createOrder(String serviceId, double amount) async {
+  Future<Job> createOrder(
+    String serviceId,
+    double amount,
+    String description,
+  ) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         '/jobs',
         data: <String, dynamic>{
-          'service_id': serviceId,
+          'serviceId': serviceId,
           'amount': amount,
+          'description': description,
         },
         options: await _authorizedOptions(),
       );
@@ -35,17 +40,17 @@ class JobsRepository {
     }
   }
 
-  Future<bool> acceptJob(String jobId) async {
+  Future<bool> startJob(String jobId) async {
     try {
-      final response = await _dio.post<Map<String, dynamic>>(
-        '/jobs/$jobId/accept',
+      final response = await _dio.patch<Map<String, dynamic>>(
+        '/jobs/$jobId/start',
         options: await _authorizedOptions(),
       );
       final data = response.data;
       if (data != null) {
         final job = Job.fromJson(data);
         notificationService.pushLocal(
-          'Job Diterima',
+          'Job Dimulakan',
           'Job ${job.serviceTitle} kini In Progress.',
         );
       }
@@ -61,7 +66,7 @@ class JobsRepository {
 
   Future<bool> rejectJob(String jobId) async {
     try {
-      final response = await _dio.post<Map<String, dynamic>>(
+      final response = await _dio.patch<Map<String, dynamic>>(
         '/jobs/$jobId/reject',
         options: await _authorizedOptions(),
       );
@@ -85,7 +90,7 @@ class JobsRepository {
 
   Future<bool> markCompleted(String jobId) async {
     try {
-      await _dio.post<void>(
+      await _dio.patch<void>(
         '/jobs/$jobId/complete',
         options: await _authorizedOptions(),
       );
@@ -101,7 +106,7 @@ class JobsRepository {
 
   Future<bool> setDispute(String jobId, String reason) async {
     try {
-      await _dio.post<void>(
+      await _dio.patch<void>(
         '/jobs/$jobId/dispute',
         data: <String, dynamic>{'reason': reason},
         options: await _authorizedOptions(),

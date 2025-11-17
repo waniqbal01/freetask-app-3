@@ -1,5 +1,13 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 export class CreateJobDto {
   @Type(() => Number)
@@ -14,4 +22,10 @@ export class CreateJobDto {
   @IsString()
   @IsNotEmpty()
   description: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  amount?: number;
 }

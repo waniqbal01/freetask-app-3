@@ -9,6 +9,11 @@ import { CreateMessageDto } from './dto/create-message.dto';
 export class ChatsController {
   constructor(private readonly chatsService: ChatsService) {}
 
+  @Get()
+  listThreads(@GetUser('userId') userId: number) {
+    return this.chatsService.listThreads(userId);
+  }
+
   @Get(':jobId/messages')
   listMessages(@Param('jobId', ParseIntPipe) jobId: number, @GetUser('userId') userId: number) {
     return this.chatsService.listMessages(jobId, userId);

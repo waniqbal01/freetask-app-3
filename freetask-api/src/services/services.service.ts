@@ -29,8 +29,19 @@ export class ServicesService {
     });
   }
 
-  findAll() {
+  findAll(q?: string, category?: string) {
     return this.prisma.service.findMany({
+      where: {
+        ...(q
+          ? {
+              OR: [
+                { title: { contains: q, mode: 'insensitive' } },
+                { description: { contains: q, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+        ...(category ? { category } : {}),
+      },
       include: {
         freelancer: {
           select: { id: true, name: true },
@@ -72,13 +83,16 @@ export class ServicesService {
     return { success: true };
   }
 
-  async categories() {
+  async categories(): Promise<string[]> {
     const results = await this.prisma.service.findMany({
       distinct: ['category'],
       select: { category: true },
       orderBy: { category: 'asc' },
     });
-    return results.map((item) => item.category);
+
+    return results
+      .map((item) => item.category)
+      .filter((category): category is string => Boolean(category));
   }
 
   private async ensureOwner(serviceId: number, userId: number) {

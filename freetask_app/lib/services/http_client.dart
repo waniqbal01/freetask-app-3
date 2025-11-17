@@ -17,15 +17,21 @@ class HttpClient {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (RequestOptions options, RequestInterceptorHandler handler) async {
+          final isPublicServicesGet =
+              options.method.toUpperCase() == 'GET' && options.path.startsWith('/services');
           final token = await _storage.read(key: _authTokenKey) ??
               await _storage.read(key: _legacyAccessTokenKey);
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
+          } else if (isPublicServicesGet) {
+            // Allow unauthenticated access to public services endpoints.
           }
           handler.next(options);
         },
         onError: (DioException error, ErrorInterceptorHandler handler) async {
-          if (error.response?.statusCode == 401) {
+          final isPublicServicesGet = error.requestOptions.method.toUpperCase() == 'GET' &&
+              error.requestOptions.path.startsWith('/services');
+          if (error.response?.statusCode == 401 && !isPublicServicesGet) {
             await _clearStoredTokens();
             appRouter.go('/login');
           }

@@ -40,13 +40,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   String _jobStatusLabel(JobStatus status) {
     switch (status) {
       case JobStatus.pending:
-        return 'Pending';
+        return 'Booked';
       case JobStatus.inProgress:
         return 'In Progress';
       case JobStatus.completed:
         return 'Completed';
       case JobStatus.rejected:
         return 'Rejected';
+      case JobStatus.disputed:
+        return 'Disputed';
     }
   }
 
@@ -61,6 +63,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return Colors.green;
       case JobStatus.rejected:
         return Colors.redAccent;
+      case JobStatus.disputed:
+        return Colors.orange;
     }
   }
 

@@ -28,6 +28,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     final jobDraft = <String, dynamic>{
       'serviceId': service.id,
       'title': service.title,
+      'description': service.description,
       'price': service.price,
       'deliveryDays': service.deliveryDays,
       'includes': service.includes,

@@ -14,7 +14,7 @@ enum UserRole {
 
 enum JobStatus {
   PENDING
-  ACCEPTED
+  IN_PROGRESS
   REJECTED
   COMPLETED
   DISPUTED
@@ -28,6 +28,10 @@ model User {
   password     String
   name         String
   role         UserRole
+  avatarUrl    String?
+  bio          String?
+  skills       Json?
+  rate         Decimal?      @db.Decimal(10, 2)
   services     Service[]
   jobsAsClient Job[]         @relation("ClientJobs")
   jobsAsFreelancer Job[]     @relation("FreelancerJobs")
@@ -55,7 +59,9 @@ model Job {
   updatedAt      DateTime    @updatedAt
   title          String
   description    String
+  amount         Decimal?    @db.Decimal(10, 2)
   status         JobStatus   @default(PENDING)
+  disputeReason  String?     @default(null)
   service        Service     @relation(fields: [serviceId], references: [id])
   serviceId      Int
   client         User        @relation("ClientJobs", fields: [clientId], references: [id])

@@ -7,9 +7,11 @@ import {
   Patch,
   Post,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { JobsService } from './jobs.service';
 import { CreateJobDto } from './dto/create-job.dto';
+import { DisputeJobDto } from './dto/dispute-job.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { GetUser } from '../auth/get-user.decorator';
 import { UserRole } from '@prisma/client';
@@ -29,8 +31,11 @@ export class JobsController {
   }
 
   @Get()
-  findAll(@GetUser('userId') userId: number) {
-    return this.jobsService.findAllForUser(userId);
+  findAll(
+    @GetUser('id') userId: number,
+    @Query('filter') filter?: 'client' | 'freelancer' | 'all',
+  ) {
+    return this.jobsService.findAllForUser(userId, filter);
   }
 
   @Get(':id')
@@ -41,6 +46,11 @@ export class JobsController {
   @Patch(':id/accept')
   accept(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
     return this.jobsService.acceptJob(id, userId);
+  }
+
+  @Patch(':id/start')
+  start(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
+    return this.jobsService.startJob(id, userId);
   }
 
   @Patch(':id/reject')
@@ -54,7 +64,11 @@ export class JobsController {
   }
 
   @Patch(':id/dispute')
-  dispute(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
-    return this.jobsService.disputeJob(id, userId);
+  dispute(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('userId') userId: number,
+    @Body() dto: DisputeJobDto,
+  ) {
+    return this.jobsService.disputeJob(id, userId, dto);
   }
 }
