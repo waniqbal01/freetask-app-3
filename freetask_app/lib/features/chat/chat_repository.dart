@@ -67,15 +67,13 @@ class ChatRepository {
 
   Future<void> sendText({
     required String chatId,
-    required String sender,
     required String text,
   }) async {
     try {
       await _dio.post<void>(
         '/chats/$chatId/messages',
         data: <String, dynamic>{
-          'text': text,
-          'sender': sender,
+          'content': text,
         },
         options: await _authorizedOptions(),
       );
@@ -88,16 +86,13 @@ class ChatRepository {
 
   Future<void> sendImage({
     required String chatId,
-    required String sender,
     required String imageUrl,
   }) async {
     try {
       await _dio.post<void>(
         '/chats/$chatId/messages',
         data: <String, dynamic>{
-          'image_url': imageUrl,
-          'image_path': imageUrl,
-          'sender': sender,
+          'content': imageUrl,
         },
         options: await _authorizedOptions(),
       );
