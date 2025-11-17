@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ServicesService } from './services.service';
@@ -31,8 +32,11 @@ export class ServicesController {
   }
 
   @Get()
-  findAll() {
-    return this.servicesService.findAll();
+  findAll(
+    @Query('q') q?: string,
+    @Query('category') category?: string,
+  ) {
+    return this.servicesService.findAll(q, category);
   }
 
   @Get('categories')
