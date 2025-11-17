@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { JobStatus, UserRole } from '@prisma/client';
+import { JobStatus, Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateJobDto } from './dto/create-job.dto';
 
@@ -23,10 +23,14 @@ export class JobsService {
       throw new NotFoundException('Service not found');
     }
 
+    const amount =
+      dto.amount !== undefined ? new Prisma.Decimal(dto.amount) : service.price;
+
     return this.prisma.job.create({
       data: {
         title: dto.title ?? service.title,
         description: dto.description,
+        amount,
         serviceId: service.id,
         clientId: userId,
         freelancerId: service.freelancerId,
