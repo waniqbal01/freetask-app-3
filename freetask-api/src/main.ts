@@ -22,7 +22,8 @@ async function bootstrap() {
     }),
   );
 
-  const port = process.env.PORT || 3001;
+  // Default to port 4000 so the backend aligns with the Flutter client configuration.
+  const port = process.env.PORT || 4000;
   await app.listen(port);
   console.log(`Application is running on: ${await app.getUrl()}`);
 }
