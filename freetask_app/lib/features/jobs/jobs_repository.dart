@@ -16,13 +16,18 @@ class JobsRepository {
   final FlutterSecureStorage _secureStorage;
   final Dio _dio;
 
-  Future<Job> createOrder(String serviceId, double amount) async {
+  Future<Job> createOrder(
+    String serviceId,
+    double amount,
+    String description,
+  ) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         '/jobs',
         data: <String, dynamic>{
-          'service_id': serviceId,
+          'serviceId': serviceId,
           'amount': amount,
+          'description': description,
         },
         options: await _authorizedOptions(),
       );
