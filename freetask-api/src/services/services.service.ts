@@ -29,8 +29,19 @@ export class ServicesService {
     });
   }
 
-  findAll() {
+  findAll(q?: string, category?: string) {
     return this.prisma.service.findMany({
+      where: {
+        ...(q
+          ? {
+              OR: [
+                { title: { contains: q, mode: 'insensitive' } },
+                { description: { contains: q, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+        ...(category ? { category } : {}),
+      },
       include: {
         freelancer: {
           select: { id: true, name: true },
