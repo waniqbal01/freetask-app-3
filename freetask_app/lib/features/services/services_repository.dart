@@ -15,12 +15,12 @@ class ServicesRepository {
   final FlutterSecureStorage _secureStorage;
   final Dio _dio;
 
-  Future<List<Service>> getServices({String? query, String? category}) async {
+  Future<List<Service>> getServices({String? q, String? category}) async {
     try {
       final response = await _dio.get<List<dynamic>>(
         '/services',
         queryParameters: <String, dynamic>{
-          if (query != null && query.isNotEmpty) 'q': query,
+          if (q != null && q.isNotEmpty) 'q': q,
           if (category != null && category.isNotEmpty && category != 'Semua')
             'category': category,
         },
@@ -37,7 +37,7 @@ class ServicesRepository {
     }
   }
 
-  Future<Service?> getServiceById(String id) async {
+  Future<Service> getServiceById(String id) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         '/services/$id',
@@ -45,13 +45,13 @@ class ServicesRepository {
       );
       final data = response.data;
       if (data == null) {
-        return null;
+        throw StateError('Servis tidak ditemui.');
       }
       return Service.fromJson(data);
     } on DioException catch (error) {
       await _handleDioError(error);
       if (error.response?.statusCode == 404) {
-        return null;
+        throw StateError('Servis tidak ditemui.');
       }
       rethrow;
     }

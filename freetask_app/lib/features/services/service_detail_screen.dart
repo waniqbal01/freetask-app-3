@@ -16,7 +16,7 @@ class ServiceDetailScreen extends StatefulWidget {
 }
 
 class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
-  late Future<Service?> _serviceFuture;
+  late Future<Service> _serviceFuture;
 
   @override
   void initState() {
@@ -41,9 +41,9 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Maklumat Servis')),
-      body: FutureBuilder<Service?>(
+      body: FutureBuilder<Service>(
         future: _serviceFuture,
-        builder: (BuildContext context, AsyncSnapshot<Service?> snapshot) {
+        builder: (BuildContext context, AsyncSnapshot<Service> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -59,19 +59,23 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   );
                 }
               });
+            } else if (error is StateError) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                final messenger = ScaffoldMessenger.maybeOf(context);
+                messenger?.showSnackBar(
+                  SnackBar(content: Text(error.message)),
+                );
+              });
             }
             return const Center(
               child: Text('Ralat memuat servis.'),
             );
           }
 
-          if (!snapshot.hasData || snapshot.data == null) {
-            return const Center(
-              child: Text('Tiada data'),
-            );
+          final service = snapshot.data;
+          if (service == null) {
+            return const Center(child: Text('Tiada data'));
           }
-
-          final service = snapshot.data!;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),

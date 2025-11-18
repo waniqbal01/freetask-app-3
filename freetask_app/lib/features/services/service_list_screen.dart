@@ -46,7 +46,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
   void _fetchServices() {
     setState(() {
       _servicesFuture = servicesRepository.getServices(
-        query: _searchController.text,
+        q: _searchController.text,
         category: _selectedCategory,
       );
     });

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../payments/escrow_service.dart';
 import 'jobs_repository.dart';
@@ -58,13 +59,16 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showSnackBar(
         SnackBar(
           content: Text(
             'Order ${job.id} dicipta. Dana (demo) RM${job.amount.toStringAsFixed(2)} dipegang untuk status Booked.',
           ),
         ),
       );
+
+      context.go('/jobs');
     } on DioException catch (error) {
       if (!mounted) {
         return;
