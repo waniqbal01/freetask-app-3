@@ -252,7 +252,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             DropdownButtonFormField<String>(
-                              value: _selectedRole,
+                              initialValue: _selectedRole,
                               items: const [
                                 DropdownMenuItem(value: 'Client', child: Text('Client')),
                                 DropdownMenuItem(
@@ -413,7 +413,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               Container(
                                 padding: const EdgeInsets.all(AppSpacing.s12),
                                 decoration: BoxDecoration(
-                                  color: AppColors.error.withOpacity(0.08),
+                                  color: AppColors.error.withValues(alpha: 0.08),
                                   borderRadius: AppRadius.mediumRadius,
                                 ),
                                 child: Text(

@@ -51,7 +51,7 @@ class AppShadows {
 
   static List<BoxShadow> get card => [
         BoxShadow(
-          color: AppColors.neutral900.withOpacity(0.08),
+          color: AppColors.neutral900.withValues(alpha: 0.08),
           blurRadius: 24,
           offset: const Offset(0, 12),
         ),
@@ -62,7 +62,7 @@ class ButtonStateColors {
   ButtonStateColors._();
 
   static const Color normal = AppColors.primary;
-  static Color get loading => AppColors.primary.withOpacity(0.7);
+  static Color get loading => AppColors.primary.withValues(alpha: 0.7);
   static const Color disabled = AppColors.neutral200;
 }
 
@@ -126,7 +126,7 @@ class AppTheme {
       brightness: Brightness.light,
     );
 
-    final TextTheme textTheme = const TextTheme(
+    const TextTheme textTheme = TextTheme(
       headlineLarge: AppTextStyles.headlineLarge,
       headlineMedium: AppTextStyles.headlineMedium,
       headlineSmall: AppTextStyles.headlineSmall,
@@ -157,7 +157,7 @@ class AppTheme {
         shape: const RoundedRectangleBorder(
           borderRadius: AppRadius.largeRadius,
         ),
-        shadowColor: AppColors.neutral900.withOpacity(0.08),
+        shadowColor: AppColors.neutral900.withValues(alpha: 0.08),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ButtonStyle(
@@ -209,7 +209,7 @@ class AppTheme {
         labelStyle: AppTextStyles.bodySmall,
       ),
       dividerColor: AppColors.neutral100,
-      shadowColor: AppColors.neutral900.withOpacity(0.08),
+      shadowColor: AppColors.neutral900.withValues(alpha: 0.08),
     );
   }
 }

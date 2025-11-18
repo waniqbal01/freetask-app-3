@@ -68,7 +68,7 @@ class JobDetailScreen extends StatelessWidget {
                             height: 52,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: statusVisual.color.withOpacity(0.12),
+                              color: statusVisual.color.withValues(alpha: 0.12),
                             ),
                             child: Icon(
                               statusVisual.icon,
@@ -189,7 +189,7 @@ class _DetailRow extends StatelessWidget {
         Icon(
           icon,
           size: 20,
-          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
         ),
         const SizedBox(width: 10),
         Expanded(

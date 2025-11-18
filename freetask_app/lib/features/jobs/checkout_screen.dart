@@ -231,7 +231,7 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(AppSpacing.s12),
                         decoration: BoxDecoration(
-                          color: AppColors.error.withOpacity(0.08),
+                          color: AppColors.error.withValues(alpha: 0.08),
                           borderRadius: AppRadius.mediumRadius,
                         ),
                         child: Text(
