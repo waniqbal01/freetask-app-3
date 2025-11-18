@@ -61,7 +61,8 @@ class ServiceCard extends StatelessWidget {
                         children: [
                           _CategoryChip(label: service.category),
                           const SizedBox(width: AppSpacing.s8),
-                          const Icon(Icons.schedule, size: 16, color: AppColors.neutral300),
+                          const Icon(Icons.schedule,
+                              size: 16, color: AppColors.neutral300),
                           const SizedBox(width: 4),
                           Text(
                             '${service.deliveryDays} hari',
@@ -74,14 +75,16 @@ class ServiceCard extends StatelessWidget {
                         service.description,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: textTheme.bodyMedium?.copyWith(color: AppColors.neutral400),
+                        style: textTheme.bodyMedium
+                            ?.copyWith(color: AppColors.neutral400),
                       ),
                       const SizedBox(height: 14),
                       Row(
                         children: <Widget>[
                           _PriceTag(price: service.price),
                           const Spacer(),
-                          const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.neutral300),
+                          const Icon(Icons.arrow_forward_ios,
+                              size: 14, color: AppColors.neutral300),
                         ],
                       ),
                     ],
@@ -136,7 +139,7 @@ class ServiceCardSkeleton extends StatelessWidget {
                   SizedBox(height: 6),
                   _SkeletonLine(widthFactor: 0.85, height: 12),
                   SizedBox(height: 14),
-                  const Row(
+                  Row(
                     children: <Widget>[
                       _SkeletonLine(widthFactor: 0.3, height: 16),
                       Spacer(),
