@@ -29,9 +29,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _skillsController = TextEditingController();
   final _rateController = TextEditingController();
 
+  late String _selectedRole;
+
   bool _isSubmitting = false;
   bool _isUploadingAvatar = false;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedRole =
+        widget.role?.toLowerCase() == 'freelancer' ? 'Freelancer' : 'Client';
+  }
 
   @override
   void dispose() {
@@ -46,7 +55,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  Future<void> _handleRegister(String role) async {
+  Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -60,7 +69,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final password = _passwordController.text;
     final avatar = _avatarController.text.trim();
 
-    final apiRole = role.toUpperCase();
+    final apiRole = _selectedRole.toUpperCase();
     final isFreelancerRole = apiRole == 'FREELANCER';
 
     final payload = <String, dynamic>{
@@ -113,12 +122,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
             'Berjaya',
             'Pendaftaran berjaya, sila log masuk.',
           );
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Pendaftaran berjaya, sila log masuk.')),
+          );
           context.go('/login');
         }
       } else if (mounted) {
         setState(() {
           _errorMessage = 'Pendaftaran gagal. Sila cuba lagi.';
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pendaftaran gagal. Sila cuba lagi.')),
+        );
       }
     } catch (error) {
       if (error is DioException) {
@@ -132,9 +147,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
           );
         }
       } else {
-        setState(() {
-          _errorMessage = 'Ralat: $error';
-        });
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Ralat: $error';
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Ralat: $error')),
+          );
+        }
       }
     } finally {
       if (mounted) {
@@ -188,9 +208,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final initialRole = widget.role ?? 'Client';
-    final normalizedRole =
-        initialRole.toLowerCase() == 'freelancer' ? 'Freelancer' : 'Client';
+    final normalizedRole = _selectedRole;
     final isFreelancer = normalizedRole == 'Freelancer';
 
     return Scaffold(
@@ -209,6 +227,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
               ),
               const SizedBox(height: 24),
+              DropdownButtonFormField<String>(
+                value: _selectedRole,
+                items: const [
+                  DropdownMenuItem(value: 'Client', child: Text('Client')),
+                  DropdownMenuItem(
+                    value: 'Freelancer',
+                    child: Text('Freelancer'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value == null) {
+                    return;
+                  }
+                  setState(() {
+                    _selectedRole = value;
+                  });
+                },
+                decoration: const InputDecoration(
+                  labelText: 'Jenis Akaun',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -352,9 +393,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ],
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: _isSubmitting
-                    ? null
-                    : () => _handleRegister(normalizedRole),
+                onPressed: _isSubmitting ? null : _handleRegister,
                 child: _isSubmitting
                     ? const SizedBox(
                         height: 20,

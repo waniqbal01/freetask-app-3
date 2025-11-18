@@ -25,7 +25,7 @@ class _StartupScreenState extends State<StartupScreen> {
     }
 
     if (token == null || token.isEmpty) {
-      context.go('/');
+      context.go('/login');
       return;
     }
 
