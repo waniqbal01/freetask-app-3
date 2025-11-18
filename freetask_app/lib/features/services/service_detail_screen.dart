@@ -1,8 +1,11 @@
+import 'dart:math';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../models/service.dart';
+import '../../theme/app_theme.dart';
 import 'services_repository.dart';
 import '../../core/utils/error_utils.dart';
 
@@ -18,6 +21,7 @@ class ServiceDetailScreen extends StatefulWidget {
 class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   Service? _service;
   bool _isLoading = false;
+  bool _isHireLoading = false;
   String? _errorMessage;
 
   @override
@@ -61,7 +65,11 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     }
   }
 
-  void _handleHire(Service service) {
+  Future<void> _handleHire(Service service) async {
+    setState(() {
+      _isHireLoading = true;
+    });
+
     final jobDraft = <String, dynamic>{
       'serviceId': service.id,
       'title': service.title,
@@ -71,11 +79,21 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       'includes': service.includes,
     };
 
-    context.push('/jobs/checkout', extra: jobDraft);
+    try {
+      await context.push('/jobs/checkout', extra: jobDraft);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isHireLoading = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Maklumat Servis')),
       body: Builder(
@@ -87,16 +105,16 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
           if (_errorMessage != null) {
             return Center(
               child: Padding(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(AppSpacing.s24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       _errorMessage!,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.red),
+                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error),
                     ),
-                    const SizedBox(height: 12),
+                    AppSpacing.vertical16,
                     ElevatedButton(
                       onPressed: _loadService,
                       child: const Text('Cuba Lagi'),
@@ -112,82 +130,302 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
             return const Center(child: Text('Tiada data'));
           }
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+          return Stack(
+            children: [
+              SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.s24,
+                  AppSpacing.s24,
+                  AppSpacing.s24,
+                  AppSpacing.s24 + 96,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _ServiceBanner(service: service),
+                    AppSpacing.vertical24,
+                    Text(
+                      service.title,
+                      style: AppTextStyles.headlineMedium,
+                    ),
+                    AppSpacing.vertical8,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Icon(Icons.star, color: AppColors.secondary, size: 22),
+                        const SizedBox(width: AppSpacing.s8),
+                        Text(
+                          service.rating.toStringAsFixed(1),
+                          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.neutral500),
+                        ),
+                        const SizedBox(width: AppSpacing.s16),
+                        Chip(
+                          label: Text(service.category),
+                          backgroundColor: theme.colorScheme.surface,
+                          shape: const StadiumBorder(),
+                        ),
+                      ],
+                    ),
+                    AppSpacing.vertical16,
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppSpacing.s16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: AppRadius.largeRadius,
+                        boxShadow: AppShadows.card,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Harga Pakej',
+                                  style: AppTextStyles.labelSmall,
+                                ),
+                                AppSpacing.vertical8,
+                                Text(
+                                  'RM${service.price.toStringAsFixed(2)}',
+                                  style: AppTextStyles.headlineSmall,
+                                ),
+                                AppSpacing.vertical8,
+                                Text(
+                                  'Siap dalam ${service.deliveryDays} hari',
+                                  style: AppTextStyles.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.payments_rounded, color: AppColors.primary, size: 36),
+                        ],
+                      ),
+                    ),
+                    AppSpacing.vertical24,
+                    Text(
+                      'Butiran Servis',
+                      style: AppTextStyles.headlineSmall,
+                    ),
+                    AppSpacing.vertical8,
+                    Text(
+                      service.description,
+                      style: AppTextStyles.bodyMedium,
+                    ),
+                    AppSpacing.vertical24,
+                    Text(
+                      'Termasuk',
+                      style: AppTextStyles.headlineSmall,
+                    ),
+                    AppSpacing.vertical8,
+                    ...service.includes.map(
+                      (String include) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.s8 / 2),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.only(top: 4),
+                              child: Icon(Icons.check_circle, color: AppColors.primary, size: 18),
+                            ),
+                            const SizedBox(width: AppSpacing.s8),
+                            Expanded(
+                              child: Text(
+                                include,
+                                style: AppTextStyles.bodyMedium,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    AppSpacing.vertical24,
+                    _FreelancerProfile(freelancerId: service.freelancerId),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+      bottomNavigationBar: Builder(
+        builder: (BuildContext context) {
+          final service = _service;
+          if (service == null || _isLoading) return const SizedBox.shrink();
+
+          return SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.s24,
+                AppSpacing.s8,
+                AppSpacing.s24,
+                AppSpacing.s24,
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isHireLoading ? null : () => _handleHire(service),
+                  child: _isHireLoading
+                      ? const SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Hire Sekarang'),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ServiceBanner extends StatelessWidget {
+  const _ServiceBanner({required this.service});
+
+  final Service service;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: AppRadius.largeRadius,
+      child: Container(
+        height: 220,
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppColors.primary, AppColors.secondary],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -32,
+              top: -32,
+              child: Container(
+                height: 160,
+                width: 160,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.08),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              bottom: 0,
+              right: 0,
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.s16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Chip(
+                      label: Text(
+                        service.category,
+                        style: AppTextStyles.bodySmall.copyWith(color: Colors.white),
+                      ),
+                      backgroundColor: Colors.white.withOpacity(0.18),
+                      side: BorderSide.none,
+                    ),
+                    AppSpacing.vertical16,
+                    Text(
+                      service.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.headlineSmall.copyWith(color: Colors.white),
+                    ),
+                    AppSpacing.vertical8,
+                    Row(
+                      children: [
+                        const Icon(Icons.star_rounded, color: Colors.amber, size: 22),
+                        const SizedBox(width: AppSpacing.s8),
+                        Text(
+                          service.rating.toStringAsFixed(1),
+                          style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
+                        ),
+                        const SizedBox(width: AppSpacing.s16),
+                        Text(
+                          'RM${service.price.toStringAsFixed(2)}',
+                          style: AppTextStyles.headlineSmall.copyWith(color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FreelancerProfile extends StatelessWidget {
+  const _FreelancerProfile({required this.freelancerId});
+
+  final String freelancerId;
+
+  @override
+  Widget build(BuildContext context) {
+    final initials = freelancerId.isNotEmpty
+        ? freelancerId.substring(0, min(2, freelancerId.length)).toUpperCase()
+        : 'FR';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.s16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: AppRadius.largeRadius,
+        boxShadow: AppShadows.card,
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: AppColors.primary.withOpacity(0.1),
+            child: Text(
+              initials,
+              style: AppTextStyles.headlineSmall.copyWith(color: AppColors.primary),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.s16),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  service.title,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  'Profil Freelancer',
+                  style: AppTextStyles.labelSmall.copyWith(color: AppColors.neutral400),
                 ),
-                const SizedBox(height: 12),
+                AppSpacing.vertical8,
+                Text(
+                  'ID: $freelancerId',
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.neutral500),
+                ),
+                AppSpacing.vertical8,
                 Row(
-                  children: [
-                    const Icon(Icons.star, color: Colors.amber),
-                    const SizedBox(width: 4),
-                    Text(service.rating.toStringAsFixed(1)),
-                    const SizedBox(width: 16),
-                    Chip(
-                      label: Text(service.category),
-                      backgroundColor:
-                          Theme.of(context).colorScheme.surfaceVariant,
+                  children: const [
+                    Icon(Icons.verified_rounded, color: AppColors.secondary, size: 18),
+                    SizedBox(width: AppSpacing.s8),
+                    Text(
+                      'Ready to collaborate',
+                      style: AppTextStyles.bodySmall,
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  service.description,
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Harga: RM${service.price.toStringAsFixed(2)}',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                Text('Tempoh siap: ${service.deliveryDays} hari'),
-                const SizedBox(height: 24),
-                Text(
-                  'Termasuk:',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                ...service.includes.map(
-                  (String include) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('• '),
-                        Expanded(child: Text(include)),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 32),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed:
-                        _isLoading ? null : () => _handleHire(service),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Hire'),
-                  ),
-                ),
               ],
             ),
-          );
-        },
+          ),
+          const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.neutral300),
+        ],
       ),
     );
   }
