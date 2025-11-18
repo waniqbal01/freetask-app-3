@@ -47,12 +47,12 @@ export class AuthService {
       where: { email },
     });
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Email atau password salah');
     }
 
     const valid = await bcrypt.compare(dto.password, user.password);
     if (!valid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Email atau password salah');
     }
 
     return this.buildAuthResponse(user);
