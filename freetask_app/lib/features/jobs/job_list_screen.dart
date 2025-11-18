@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/utils/error_utils.dart';
@@ -206,13 +207,12 @@ class _JobListScreenState extends State<JobListScreen> {
   }
 
   void _openJobDetail(Job job, {required bool isClientView}) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => JobDetailScreen(
-          job: job,
-          isClientView: isClientView,
-        ),
-      ),
+    context.push(
+      '/jobs/${job.id}',
+      extra: <String, dynamic>{
+        'job': job,
+        'isClientView': isClientView,
+      },
     );
   }
 
@@ -488,6 +488,15 @@ class _JobListScreenState extends State<JobListScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Jobs'),
+          leading: BackButton(
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/home');
+              }
+            },
+          ),
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Client Jobs'),
