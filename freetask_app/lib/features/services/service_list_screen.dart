@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/utils/error_utils.dart';
 import '../../core/widgets/ft_button.dart';
 import '../../models/service.dart';
+import '../../theme/app_theme.dart';
 import '../../widgets/service_card.dart';
 import 'services_repository.dart';
 
@@ -111,75 +112,37 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Servis'),
-        automaticallyImplyLeading: false,
-      ),
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints _) {
-            return Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 600),
-                child: CustomScrollView(
-                  slivers: <Widget>[
-                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
-                    SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      sliver: SliverToBoxAdapter(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            TextField(
-                              controller: _searchController,
-                              decoration: InputDecoration(
-                                hintText: 'Cari servis...',
-                                prefixIcon: const Icon(Icons.search),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              height: 40,
-                              child: ListView.separated(
-                                scrollDirection: Axis.horizontal,
-                                itemBuilder:
-                                    (BuildContext context, int index) {
-                                  final category = _categories[index];
-                                  final isSelected =
-                                      category == _selectedCategory;
-                                  return ChoiceChip(
-                                    label: Text(category),
-                                    selected: isSelected,
-                                    onSelected: (_) {
-                                      setState(() {
-                                        _selectedCategory = category;
-                                      });
-                                      _fetchServices();
-                                    },
-                                    selectedColor: Theme.of(context)
-                                        .colorScheme
-                                        .primaryContainer,
-                                    labelStyle: Theme.of(context)
-                                        .textTheme
-                                        .labelMedium,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(999),
-                                    ),
-                                  );
-                                },
-                                separatorBuilder: (BuildContext context, int _) =>
-                                    const SizedBox(width: 8),
-                                itemCount: _categories.length,
-                              ),
-                            ),
-                          ],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFEEF3FC), Colors.white],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints _) {
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 720),
+                  child: CustomScrollView(
+                    slivers: <Widget>[
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+                          child: _MarketplaceHero(
+                            searchController: _searchController,
+                            onSearchChanged: _onSearchChanged,
+                            categories: _categories,
+                            selectedCategory: _selectedCategory,
+                            onCategorySelected: (String value) {
+                              setState(() => _selectedCategory = value);
+                              _fetchServices();
+                            },
+                          ),
                         ),
                       ),
-                    ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
                     if (_isLoading)
                       SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -268,6 +231,110 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+class _MarketplaceHero extends StatelessWidget {
+  const _MarketplaceHero({
+    required this.searchController,
+    required this.onSearchChanged,
+    required this.categories,
+    required this.selectedCategory,
+    required this.onCategorySelected,
+  });
+
+  final TextEditingController searchController;
+  final VoidCallback onSearchChanged;
+  final List<String> categories;
+  final String selectedCategory;
+  final ValueChanged<String> onCategorySelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: AppRadius.largeRadius,
+        boxShadow: AppShadows.card,
+      ),
+      padding: const EdgeInsets.all(AppSpacing.s16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.store_mall_directory_outlined, color: AppColors.primary),
+              ),
+              const SizedBox(width: AppSpacing.s12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Marketplace Servis',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.neutral900,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Pilih servis berkualiti dengan reka bentuk marketplace moden.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s16),
+          TextField(
+            controller: searchController,
+            onChanged: (_) => onSearchChanged(),
+            decoration: const InputDecoration(
+              hintText: 'Cari servis, kategori atau freelancer...',
+              prefixIcon: Icon(Icons.search_rounded),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s12),
+          SizedBox(
+            height: 42,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemBuilder: (BuildContext context, int index) {
+                final category = categories[index];
+                final isSelected = category == selectedCategory;
+                return ChoiceChip(
+                  label: Text(category),
+                  selected: isSelected,
+                  onSelected: (_) => onCategorySelected(category),
+                  selectedColor: AppColors.primary.withOpacity(0.12),
+                  labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: isSelected ? AppColors.primary : AppColors.neutral400,
+                        fontWeight: FontWeight.w600,
+                      ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                    side: BorderSide(
+                      color: isSelected ? AppColors.primary : AppColors.neutral100,
+                    ),
+                  ),
+                );
+              },
+              separatorBuilder: (BuildContext context, int _) => const SizedBox(width: 8),
+              itemCount: categories.length,
+            ),
+          ),
+        ],
       ),
     );
   }
