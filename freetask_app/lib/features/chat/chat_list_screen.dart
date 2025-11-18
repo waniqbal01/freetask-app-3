@@ -42,9 +42,9 @@ class ChatListScreen extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const Scaffold(
-        appBar: AppBar(title: Text('Chat')),
-        body: Center(child: CircularProgressIndicator()),
+      loading: () => Scaffold(
+        appBar: AppBar(title: const Text('Chat')),
+        body: const Center(child: CircularProgressIndicator()),
       ),
       error: (Object error, StackTrace stackTrace) {
         if (error is DioException) {
