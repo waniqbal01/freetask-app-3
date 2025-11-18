@@ -24,6 +24,8 @@ export class AuthService {
       throw new ConflictException('Email already in use');
     }
 
+    const avatarUrl = dto.avatarUrl ?? dto.avatar;
+
     const hashed = await bcrypt.hash(dto.password, 10);
     const user = await this.prisma.user.create({
       data: {
@@ -31,7 +33,7 @@ export class AuthService {
         password: hashed,
         name: dto.name,
         role: dto.role,
-        avatarUrl: dto.avatarUrl,
+        avatarUrl,
         bio: dto.bio,
         skills: dto.skills,
         rate: dto.rate,

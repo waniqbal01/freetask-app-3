@@ -34,11 +34,13 @@ export class UsersService {
   }
 
   async updateProfile(id: number, dto: UpdateUserDto) {
+    const avatarUrl = dto.avatarUrl ?? dto.avatar;
+
     const user = await this.prisma.user.update({
       where: { id },
       data: {
         name: dto.name,
-        avatarUrl: dto.avatarUrl,
+        avatarUrl,
         bio: dto.bio,
         skills: dto.skills,
         rate: dto.rate,
