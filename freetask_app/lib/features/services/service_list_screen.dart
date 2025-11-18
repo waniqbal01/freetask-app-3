@@ -4,10 +4,10 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../models/service.dart';
 import '../../core/utils/error_utils.dart';
+import '../../models/service.dart';
+import '../../widgets/service_card.dart';
 import 'services_repository.dart';
-import 'widgets/service_card.dart';
 
 class ServiceListScreen extends StatefulWidget {
   const ServiceListScreen({super.key});
@@ -112,104 +112,144 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Servis'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(120),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Cari servis...',
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+      ),
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints _) {
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: CustomScrollView(
+                  slivers: <Widget>[
+                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      sliver: SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            TextField(
+                              controller: _searchController,
+                              decoration: InputDecoration(
+                                hintText: 'Cari servis...',
+                                prefixIcon: const Icon(Icons.search),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              height: 40,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemBuilder:
+                                    (BuildContext context, int index) {
+                                  final category = _categories[index];
+                                  final isSelected =
+                                      category == _selectedCategory;
+                                  return ChoiceChip(
+                                    label: Text(category),
+                                    selected: isSelected,
+                                    onSelected: (_) {
+                                      setState(() {
+                                        _selectedCategory = category;
+                                      });
+                                      _fetchServices();
+                                    },
+                                    selectedColor: Theme.of(context)
+                                        .colorScheme
+                                        .primaryContainer,
+                                    labelStyle: Theme.of(context)
+                                        .textTheme
+                                        .labelMedium,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                  );
+                                },
+                                separatorBuilder: (BuildContext context, int _) =>
+                                    const SizedBox(width: 8),
+                                itemCount: _categories.length,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: _selectedCategory,
-                  decoration: InputDecoration(
-                    labelText: 'Kategori',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  items: _categories
-                      .map(
-                        (String category) => DropdownMenuItem<String>(
-                          value: category,
-                          child: Text(category),
+                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                    if (_isLoading)
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (BuildContext context, int index) {
+                              if (index.isOdd) {
+                                return const SizedBox(height: 12);
+                              }
+                              return const ServiceCardSkeleton();
+                            },
+                            childCount: (6 * 2) - 1,
+                          ),
                         ),
                       )
-                      .toList(),
-                  onChanged: (String? value) {
-                    if (value == null) {
-                      return;
-                    }
-                    setState(() {
-                      _selectedCategory = value;
-                    });
-                    _fetchServices();
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      body: Builder(
-        builder: (BuildContext context) {
-          if (_isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (_errorMessage != null) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _errorMessage!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      onPressed: _fetchServices,
-                      child: const Text('Cuba Lagi'),
-                    ),
+                    else if (_errorMessage != null)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: <Widget>[
+                              Text(
+                                _errorMessage!,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .error,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              FilledButton(
+                                onPressed: _fetchServices,
+                                child: const Text('Cuba Lagi'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else if (_services.isEmpty)
+                      const SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(child: Text('Tiada data')),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (BuildContext context, int index) {
+                              if (index.isOdd) {
+                                return const SizedBox(height: 12);
+                              }
+                              final service = _services[index ~/ 2];
+                              return ServiceCard(
+                                service: service,
+                                onTap: () =>
+                                    context.push('/service/${service.id}'),
+                              );
+                            },
+                            childCount: (_services.length * 2) - 1,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
             );
-          }
-
-          if (_services.isEmpty) {
-            return const Center(
-              child: Text('Tiada data'),
-            );
-          }
-
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-            itemCount: _services.length,
-            separatorBuilder: (BuildContext context, int index) =>
-                const SizedBox(height: 12),
-            itemBuilder: (BuildContext context, int index) {
-              final service = _services[index];
-              return ServiceCard(
-                service: service,
-                onView: () => context.push('/service/${service.id}'),
-              );
-            },
-          );
-        },
+          },
+        ),
       ),
     );
   }
