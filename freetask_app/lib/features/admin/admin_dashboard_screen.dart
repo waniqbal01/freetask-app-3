@@ -16,7 +16,8 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   late Future<List<Job>> _jobsFuture;
   List<EscrowRecordSummary> _escrowRecords = <EscrowRecordSummary>[];
-  Map<String, EscrowRecordSummary> _escrowByJob = <String, EscrowRecordSummary>{};
+  Map<String, EscrowRecordSummary> _escrowByJob =
+      <String, EscrowRecordSummary>{};
 
   @override
   void initState() {
@@ -170,6 +171,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       Chip(
                         label: Text(_jobStatusLabel(job.status)),
                         backgroundColor: _jobStatusColor(job.status, context)
+                            // ignore: deprecated_member_use
                             .withOpacity(0.15),
                         labelStyle: TextStyle(
                           color: _jobStatusColor(job.status, context),
@@ -178,6 +180,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ),
                       Chip(
                         label: Text('Escrow: $escrowLabel'),
+                        // ignore: deprecated_member_use
                         backgroundColor: escrowColor?.withOpacity(0.15),
                         labelStyle: TextStyle(
                           color: escrowColor ?? Colors.grey,
@@ -238,6 +241,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     Chip(
                       label: Text(_escrowStatusLabel(record.status)),
                       backgroundColor:
+                          // ignore: deprecated_member_use
                           _escrowStatusColor(record.status).withOpacity(0.15),
                       labelStyle: TextStyle(
                         color: _escrowStatusColor(record.status),
@@ -340,7 +344,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           final messenger = ScaffoldMessenger.maybeOf(context);
                           if (messenger != null) {
                             messenger.showSnackBar(
-                              SnackBar(content: Text(resolveDioErrorMessage(error))),
+                              SnackBar(
+                                  content: Text(resolveDioErrorMessage(error))),
                             );
                           }
                         });

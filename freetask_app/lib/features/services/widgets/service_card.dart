@@ -39,7 +39,8 @@ class ServiceCard extends StatelessWidget {
               children: [
                 Chip(
                   label: Text(service.category),
-                  backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+                  backgroundColor:
+                      Theme.of(context).colorScheme.surfaceContainerHighest,
                 ),
                 const Spacer(),
                 const Icon(Icons.star, color: Colors.amber, size: 20),

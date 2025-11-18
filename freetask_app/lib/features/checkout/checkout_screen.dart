@@ -30,7 +30,8 @@ class CheckoutScreen extends StatelessWidget {
             else ...[
               Text('Servis: ${draft['title'] ?? '-'}'),
               const SizedBox(height: 8),
-              Text('Harga: RM${(draft['price'] as num?)?.toStringAsFixed(2) ?? '0.00'}'),
+              Text(
+                  'Harga: RM${(draft['price'] as num?)?.toStringAsFixed(2) ?? '0.00'}'),
               const SizedBox(height: 8),
               Text('Tempoh siap: ${draft['deliveryDays'] ?? '-'} hari'),
               const SizedBox(height: 16),
@@ -53,13 +54,15 @@ class CheckoutScreen extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () async {
-                  final jobId = (draft['jobId'] ?? draft['serviceId'])?.toString();
+                  final jobId =
+                      (draft['jobId'] ?? draft['serviceId'])?.toString();
                   final price = draft['price'];
 
                   if (jobId == null || jobId.isEmpty || price is! num) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Maklumat job tidak lengkap untuk demo escrow.'),
+                        content: Text(
+                            'Maklumat job tidak lengkap untuk demo escrow.'),
                       ),
                     );
                     return;
@@ -67,6 +70,7 @@ class CheckoutScreen extends StatelessWidget {
 
                   await escrowService.hold(jobId, price.toDouble());
 
+                  // ignore: use_build_context_synchronously
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(

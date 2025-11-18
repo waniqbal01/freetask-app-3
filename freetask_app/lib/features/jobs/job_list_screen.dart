@@ -204,12 +204,12 @@ class _JobListScreenState extends State<JobListScreen> {
                             ? null
                             : () => _handleAction(
                                   () async {
-                                final success =
-                                    await jobsRepository.rejectJob(job.id);
-                                return success;
-                              },
-                              'Job telah ditolak dan dikemas kini.',
-                            ),
+                                    final success =
+                                        await jobsRepository.rejectJob(job.id);
+                                    return success;
+                                  },
+                                  'Job telah ditolak dan dikemas kini.',
+                                ),
                         child: const Text('Reject'),
                       ),
                       const SizedBox(width: 8),
@@ -245,12 +245,12 @@ class _JobListScreenState extends State<JobListScreen> {
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: alreadyReviewed
-                      ? Chip(
-                          avatar: const Icon(
+                      ? const Chip(
+                          avatar: Icon(
                             Icons.check_circle,
                             color: Colors.green,
                           ),
-                          label: const Text('Review dihantar'),
+                          label: Text('Review dihantar'),
                         )
                       : TextButton.icon(
                           onPressed: () => _openReviewDialog(job),

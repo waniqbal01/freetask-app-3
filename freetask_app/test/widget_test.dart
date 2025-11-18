@@ -1,11 +1,10 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:freetask_app/main.dart';
+import 'package:freetask_app/app.dart';
 
 void main() {
   testWidgets('Home screen shows welcome message', (WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: FreeTaskApp()));
+    await tester.pumpWidget(const ProviderScope(child: App()));
 
     expect(find.textContaining('Welcome to FreeTask!'), findsOneWidget);
     await tester.tap(find.text('Show message'));

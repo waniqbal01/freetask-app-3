@@ -93,7 +93,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: _selectedCategory,
+                  initialValue: _selectedCategory,
                   decoration: InputDecoration(
                     labelText: 'Kategori',
                     border: OutlineInputBorder(

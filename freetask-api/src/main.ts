@@ -8,12 +8,12 @@ async function bootstrap() {
     bufferLogs: true,
   });
 
-  app.enableCors({
-    origin: ['http://localhost:3000', 'http://localhost:4000'],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  });
+app.enableCors({
+  origin: true, // benarkan semua origin (sesuai untuk DEV)
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+});
 
   app.useGlobalPipes(
     new ValidationPipe({

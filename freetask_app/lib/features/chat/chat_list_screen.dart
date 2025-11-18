@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:freetask_app/features/chat/chat_models.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/utils/error_utils.dart';
@@ -41,9 +42,9 @@ class ChatListScreen extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const Scaffold(
-        appBar: AppBar(title: Text('Chat')),
-        body: Center(child: CircularProgressIndicator()),
+      loading: () => Scaffold(
+        appBar: AppBar(title: const Text('Chat')),
+        body: const Center(child: CircularProgressIndicator()),
       ),
       error: (Object error, StackTrace stackTrace) {
         if (error is DioException) {

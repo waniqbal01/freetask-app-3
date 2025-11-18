@@ -17,7 +17,8 @@ class JobCheckoutScreen extends StatefulWidget {
 class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
   bool _isSubmitting = false;
 
-  Map<String, dynamic> get _summary => widget.serviceSummary ?? <String, dynamic>{};
+  Map<String, dynamic> get _summary =>
+      widget.serviceSummary ?? <String, dynamic>{};
 
   String get _serviceId => (_summary['serviceId'] ?? '') as String;
 
@@ -81,6 +82,7 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       );
     } finally {
       if (!mounted) {
+        // ignore: control_flow_in_finally
         return;
       }
       setState(() {
@@ -117,8 +119,7 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
             else
               Text('Servis ID: $_serviceId'),
             const SizedBox(height: 12),
-            if (delivery != null)
-              Text('Tempoh siap: $delivery hari'),
+            if (delivery != null) Text('Tempoh siap: $delivery hari'),
             const SizedBox(height: 12),
             Text('Jumlah: RM${(_amount ?? 0).toStringAsFixed(2)}'),
             const SizedBox(height: 16),
