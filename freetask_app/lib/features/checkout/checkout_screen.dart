@@ -111,6 +111,8 @@ class CheckoutScreen extends StatelessWidget {
 
                       await escrowService.hold(jobId, price.toDouble());
 
+                      if (!context.mounted) return;
+
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
