@@ -4,11 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/utils/error_utils.dart';
+import '../../core/widgets/ft_button.dart';
+import '../../core/widgets/loading_overlay.dart';
 import '../../models/job.dart';
 import '../reviews/review_dialog.dart';
 import '../reviews/reviews_repository.dart';
 import 'job_detail_screen.dart';
 import 'jobs_repository.dart';
+import 'widgets/job_card_skeleton.dart';
 import 'widgets/job_status_badge.dart';
 
 class JobListScreen extends StatefulWidget {
@@ -160,9 +163,7 @@ class _JobListScreenState extends State<JobListScreen> {
       setState(() {
         _isProcessing = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(resolveDioErrorMessage(error))),
-      );
+      showErrorSnackBar(context, resolveDioErrorMessage(error));
     } catch (_) {
       if (!mounted) {
         return;
@@ -170,11 +171,7 @@ class _JobListScreenState extends State<JobListScreen> {
       setState(() {
         _isProcessing = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ralat melaksanakan tindakan.'),
-        ),
-      );
+      showErrorSnackBar(context, 'Ralat melaksanakan tindakan.');
     }
   }
 
@@ -363,16 +360,16 @@ class _JobListScreenState extends State<JobListScreen> {
     if (isClientView && job.status == JobStatus.inProgress) {
       return Align(
         alignment: Alignment.centerRight,
-        child: FilledButton(
-          onPressed: _isProcessing
-              ? null
-              : () => _handleAction(
-                    () async {
-                      return jobsRepository.markCompleted(job.id);
-                    },
-                    'Job ditandakan selesai. Status kini Completed.',
-                  ),
-          child: const Text('Mark as Completed'),
+        child: FTButton(
+          label: 'Mark as Completed',
+          isLoading: _isProcessing,
+          onPressed: () => _handleAction(
+            () async {
+              return jobsRepository.markCompleted(job.id);
+            },
+            'Job ditandakan selesai. Status kini Completed.',
+          ),
+          expanded: false,
         ),
       );
     }
@@ -380,27 +377,29 @@ class _JobListScreenState extends State<JobListScreen> {
     if (!isClientView && job.status == JobStatus.pending) {
       return Row(
         children: [
-          TextButton(
-            onPressed: _isProcessing
-                ? null
-                : () => _handleAction(
-                      () async {
-                        final success = await jobsRepository.rejectJob(job.id);
-                        return success;
-                      },
-                      'Job telah ditolak dan dikemas kini.',
-                    ),
-            child: const Text('Reject'),
+          FTButton(
+            label: 'Reject',
+            isLoading: _isProcessing,
+            onPressed: () => _handleAction(
+              () async {
+                final success = await jobsRepository.rejectJob(job.id);
+                return success;
+              },
+              'Job telah ditolak dan dikemas kini.',
+            ),
+            expanded: false,
+            size: FTButtonSize.small,
           ),
           const SizedBox(width: 8),
-          FilledButton(
-            onPressed: _isProcessing
-                ? null
-                : () => _handleAction(
-                      () => jobsRepository.startJob(job.id),
-                      'Job dimulakan! Status kini In Progress.',
-                    ),
-            child: const Text('Start Job'),
+          FTButton(
+            label: 'Start Job',
+            isLoading: _isProcessing,
+            onPressed: () => _handleAction(
+              () => jobsRepository.startJob(job.id),
+              'Job dimulakan! Status kini In Progress.',
+            ),
+            expanded: false,
+            size: FTButtonSize.small,
           ),
         ],
       );
@@ -417,10 +416,11 @@ class _JobListScreenState extends State<JobListScreen> {
                 ),
                 label: const Text('Review dihantar'),
               )
-            : TextButton.icon(
+            : FTButton(
+                label: 'Tulis review',
                 onPressed: () => _openReviewDialog(job),
-                icon: const Icon(Icons.rate_review_outlined),
-                label: const Text('Tulis review'),
+                expanded: false,
+                size: FTButtonSize.small,
               ),
       );
     }
@@ -436,7 +436,12 @@ class _JobListScreenState extends State<JobListScreen> {
     required Future<void> Function() onRefresh,
   }) {
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemBuilder: (_, __) => const JobCardSkeleton(),
+        separatorBuilder: (_, __) => const SizedBox.shrink(),
+        itemCount: 4,
+      );
     }
 
     if (errorMessage != null) {
@@ -446,15 +451,22 @@ class _JobListScreenState extends State<JobListScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Icon(
+                Icons.error_outline,
+                size: 38,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(height: 12),
               Text(
                 errorMessage,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
               const SizedBox(height: 12),
-              ElevatedButton(
+              FTButton(
+                label: 'Cuba Lagi',
                 onPressed: onRefresh,
-                child: const Text('Cuba Lagi'),
+                expanded: false,
               ),
             ],
           ),
@@ -463,7 +475,16 @@ class _JobListScreenState extends State<JobListScreen> {
     }
 
     if (jobs.isEmpty) {
-      return const Center(child: Text('Tiada data'));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(Icons.assignment_outlined, size: 48, color: Colors.grey),
+            SizedBox(height: 12),
+            Text('Tiada job ditemui'),
+          ],
+        ),
+      );
     }
 
     return RefreshIndicator(
@@ -504,22 +525,31 @@ class _JobListScreenState extends State<JobListScreen> {
             ],
           ),
         ),
-        body: TabBarView(
+        body: Stack(
           children: [
-            _buildJobsTab(
-              jobs: _clientJobs,
-              isClientView: true,
-              isLoading: _isLoadingClient,
-              errorMessage: _clientErrorMessage,
-              onRefresh: _refreshClientJobs,
+            TabBarView(
+              children: [
+                _buildJobsTab(
+                  jobs: _clientJobs,
+                  isClientView: true,
+                  isLoading: _isLoadingClient,
+                  errorMessage: _clientErrorMessage,
+                  onRefresh: _refreshClientJobs,
+                ),
+                _buildJobsTab(
+                  jobs: _freelancerJobs,
+                  isClientView: false,
+                  isLoading: _isLoadingFreelancer,
+                  errorMessage: _freelancerErrorMessage,
+                  onRefresh: _refreshFreelancerJobs,
+                ),
+              ],
             ),
-            _buildJobsTab(
-              jobs: _freelancerJobs,
-              isClientView: false,
-              isLoading: _isLoadingFreelancer,
-              errorMessage: _freelancerErrorMessage,
-              onRefresh: _refreshFreelancerJobs,
-            ),
+            if (_isProcessing)
+              const LoadingOverlay(
+                message: 'Memproses tindakan...',
+                backgroundOpacity: 0.4,
+              ),
           ],
         ),
       ),

@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/widgets/ft_button.dart';
+import '../../core/widgets/loading_overlay.dart';
 import '../payments/escrow_service.dart';
 import 'jobs_repository.dart';
 import '../../core/utils/error_utils.dart';
@@ -69,8 +71,10 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
           ),
         ),
       );
-
-      context.go('/jobs');
+      await _showSuccessDialog();
+      if (mounted) {
+        context.go('/jobs');
+      }
     } on DioException catch (error) {
       if (!mounted) {
         return;
@@ -99,6 +103,50 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
     }
   }
 
+  Future<void> _showSuccessDialog() {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: Colors.green,
+                child: Icon(Icons.check_rounded, color: Colors.white, size: 34),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Tempahan berjaya! Freelancer akan respon.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Anda boleh semak status tempahan dalam halaman Jobs.',
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: FTButton(
+                label: 'Lihat Jobs',
+                onPressed: () => Navigator.of(context).pop(),
+                expanded: true,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final title = _summary['title']?.toString();
@@ -107,74 +155,75 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Job Checkout')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Ringkasan Servis',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 16),
-            if (title != null)
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium,
-              )
-            else
-              Text('Servis ID: $_serviceId'),
-            const SizedBox(height: 12),
-            if (delivery != null)
-              Text('Tempoh siap: $delivery hari'),
-            const SizedBox(height: 12),
-            Text('Jumlah: RM${(_amount ?? 0).toStringAsFixed(2)}'),
-            const SizedBox(height: 16),
-            if (includes != null && includes.isNotEmpty) ...[
-              Text(
-                'Termasuk:',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              ...includes.map(
-                (String item) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('• '),
-                      Expanded(child: Text(item)),
-                    ],
-                  ),
+      body: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Ringkasan Servis',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
-              ),
-              const SizedBox(height: 16),
-            ],
-            const Spacer(),
-            if (_errorMessage != null) ...[
-              Text(
-                _errorMessage!,
-                style: const TextStyle(color: Colors.red),
-              ),
-              const SizedBox(height: 12),
-            ],
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _isSubmitting ? null : _createOrder,
-                child: _isSubmitting
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Create Order (Escrow Hold)'),
-              ),
+                const SizedBox(height: 16),
+                if (title != null)
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  )
+                else
+                  Text('Servis ID: $_serviceId'),
+                const SizedBox(height: 12),
+                if (delivery != null)
+                  Text('Tempoh siap: $delivery hari'),
+                const SizedBox(height: 12),
+                Text('Jumlah: RM${(_amount ?? 0).toStringAsFixed(2)}'),
+                const SizedBox(height: 16),
+                if (includes != null && includes.isNotEmpty) ...[
+                  Text(
+                    'Termasuk:',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  ...includes.map(
+                    (String item) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('• '),
+                          Expanded(child: Text(item)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                const Spacer(),
+                if (_errorMessage != null) ...[
+                  Text(
+                    _errorMessage!,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                FTButton(
+                  label: 'Create Order (Escrow Hold)',
+                  isLoading: _isSubmitting,
+                  onPressed: _isSubmitting ? null : _createOrder,
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          if (_isSubmitting)
+            const LoadingOverlay(
+              message: 'Memproses tempahan...',
+              backgroundOpacity: 0.25,
+            ),
+        ],
       ),
     );
   }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+enum FTButtonSize { small, medium, large }
+
 class FTButton extends StatelessWidget {
   const FTButton({
     super.key,
@@ -7,12 +9,14 @@ class FTButton extends StatelessWidget {
     this.onPressed,
     this.isLoading = false,
     this.expanded = true,
+    this.size = FTButtonSize.medium,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final bool isLoading;
   final bool expanded;
+  final FTButtonSize size;
 
   @override
   Widget build(BuildContext context) {
@@ -24,10 +28,25 @@ class FTButton extends StatelessWidget {
           )
         : Text(label);
 
+    final horizontalPadding = switch (size) {
+      FTButtonSize.small => 12.0,
+      FTButtonSize.medium => 20.0,
+      FTButtonSize.large => 24.0,
+    };
+
+    final verticalPadding = switch (size) {
+      FTButtonSize.small => 12.0,
+      FTButtonSize.medium => 16.0,
+      FTButtonSize.large => 18.0,
+    };
+
     final button = ElevatedButton(
       onPressed: isLoading ? null : onPressed,
       style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        padding: EdgeInsets.symmetric(
+          vertical: verticalPadding,
+          horizontal: horizontalPadding,
+        ),
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(12)),
         ),

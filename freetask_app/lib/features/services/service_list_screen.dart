@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/utils/error_utils.dart';
+import '../../core/widgets/ft_button.dart';
 import '../../models/service.dart';
 import '../../widgets/service_card.dart';
 import 'services_repository.dart';
@@ -202,28 +203,44 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: <Widget>[
+                              Icon(
+                                Icons.error_outline,
+                                size: 42,
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                              const SizedBox(height: 12),
                               Text(
                                 _errorMessage!,
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .error,
+                                  color:
+                                      Theme.of(context).colorScheme.error,
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              FilledButton(
+                              FTButton(
+                                label: 'Cuba Lagi',
                                 onPressed: _fetchServices,
-                                child: const Text('Cuba Lagi'),
+                                expanded: false,
                               ),
                             ],
                           ),
                         ),
                       )
                     else if (_services.isEmpty)
-                      const SliverFillRemaining(
+                      SliverFillRemaining(
                         hasScrollBody: false,
-                        child: Center(child: Text('Tiada data')),
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const <Widget>[
+                              Icon(Icons.store_mall_directory_outlined,
+                                  size: 52, color: Colors.grey),
+                              SizedBox(height: 12),
+                              Text('Tiada servis buat masa ini'),
+                            ],
+                          ),
+                        ),
                       )
                     else
                       SliverPadding(

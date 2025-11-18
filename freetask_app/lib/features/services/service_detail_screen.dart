@@ -4,6 +4,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/widgets/ft_button.dart';
+import '../../core/widgets/loading_overlay.dart';
 import '../../models/service.dart';
 import '../../theme/app_theme.dart';
 import 'services_repository.dart';
@@ -94,159 +96,184 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Maklumat Servis')),
-      body: Builder(
-        builder: (BuildContext context) {
-          if (_isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    Widget bodyContent = Builder(
+      builder: (BuildContext context) {
+        if (_isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-          if (_errorMessage != null) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.s24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _errorMessage!,
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error),
-                    ),
-                    AppSpacing.vertical16,
-                    ElevatedButton(
-                      onPressed: _loadService,
-                      child: const Text('Cuba Lagi'),
-                    ),
-                  ],
-                ),
+        if (_errorMessage != null) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.s24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 44,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  AppSpacing.vertical16,
+                  Text(
+                    _errorMessage!,
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error),
+                  ),
+                  AppSpacing.vertical16,
+                  FTButton(
+                    label: 'Cuba Lagi',
+                    onPressed: _loadService,
+                    expanded: false,
+                  ),
+                ],
               ),
-            );
-          }
+            ),
+          );
+        }
 
-          final service = _service;
-          if (service == null) {
-            return const Center(child: Text('Tiada data'));
-          }
+        final service = _service;
+        if (service == null) {
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [
+              Icon(Icons.store_mall_directory_outlined, size: 52, color: Colors.grey),
+              SizedBox(height: AppSpacing.s12),
+              Text('Tiada servis buat masa ini'),
+            ],
+          );
+        }
 
-          return Stack(
-            children: [
-              SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.s24,
-                  AppSpacing.s24,
-                  AppSpacing.s24,
-                  AppSpacing.s24 + 96,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _ServiceBanner(service: service),
-                    AppSpacing.vertical24,
-                    Text(
-                      service.title,
-                      style: AppTextStyles.headlineMedium,
+        return Stack(
+          children: [
+            SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.s24,
+                AppSpacing.s24,
+                AppSpacing.s24,
+                AppSpacing.s24 + 96,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ServiceBanner(service: service),
+                  AppSpacing.vertical24,
+                  Text(
+                    service.title,
+                    style: AppTextStyles.headlineMedium,
+                  ),
+                  AppSpacing.vertical8,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Icon(Icons.star, color: AppColors.secondary, size: 22),
+                      const SizedBox(width: AppSpacing.s8),
+                      Text(
+                        service.rating.toStringAsFixed(1),
+                        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.neutral500),
+                      ),
+                      const SizedBox(width: AppSpacing.s16),
+                      Chip(
+                        label: Text(service.category),
+                        backgroundColor: theme.colorScheme.surface,
+                        shape: const StadiumBorder(),
+                      ),
+                    ],
+                  ),
+                  AppSpacing.vertical16,
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(AppSpacing.s16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: AppRadius.largeRadius,
+                      boxShadow: AppShadows.card,
                     ),
-                    AppSpacing.vertical8,
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                    child: Row(
                       children: [
-                        Icon(Icons.star, color: AppColors.secondary, size: 22),
-                        const SizedBox(width: AppSpacing.s8),
-                        Text(
-                          service.rating.toStringAsFixed(1),
-                          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.neutral500),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Harga Pakej',
+                                style: AppTextStyles.labelSmall,
+                              ),
+                              AppSpacing.vertical8,
+                              Text(
+                                'RM${service.price.toStringAsFixed(2)}',
+                                style: AppTextStyles.headlineSmall,
+                              ),
+                              AppSpacing.vertical8,
+                              Text(
+                                'Siap dalam ${service.deliveryDays} hari',
+                                style: AppTextStyles.bodySmall,
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(width: AppSpacing.s16),
-                        Chip(
-                          label: Text(service.category),
-                          backgroundColor: theme.colorScheme.surface,
-                          shape: const StadiumBorder(),
-                        ),
+                        const Icon(Icons.payments_rounded, color: AppColors.primary, size: 36),
                       ],
                     ),
-                    AppSpacing.vertical16,
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(AppSpacing.s16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: AppRadius.largeRadius,
-                        boxShadow: AppShadows.card,
-                      ),
+                  ),
+                  AppSpacing.vertical24,
+                  Text(
+                    'Butiran Servis',
+                    style: AppTextStyles.headlineSmall,
+                  ),
+                  AppSpacing.vertical8,
+                  Text(
+                    service.description,
+                    style: AppTextStyles.bodyMedium,
+                  ),
+                  AppSpacing.vertical24,
+                  Text(
+                    'Termasuk',
+                    style: AppTextStyles.headlineSmall,
+                  ),
+                  AppSpacing.vertical8,
+                  ...service.includes.map(
+                    (String include) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s8 / 2),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          const Padding(
+                            padding: EdgeInsets.only(top: 4),
+                            child: Icon(Icons.check_circle, color: AppColors.primary, size: 18),
+                          ),
+                          const SizedBox(width: AppSpacing.s8),
                           Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Harga Pakej',
-                                  style: AppTextStyles.labelSmall,
-                                ),
-                                AppSpacing.vertical8,
-                                Text(
-                                  'RM${service.price.toStringAsFixed(2)}',
-                                  style: AppTextStyles.headlineSmall,
-                                ),
-                                AppSpacing.vertical8,
-                                Text(
-                                  'Siap dalam ${service.deliveryDays} hari',
-                                  style: AppTextStyles.bodySmall,
-                                ),
-                              ],
+                            child: Text(
+                              include,
+                              style: AppTextStyles.bodyMedium,
                             ),
                           ),
-                          const Icon(Icons.payments_rounded, color: AppColors.primary, size: 36),
                         ],
                       ),
                     ),
-                    AppSpacing.vertical24,
-                    Text(
-                      'Butiran Servis',
-                      style: AppTextStyles.headlineSmall,
-                    ),
-                    AppSpacing.vertical8,
-                    Text(
-                      service.description,
-                      style: AppTextStyles.bodyMedium,
-                    ),
-                    AppSpacing.vertical24,
-                    Text(
-                      'Termasuk',
-                      style: AppTextStyles.headlineSmall,
-                    ),
-                    AppSpacing.vertical8,
-                    ...service.includes.map(
-                      (String include) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.s8 / 2),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Padding(
-                              padding: EdgeInsets.only(top: 4),
-                              child: Icon(Icons.check_circle, color: AppColors.primary, size: 18),
-                            ),
-                            const SizedBox(width: AppSpacing.s8),
-                            Expanded(
-                              child: Text(
-                                include,
-                                style: AppTextStyles.bodyMedium,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    AppSpacing.vertical24,
-                    _FreelancerProfile(freelancerId: service.freelancerId),
-                  ],
-                ),
+                  ),
+                  AppSpacing.vertical24,
+                  _FreelancerProfile(freelancerId: service.freelancerId),
+                ],
               ),
-            ],
-          );
-        },
+            ),
+          ],
+        );
+      },
+    );
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Maklumat Servis')),
+      body: Stack(
+        children: [
+          bodyContent,
+          if (_isHireLoading)
+            const LoadingOverlay(
+              message: 'Memproses tempahan...',
+              backgroundOpacity: 0.25,
+            ),
+        ],
       ),
       bottomNavigationBar: Builder(
         builder: (BuildContext context) {
@@ -262,18 +289,10 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                 AppSpacing.s24,
                 AppSpacing.s24,
               ),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isHireLoading ? null : () => _handleHire(service),
-                  child: _isHireLoading
-                      ? const SizedBox(
-                          height: 22,
-                          width: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Hire Sekarang'),
-                ),
+              child: FTButton(
+                label: 'Hire Sekarang',
+                isLoading: _isHireLoading,
+                onPressed: () => _handleHire(service),
               ),
             ),
           );
