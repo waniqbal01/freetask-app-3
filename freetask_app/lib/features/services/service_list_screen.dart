@@ -232,7 +232,8 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
           },
         ),
       ),
-    );
+    ),
+  );
   }
 }
 
