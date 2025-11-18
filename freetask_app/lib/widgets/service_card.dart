@@ -53,7 +53,9 @@ class ServiceCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: AppSpacing.s8),
-                          _RatingPill(rating: service.rating),
+                          if (service.freelancerName != null &&
+                              service.freelancerName!.isNotEmpty)
+                            _RatingPill(label: service.freelancerName!),
                         ],
                       ),
                       const SizedBox(height: 6),
@@ -61,12 +63,17 @@ class ServiceCard extends StatelessWidget {
                         children: [
                           _CategoryChip(label: service.category),
                           const SizedBox(width: AppSpacing.s8),
-                          const Icon(Icons.schedule,
+                          const Icon(Icons.person_outline,
                               size: 16, color: AppColors.neutral300),
                           const SizedBox(width: 4),
-                          Text(
-                            '${service.deliveryDays} hari',
-                            style: textTheme.bodySmall,
+                          Expanded(
+                            child: Text(
+                              service.freelancerName?.isNotEmpty == true
+                                  ? service.freelancerName!
+                                  : 'Freelancer ID: ${service.freelancerId}',
+                              style: textTheme.bodySmall,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
@@ -233,9 +240,9 @@ class _CategoryChip extends StatelessWidget {
 }
 
 class _RatingPill extends StatelessWidget {
-  const _RatingPill({required this.rating});
+  const _RatingPill({required this.label});
 
-  final double rating;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -248,10 +255,10 @@ class _RatingPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.star_rounded, size: 16, color: Colors.amber),
+          const Icon(Icons.person, size: 16, color: Colors.amber),
           const SizedBox(width: 4),
           Text(
-            rating.toStringAsFixed(1),
+            label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: AppColors.neutral400,

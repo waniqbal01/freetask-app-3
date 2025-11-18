@@ -5,30 +5,25 @@ class Service {
     required this.category,
     required this.description,
     required this.price,
-    required this.deliveryDays,
-    required this.includes,
     required this.freelancerId,
-    required this.rating,
+    this.freelancerName,
+    this.createdAt,
   });
 
   factory Service.fromJson(Map<String, dynamic> json) {
-    final includes = json['includes'];
+    final freelancer = json['freelancer'] as Map<String, dynamic>?;
     return Service(
       id: json['id']?.toString() ?? '',
       title: json['title']?.toString() ?? '',
       category: json['category']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
       price: (json['price'] as num?)?.toDouble() ?? 0,
-      deliveryDays: json['delivery_days'] as int? ??
-          json['deliveryDays'] as int? ??
-          0,
-      includes: includes is List
-          ? includes.map((dynamic item) => item.toString()).toList()
-          : <String>[],
       freelancerId: json['freelancer_id']?.toString() ??
           json['freelancerId']?.toString() ??
+          freelancer?['id']?.toString() ??
           '',
-      rating: (json['rating'] as num?)?.toDouble() ?? 0,
+      freelancerName: freelancer?['name']?.toString(),
+      createdAt: _parseDateTime(json['createdAt'] ?? json['created_at']),
     );
   }
 
@@ -37,8 +32,17 @@ class Service {
   final String category;
   final String description;
   final double price;
-  final int deliveryDays;
-  final List<String> includes;
   final String freelancerId;
-  final double rating;
+  final String? freelancerName;
+  final DateTime? createdAt;
+
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value is DateTime) {
+      return value;
+    }
+    if (value is String && value.isNotEmpty) {
+      return DateTime.tryParse(value);
+    }
+    return null;
+  }
 }

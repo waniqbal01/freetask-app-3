@@ -1,12 +1,12 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../core/env.dart';
 import '../core/router.dart';
+import 'token_storage.dart';
 
 class HttpClient {
-  HttpClient({FlutterSecureStorage? secureStorage})
-      : _storage = secureStorage ?? const FlutterSecureStorage(),
+  HttpClient({TokenStorage? tokenStorage})
+      : _storage = tokenStorage ?? createTokenStorage(),
         dio = Dio(
           BaseOptions(
             baseUrl: Env.apiBaseUrl,
@@ -19,8 +19,8 @@ class HttpClient {
         onRequest: (RequestOptions options, RequestInterceptorHandler handler) async {
           final isPublicServicesGet =
               options.method.toUpperCase() == 'GET' && options.path.startsWith('/services');
-          final token = await _storage.read(key: _authTokenKey) ??
-              await _storage.read(key: _legacyAccessTokenKey);
+          final token = await _storage.read(_authTokenKey) ??
+              await _storage.read(_legacyAccessTokenKey);
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           } else if (isPublicServicesGet) {
@@ -42,13 +42,13 @@ class HttpClient {
   }
 
   Future<void> _clearStoredTokens() async {
-    await _storage.delete(key: _authTokenKey);
-    await _storage.delete(key: _legacyAccessTokenKey);
+    await _storage.delete(_authTokenKey);
+    await _storage.delete(_legacyAccessTokenKey);
   }
 
   static const String _authTokenKey = 'auth_token';
   static const String _legacyAccessTokenKey = 'access_token';
 
-  final FlutterSecureStorage _storage;
+  final TokenStorage _storage;
   final Dio dio;
 }

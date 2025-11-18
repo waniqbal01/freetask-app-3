@@ -19,10 +19,13 @@ export class UploadsService {
 
   buildFileName(originalName: string) {
     const fileExt = extname(originalName);
-    const nameWithoutExt = basename(originalName, fileExt).replace(/\s+/g, '-');
+    const nameWithoutExt = basename(originalName, fileExt)
+      .replace(/\s+/g, '-')
+      .replace(/[^a-zA-Z0-9_-]/g, '')
+      .toLowerCase();
     const timestamp = Date.now();
 
-    return `${nameWithoutExt}-${timestamp}${fileExt}`;
+    return `${nameWithoutExt || 'upload'}-${timestamp}${fileExt}`;
   }
 
   buildFileUrl(request: Request, filename: string) {

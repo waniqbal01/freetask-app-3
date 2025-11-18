@@ -72,23 +72,15 @@ class CheckoutScreen extends StatelessWidget {
                               children: [
                                 const Icon(Icons.schedule_outlined, color: AppColors.neutral300),
                                 const SizedBox(width: 8),
-                                Text('Tempoh siap: ${draft['deliveryDays'] ?? '-'} hari'),
+                                Text('Kategori: ${draft['category'] ?? '-'}'),
                               ],
                             ),
                             const SizedBox(height: 12),
-                            const Text('Termasuk:'),
-                            const SizedBox(height: 8),
-                            ...(draft['includes'] as List<dynamic>? ?? <dynamic>[])
-                                .map((dynamic item) => Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 2),
-                                      child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const Text('• '),
-                                          Expanded(child: Text(item.toString())),
-                                        ],
-                                      ),
-                                    )),
+                            if (draft['description'] != null) ...[
+                              const Text('Deskripsi:'),
+                              const SizedBox(height: 8),
+                              Text(draft['description'].toString()),
+                            ],
                           ],
                         ),
                 ),

@@ -1,17 +1,17 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../models/user.dart';
 import '../../services/http_client.dart';
+import '../../services/token_storage.dart';
 
 class AuthRepository {
-  AuthRepository({FlutterSecureStorage? secureStorage, Dio? dio})
-      : _secureStorage = secureStorage ?? const FlutterSecureStorage(),
-        _dio = dio ?? HttpClient().dio;
+  AuthRepository({TokenStorage? tokenStorage, Dio? dio})
+      : _tokenStorage = tokenStorage ?? createTokenStorage(),
+        _dio = dio ?? HttpClient(tokenStorage: tokenStorage).dio;
 
   static const tokenStorageKey = 'auth_token';
 
-  final FlutterSecureStorage _secureStorage;
+  final TokenStorage _tokenStorage;
   final Dio _dio;
   AppUser? _cachedUser;
 
@@ -103,11 +103,11 @@ class AuthRepository {
   }
 
   Future<String?> getSavedToken() {
-    return _secureStorage.read(key: tokenStorageKey);
+    return _tokenStorage.read(tokenStorageKey);
   }
 
   Future<void> logout() async {
-    final token = await _secureStorage.read(key: tokenStorageKey);
+    final token = await _tokenStorage.read(tokenStorageKey);
     try {
       if (token != null && token.isNotEmpty) {
         await _dio.post<void>(
@@ -119,7 +119,7 @@ class AuthRepository {
       // Ignore logout failures and continue clearing local session.
     } finally {
       _cachedUser = null;
-      await _secureStorage.delete(key: tokenStorageKey);
+      await _tokenStorage.delete(tokenStorageKey);
     }
   }
 
@@ -128,7 +128,7 @@ class AuthRepository {
   }
 
   Future<void> _saveToken(String token) {
-    return _secureStorage.write(key: tokenStorageKey, value: token);
+    return _tokenStorage.write(tokenStorageKey, token);
   }
 
   Map<String, dynamic> _buildRegisterPayload(Map<String, dynamic> payload) {

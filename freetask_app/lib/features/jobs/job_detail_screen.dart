@@ -105,6 +105,20 @@ class JobDetailScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       _DetailRow(
+                        icon: Icons.title_outlined,
+                        label: 'Tajuk Job',
+                        value: job.title,
+                      ),
+                      const SizedBox(height: 12),
+                      _DetailRow(
+                        icon: Icons.notes_outlined,
+                        label: 'Deskripsi',
+                        value: job.description.isNotEmpty
+                            ? job.description
+                            : 'Tiada deskripsi',
+                      ),
+                      const SizedBox(height: 12),
+                      _DetailRow(
                         icon: Icons.receipt_long_outlined,
                         label: 'Service ID',
                         value: job.serviceId,
@@ -118,8 +132,14 @@ class JobDetailScreen extends StatelessWidget {
                       const SizedBox(height: 12),
                       _DetailRow(
                         icon: Icons.person_outline,
-                        label: isClientView ? 'Freelancer ID' : 'Client ID',
-                        value: isClientView ? job.freelancerId : job.clientId,
+                        label: isClientView ? 'Freelancer' : 'Client',
+                        value: isClientView
+                            ? (job.freelancerName.isNotEmpty
+                                ? '${job.freelancerName} (ID: ${job.freelancerId})'
+                                : job.freelancerId)
+                            : (job.clientName.isNotEmpty
+                                ? '${job.clientName} (ID: ${job.clientId})'
+                                : job.clientId),
                       ),
                       const SizedBox(height: 12),
                       _DetailRow(

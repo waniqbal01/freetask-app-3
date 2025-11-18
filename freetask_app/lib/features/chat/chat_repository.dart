@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../services/http_client.dart';
+import '../../services/token_storage.dart';
 import '../auth/auth_repository.dart';
 import 'chat_models.dart';
 
@@ -26,11 +26,11 @@ final chatMessagesProvider = StreamProvider.family<List<ChatMessage>, String>(
 });
 
 class ChatRepository {
-  ChatRepository({FlutterSecureStorage? secureStorage, Dio? dio})
-      : _secureStorage = secureStorage ?? const FlutterSecureStorage(),
-        _dio = dio ?? HttpClient().dio;
+  ChatRepository({TokenStorage? tokenStorage, Dio? dio})
+      : _tokenStorage = tokenStorage ?? createTokenStorage(),
+        _dio = dio ?? HttpClient(tokenStorage: tokenStorage).dio;
 
-  final FlutterSecureStorage _secureStorage;
+  final TokenStorage _tokenStorage;
   final Dio _dio;
   List<ChatThread> _threads = <ChatThread>[];
   final Map<String, List<ChatMessage>> _messages = <String, List<ChatMessage>>{};
@@ -140,7 +140,7 @@ class ChatRepository {
   }
 
   Future<Options> _authorizedOptions() async {
-    final token = await _secureStorage.read(key: AuthRepository.tokenStorageKey);
+    final token = await _tokenStorage.read(AuthRepository.tokenStorageKey);
     if (token == null || token.isEmpty) {
       throw StateError('Token tidak ditemui. Sila log masuk semula.');
     }

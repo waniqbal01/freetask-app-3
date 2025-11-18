@@ -29,6 +29,8 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
 
   String get _description => _summary['description']?.toString() ?? '';
 
+  String? get _title => _summary['title']?.toString();
+
   double? get _amount {
     final value = _summary['price'];
     if (value is num) {
@@ -42,7 +44,7 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
     final amount = _amount;
     final description = _description;
 
-    if (serviceId.isEmpty || amount == null || description.isEmpty) {
+    if (serviceId.isEmpty || description.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Maklumat servis tidak lengkap.'),
@@ -57,8 +59,12 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
     });
 
     try {
-      final job =
-          await jobsRepository.createOrder(serviceId, amount, description);
+      final job = await jobsRepository.createOrder(
+        serviceId,
+        amount,
+        description,
+        title: _title,
+      );
       await escrowService.hold(job.id, job.amount);
 
       if (!mounted) {
@@ -75,7 +81,7 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       );
       await _showSuccessDialog();
       if (mounted) {
-        context.go('/jobs');
+        context.go('/jobs/${job.id}', extra: <String, dynamic>{'job': job});
       }
     } on DioException catch (error) {
       if (!mounted) {
@@ -151,8 +157,7 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     final title = _summary['title']?.toString();
-    final includes = (_summary['includes'] as List<dynamic>?)?.cast<String>();
-    final delivery = _summary['deliveryDays'];
+    final freelancerName = _summary['freelancerName']?.toString();
 
     return Scaffold(
       body: Container(
@@ -201,27 +206,10 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
                                 ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 8),
-                          if (delivery != null)
-                            Text('Tempoh siap: $delivery hari'),
+                          if (freelancerName != null && freelancerName.isNotEmpty)
+                            Text('Disediakan oleh $freelancerName'),
                           const SizedBox(height: 8),
                           Text('Jumlah: RM${(_amount ?? 0).toStringAsFixed(2)}'),
-                          const SizedBox(height: 12),
-                          if (includes != null && includes.isNotEmpty) ...[
-                            const Text('Termasuk:'),
-                            const SizedBox(height: 8),
-                            ...includes.map(
-                              (String item) => Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 2),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text('• '),
-                                    Expanded(child: Text(item)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
                         ],
                       ),
                     ),

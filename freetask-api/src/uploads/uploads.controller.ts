@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Post,
   UploadedFile,
@@ -20,6 +21,19 @@ export class UploadsController {
   @Post()
   @UseInterceptors(
     FileInterceptor('file', {
+      fileFilter: (_req, file, cb) => {
+        const allowedMimeTypes = ['image/png', 'image/jpeg', 'application/pdf'];
+        if (!allowedMimeTypes.includes(file.mimetype)) {
+          return cb(
+            new BadRequestException('Fail mesti dalam format PNG, JPEG, atau PDF'),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB
+      },
       storage: diskStorage({
         destination: (_req, _file, cb) => {
           this.uploadsService.ensureUploadsDir();
