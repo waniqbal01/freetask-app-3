@@ -41,10 +41,6 @@ class _JobListScreenState extends State<JobListScreen> {
     await Future.wait([_fetchClientJobs(), _fetchFreelancerJobs()]);
   }
 
-  void _refreshJobs() {
-    _loadJobs();
-  }
-
   Future<void> _refreshClientJobs() async {
     await _fetchClientJobs();
   }
@@ -147,6 +143,7 @@ class _JobListScreenState extends State<JobListScreen> {
 
       if (success) {
         await _loadJobs();
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(successMessage)),
         );
