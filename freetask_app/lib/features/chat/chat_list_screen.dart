@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/utils/error_utils.dart';
+import 'chat_models.dart';
 import 'chat_repository.dart';
 
 class ChatListScreen extends ConsumerWidget {

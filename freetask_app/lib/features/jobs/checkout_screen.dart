@@ -96,12 +96,11 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       });
       showErrorSnackBar(context, message);
     } finally {
-      if (!mounted) {
-        return;
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
       }
-      setState(() {
-        _isSubmitting = false;
-      });
     }
   }
 
