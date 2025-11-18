@@ -112,9 +112,9 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-          content: Column(
+          content: const Column(
             mainAxisSize: MainAxisSize.min,
-            children: const [
+            children: [
               CircleAvatar(
                 radius: 30,
                 backgroundColor: Colors.green,
