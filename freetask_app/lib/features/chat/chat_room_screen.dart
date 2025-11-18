@@ -31,6 +31,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
   @override
   Widget build(BuildContext context) {
     final asyncMessages = ref.watch(chatMessagesProvider(widget.chatId));
+    final bool hasMessageError = asyncMessages.hasError;
     final thread = ref.watch(chatThreadsProvider).maybeWhen(
           data: (List<ChatThread> threads) => threads.firstWhere(
             (ChatThread element) => element.id == widget.chatId,
@@ -156,7 +157,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                   });
                 }
                 return const Center(
-                  child: Text('Ralat memuat mesej.'),
+                  child: Text('Chat akan datang (Coming Soon). Sila cuba lagi nanti.'),
                 );
               },
             ),
@@ -165,6 +166,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
             controller: _controller,
             onSendText: _handleSendText,
             onSendImage: _handleSendImage,
+            enabled: !hasMessageError,
           ),
         ],
       ),
@@ -233,11 +235,13 @@ class _MessageComposer extends StatelessWidget {
     required this.controller,
     required this.onSendText,
     required this.onSendImage,
+    this.enabled = true,
   });
 
   final TextEditingController controller;
   final ValueChanged<String> onSendText;
   final VoidCallback onSendImage;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -255,24 +259,27 @@ class _MessageComposer extends StatelessWidget {
           children: <Widget>[
             IconButton(
               icon: const Icon(Icons.photo),
-              onPressed: onSendImage,
+              onPressed: enabled ? onSendImage : null,
             ),
             Expanded(
               child: TextField(
                 controller: controller,
-                textInputAction: TextInputAction.send,
-                decoration: const InputDecoration(
-                  hintText: 'Tulis mesej...',
-                  border: OutlineInputBorder(),
+                readOnly: !enabled,
+                textInputAction: enabled ? TextInputAction.send : TextInputAction.none,
+                decoration: InputDecoration(
+                  hintText: enabled
+                      ? 'Tulis mesej...'
+                      : 'Chat akan datang (Coming Soon)',
+                  border: const OutlineInputBorder(),
                   isDense: true,
                 ),
-                onSubmitted: onSendText,
+                onSubmitted: enabled ? onSendText : null,
               ),
             ),
             const SizedBox(width: 8),
             IconButton(
               icon: const Icon(Icons.send),
-              onPressed: () => onSendText(controller.text),
+              onPressed: enabled ? () => onSendText(controller.text) : null,
             ),
           ],
         ),

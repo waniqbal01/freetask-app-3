@@ -58,7 +58,9 @@ class ChatListScreen extends ConsumerWidget {
         }
         return Scaffold(
           appBar: AppBar(title: const Text('Chat')),
-          body: const Center(child: Text('Ralat memuat chat.')),
+          body: const Center(
+            child: Text('Chat akan datang (Coming Soon). Sila cuba lagi nanti.'),
+          ),
         );
       },
     );
