@@ -3,13 +3,16 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { join } from 'path';
 
+// ---------------------------------------------------
+// Build Allowed CORS Origins (default + .env variable)
+// ---------------------------------------------------
 function buildAllowedOrigins(): string[] {
   const defaultOrigins = [
-    'http://localhost:3000',
-    'http://localhost:4000',
-    'http://10.0.2.2:4000',
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
+    'http://localhost:3000',   // Next.js local
+    'http://localhost:4000',   // API local
+    'http://10.0.2.2:4000',    // Android emulator → backend
+    'http://localhost:5173',   // Flutter Web (Vite)
+    'http://127.0.0.1:5173',   // Flutter Web alternative
   ];
 
   const envOrigins = (process.env.ALLOWED_ORIGINS ?? '')
@@ -17,24 +20,33 @@ function buildAllowedOrigins(): string[] {
     .map((origin) => origin.trim())
     .filter(Boolean);
 
-  // Use Set to avoid duplicates while keeping the default origins intact.
   return Array.from(new Set([...defaultOrigins, ...envOrigins]));
 }
 
+// ---------------------------------------------------
+// Bootstrap the NestJS App (Recommended Style)
+// ---------------------------------------------------
 async function bootstrap() {
   try {
     const app = await NestFactory.create(AppModule, {
       bufferLogs: true,
     });
 
+    // ------------------------------
+    // CORS Configuration
+    // ------------------------------
+    const allowedOrigins = buildAllowedOrigins();
+
     app.enableCors({
-      origin: buildAllowedOrigins(),
+      origin: allowedOrigins,
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
     });
-    // To allow new dev origins, set ALLOWED_ORIGINS (comma separated) or append to buildAllowedOrigins default list.
 
+    // ------------------------------
+    // Global Pipes
+    // ------------------------------
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
@@ -43,15 +55,22 @@ async function bootstrap() {
       }),
     );
 
+    // ------------------------------
+    // Static File Serving (uploads)
+    // ------------------------------
     app.useStaticAssets(join(process.cwd(), 'uploads'));
 
-    // Default to port 4000 so the backend aligns with the Flutter client configuration.
+    // ------------------------------
+    // Start Server
+    // ------------------------------
     const port = process.env.PORT || 4000;
     await app.listen(port);
-    console.log(`Application is running on: ${await app.getUrl()}`);
+
+    console.log(`🚀 Application running at: ${await app.getUrl()}`);
+    console.log('Allowed CORS Origins:', allowedOrigins);
   } catch (error) {
     console.error(
-      'Failed to bootstrap application. Ensure DATABASE_URL is valid and the database is reachable before starting the server.',
+      '❌ Failed to bootstrap application. Check DATABASE_URL & connection.',
       error,
     );
     process.exit(1);

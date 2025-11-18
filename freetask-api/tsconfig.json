@@ -11,7 +11,7 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "moduleResolution": "node",
-    "types": ["node", "jest"],
+    "types": ["node"],
     "incremental": true,
     "strictNullChecks": true,
     "strictPropertyInitialization": false,
