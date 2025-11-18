@@ -18,7 +18,9 @@ class ServiceListScreen extends StatefulWidget {
 
 class _ServiceListScreenState extends State<ServiceListScreen> {
   final TextEditingController _searchController = TextEditingController();
-  late Future<List<Service>> _servicesFuture;
+  final List<Service> _services = <Service>[];
+  bool _isLoading = false;
+  String? _errorMessage;
   List<String> _categories = const <String>['Semua'];
   String _selectedCategory = 'Semua';
   Timer? _debounce;
@@ -26,7 +28,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
   @override
   void initState() {
     super.initState();
-    _servicesFuture = servicesRepository.getServices();
+    _fetchServices();
     _loadCategories();
     _searchController.addListener(_onSearchChanged);
   }
@@ -43,13 +45,48 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
     _debounce = Timer(const Duration(milliseconds: 300), _fetchServices);
   }
 
-  void _fetchServices() {
+  Future<void> _fetchServices() async {
     setState(() {
-      _servicesFuture = servicesRepository.getServices(
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final services = await servicesRepository.getServices(
         q: _searchController.text,
         category: _selectedCategory,
       );
-    });
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _services
+          ..clear()
+          ..addAll(services);
+      });
+    } on DioException catch (error) {
+      if (!mounted) return;
+      final message = resolveDioErrorMessage(error);
+      setState(() {
+        _errorMessage = message;
+      });
+      showErrorSnackBar(context, message);
+    } catch (error) {
+      if (!mounted) return;
+      const message = 'Tidak dapat memuatkan servis. Sila cuba lagi.';
+      setState(() {
+        _errorMessage = message;
+      });
+      showErrorSnackBar(context, '$message\n$error');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadCategories() async {
@@ -64,8 +101,9 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
           _selectedCategory = 'Semua';
         }
       });
-    } catch (_) {
-      // Biarkan kategori kekal kepada lalai jika permintaan gagal.
+    } catch (error) {
+      if (!mounted) return;
+      showErrorSnackBar(context, 'Gagal memuat kategori: $error');
     }
   }
 
@@ -123,33 +161,36 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
           ),
         ),
       ),
-      body: FutureBuilder<List<Service>>(
-        future: _servicesFuture,
-        builder: (BuildContext context, AsyncSnapshot<List<Service>> snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      body: Builder(
+        builder: (BuildContext context) {
+          if (_isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (snapshot.hasError) {
-            final error = snapshot.error;
-            if (error is DioException) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                final messenger = ScaffoldMessenger.maybeOf(context);
-                if (messenger != null) {
-                  messenger.showSnackBar(
-                    SnackBar(content: Text(resolveDioErrorMessage(error))),
-                  );
-                }
-              });
-            }
-            return const Center(
-              child: Text('Ralat memuatkan servis.'),
+          if (_errorMessage != null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: _fetchServices,
+                      child: const Text('Cuba Lagi'),
+                    ),
+                  ],
+                ),
+              ),
             );
           }
 
-          final services = snapshot.data ?? <Service>[];
-
-          if (services.isEmpty) {
+          if (_services.isEmpty) {
             return const Center(
               child: Text('Tiada data'),
             );
@@ -157,11 +198,11 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
 
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-            itemCount: services.length,
+            itemCount: _services.length,
             separatorBuilder: (BuildContext context, int index) =>
                 const SizedBox(height: 12),
             itemBuilder: (BuildContext context, int index) {
-              final service = services[index];
+              final service = _services[index];
               return ServiceCard(
                 service: service,
                 onView: () => context.push('/service/${service.id}'),

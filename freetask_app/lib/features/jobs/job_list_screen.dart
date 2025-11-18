@@ -15,8 +15,12 @@ class JobListScreen extends StatefulWidget {
 }
 
 class _JobListScreenState extends State<JobListScreen> {
-  late Future<List<Job>> _clientJobsFuture;
-  late Future<List<Job>> _freelancerJobsFuture;
+  final List<Job> _clientJobs = <Job>[];
+  final List<Job> _freelancerJobs = <Job>[];
+  bool _isLoadingClient = false;
+  bool _isLoadingFreelancer = false;
+  String? _clientErrorMessage;
+  String? _freelancerErrorMessage;
   bool _isProcessing = false;
 
   @override
@@ -25,29 +29,94 @@ class _JobListScreenState extends State<JobListScreen> {
     _loadJobs();
   }
 
-  void _loadJobs() {
-    _clientJobsFuture = jobsRepository.getClientJobs();
-    _freelancerJobsFuture = jobsRepository.getFreelancerJobs();
+  Future<void> _loadJobs() async {
+    await Future.wait([_fetchClientJobs(), _fetchFreelancerJobs()]);
   }
 
   void _refreshJobs() {
-    setState(_loadJobs);
+    _loadJobs();
   }
 
   Future<void> _refreshClientJobs() async {
-    final future = jobsRepository.getClientJobs();
-    setState(() {
-      _clientJobsFuture = future;
-    });
-    await future;
+    await _fetchClientJobs();
   }
 
   Future<void> _refreshFreelancerJobs() async {
-    final future = jobsRepository.getFreelancerJobs();
+    await _fetchFreelancerJobs();
+  }
+
+  Future<void> _fetchClientJobs() async {
     setState(() {
-      _freelancerJobsFuture = future;
+      _isLoadingClient = true;
+      _clientErrorMessage = null;
     });
-    await future;
+
+    try {
+      final jobs = await jobsRepository.getClientJobs();
+      if (!mounted) return;
+      setState(() {
+        _clientJobs
+          ..clear()
+          ..addAll(jobs);
+      });
+    } on DioException catch (error) {
+      if (!mounted) return;
+      final message = resolveDioErrorMessage(error);
+      setState(() {
+        _clientErrorMessage = message;
+      });
+      showErrorSnackBar(context, message);
+    } catch (error) {
+      if (!mounted) return;
+      const message = 'Ralat memuat job pelanggan.';
+      setState(() {
+        _clientErrorMessage = message;
+      });
+      showErrorSnackBar(context, '$message $error');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingClient = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _fetchFreelancerJobs() async {
+    setState(() {
+      _isLoadingFreelancer = true;
+      _freelancerErrorMessage = null;
+    });
+
+    try {
+      final jobs = await jobsRepository.getFreelancerJobs();
+      if (!mounted) return;
+      setState(() {
+        _freelancerJobs
+          ..clear()
+          ..addAll(jobs);
+      });
+    } on DioException catch (error) {
+      if (!mounted) return;
+      final message = resolveDioErrorMessage(error);
+      setState(() {
+        _freelancerErrorMessage = message;
+      });
+      showErrorSnackBar(context, message);
+    } catch (error) {
+      if (!mounted) return;
+      const message = 'Ralat memuat job freelancer.';
+      setState(() {
+        _freelancerErrorMessage = message;
+      });
+      showErrorSnackBar(context, '$message $error');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingFreelancer = false;
+        });
+      }
+    }
   }
 
   Future<void> _handleAction(
@@ -69,7 +138,7 @@ class _JobListScreenState extends State<JobListScreen> {
       });
 
       if (success) {
-        _refreshJobs();
+        await _loadJobs();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(successMessage)),
         );
@@ -266,50 +335,55 @@ class _JobListScreenState extends State<JobListScreen> {
   }
 
   Widget _buildJobsTab({
-    required Future<List<Job>> future,
+    required List<Job> jobs,
     required bool isClientView,
+    required bool isLoading,
+    required String? errorMessage,
     required Future<void> Function() onRefresh,
   }) {
-    return FutureBuilder<List<Job>>(
-      future: future,
-      builder: (BuildContext context, AsyncSnapshot<List<Job>> snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          final error = snapshot.error;
-          if (error is DioException) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              final messenger = ScaffoldMessenger.maybeOf(context);
-              if (messenger != null) {
-                messenger.showSnackBar(
-                  SnackBar(content: Text(resolveDioErrorMessage(error))),
-                );
-              }
-            });
-          }
-          return const Center(
-            child: Text('Ralat memuat job.'),
-          );
-        }
-        final jobs = snapshot.data ?? <Job>[];
-        if (jobs.isEmpty) {
-          return const Center(child: Text('Tiada data'));
-        }
-        return RefreshIndicator(
-          onRefresh: onRefresh,
-          child: ListView.builder(
-            physics: const AlwaysScrollableScrollPhysics(),
-            itemCount: jobs.length,
-            itemBuilder: (BuildContext context, int index) {
-              return _buildJobCard(
-                jobs[index],
-                isClientView: isClientView,
-              );
-            },
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                errorMessage,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: onRefresh,
+                child: const Text('Cuba Lagi'),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      );
+    }
+
+    if (jobs.isEmpty) {
+      return const Center(child: Text('Tiada data'));
+    }
+
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemCount: jobs.length,
+        itemBuilder: (BuildContext context, int index) {
+          return _buildJobCard(
+            jobs[index],
+            isClientView: isClientView,
+          );
+        },
+      ),
     );
   }
 
@@ -330,13 +404,17 @@ class _JobListScreenState extends State<JobListScreen> {
         body: TabBarView(
           children: [
             _buildJobsTab(
-              future: _clientJobsFuture,
+              jobs: _clientJobs,
               isClientView: true,
+              isLoading: _isLoadingClient,
+              errorMessage: _clientErrorMessage,
               onRefresh: _refreshClientJobs,
             ),
             _buildJobsTab(
-              future: _freelancerJobsFuture,
+              jobs: _freelancerJobs,
               isClientView: false,
+              isLoading: _isLoadingFreelancer,
+              errorMessage: _freelancerErrorMessage,
               onRefresh: _refreshFreelancerJobs,
             ),
           ],

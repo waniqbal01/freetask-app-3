@@ -122,8 +122,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
             'Berjaya',
             'Pendaftaran berjaya, sila log masuk.',
           );
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Pendaftaran berjaya, sila log masuk.')),
+          showErrorSnackBar(
+            context,
+            'Pendaftaran berjaya, sila log masuk.',
           );
           context.go('/login');
         }
@@ -131,9 +132,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         setState(() {
           _errorMessage = 'Pendaftaran gagal. Sila cuba lagi.';
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pendaftaran gagal. Sila cuba lagi.')),
-        );
+        showErrorSnackBar(context, 'Pendaftaran gagal. Sila cuba lagi.');
       }
     } catch (error) {
       if (error is DioException) {
@@ -142,18 +141,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
           setState(() {
             _errorMessage = message;
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(message)),
-          );
+          showErrorSnackBar(context, message);
         }
       } else {
         if (mounted) {
           setState(() {
             _errorMessage = 'Ralat: $error';
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Ralat: $error')),
-          );
+          showErrorSnackBar(context, 'Ralat: $error');
         }
       }
     } finally {
@@ -180,22 +175,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final url = await uploadService.uploadFile(path);
       _avatarController.text = url;
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Avatar berjaya dimuat naik.')),
-        );
+        showErrorSnackBar(context, 'Avatar berjaya dimuat naik.');
       }
     } on DioException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(resolveDioErrorMessage(error))),
-        );
+        showErrorSnackBar(context, resolveDioErrorMessage(error));
       }
     } catch (error) {
       if (mounted) {
         final message = error is StateError ? error.message : error.toString();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
+        showErrorSnackBar(context, message);
       }
     } finally {
       if (mounted) {

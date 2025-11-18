@@ -16,12 +16,49 @@ class ServiceDetailScreen extends StatefulWidget {
 }
 
 class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
-  late Future<Service> _serviceFuture;
+  Service? _service;
+  bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _serviceFuture = servicesRepository.getServiceById(widget.serviceId);
+    _loadService();
+  }
+
+  Future<void> _loadService() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final service = await servicesRepository.getServiceById(widget.serviceId);
+      if (!mounted) return;
+      setState(() {
+        _service = service;
+      });
+    } on DioException catch (error) {
+      if (!mounted) return;
+      final message = resolveDioErrorMessage(error);
+      setState(() {
+        _errorMessage = message;
+      });
+      showErrorSnackBar(context, message);
+    } catch (error) {
+      if (!mounted) return;
+      const message = 'Ralat memuat servis.';
+      setState(() {
+        _errorMessage = message;
+      });
+      showErrorSnackBar(context, '$message $error');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   void _handleHire(Service service) {
@@ -41,38 +78,36 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Maklumat Servis')),
-      body: FutureBuilder<Service>(
-        future: _serviceFuture,
-        builder: (BuildContext context, AsyncSnapshot<Service> snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      body: Builder(
+        builder: (BuildContext context) {
+          if (_isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (snapshot.hasError) {
-            final error = snapshot.error;
-            if (error is DioException) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                final messenger = ScaffoldMessenger.maybeOf(context);
-                if (messenger != null) {
-                  messenger.showSnackBar(
-                    SnackBar(content: Text(resolveDioErrorMessage(error))),
-                  );
-                }
-              });
-            } else if (error is StateError) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                final messenger = ScaffoldMessenger.maybeOf(context);
-                messenger?.showSnackBar(
-                  SnackBar(content: Text(error.message)),
-                );
-              });
-            }
-            return const Center(
-              child: Text('Ralat memuat servis.'),
+          if (_errorMessage != null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: _loadService,
+                      child: const Text('Cuba Lagi'),
+                    ),
+                  ],
+                ),
+              ),
             );
           }
 
-          final service = snapshot.data;
+          final service = _service;
           if (service == null) {
             return const Center(child: Text('Tiada data'));
           }
@@ -138,8 +173,15 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => _handleHire(service),
-                    child: const Text('Hire'),
+                    onPressed:
+                        _isLoading ? null : () => _handleHire(service),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Hire'),
                   ),
                 ),
               ],

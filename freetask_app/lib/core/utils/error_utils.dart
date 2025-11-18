@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 
 String resolveDioErrorMessage(
   DioException error, {
@@ -49,4 +50,10 @@ String resolveDioErrorMessage(
   }
 
   return fallback;
+}
+
+void showErrorSnackBar(BuildContext context, String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(message)),
+  );
 }
