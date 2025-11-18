@@ -32,6 +32,11 @@ export class RegisterDto {
 
   @IsOptional()
   @IsString()
+  // Accepts `avatar` from Flutter payloads and maps it to `avatarUrl` in the service layer.
+  avatar?: string;
+
+  @IsOptional()
+  @IsString()
   bio?: string;
 
   @IsOptional()
