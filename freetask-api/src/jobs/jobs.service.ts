@@ -7,6 +7,7 @@ import { JobStatus, Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateJobDto } from './dto/create-job.dto';
 import { DisputeJobDto } from './dto/dispute-job.dto';
+import { UpdateJobStatusDto } from './dto/update-job-status.dto';
 
 @Injectable()
 export class JobsService {
@@ -73,50 +74,84 @@ export class JobsService {
   }
 
   async acceptJob(id: number, userId: number) {
-    // Kept for backward compatibility; delegates to startJob to use new status flow.
-    return this.startJob(id, userId);
+    const job = await this.ensureJobForFreelancer(id, userId);
+    this.ensureValidTransition(job.status, JobStatus.ACCEPTED);
+    return this.applyStatusUpdate(id, JobStatus.ACCEPTED);
   }
 
   async startJob(id: number, userId: number) {
     const job = await this.ensureJobForFreelancer(id, userId);
-    if (job.status !== JobStatus.PENDING) {
-      throw new ForbiddenException('Only pending jobs can be started');
-    }
-    return this.updateStatus(id, JobStatus.IN_PROGRESS);
+    this.ensureValidTransition(job.status, JobStatus.IN_PROGRESS);
+    return this.applyStatusUpdate(id, JobStatus.IN_PROGRESS);
   }
 
   async rejectJob(id: number, userId: number) {
     const job = await this.ensureJobForFreelancer(id, userId);
-    if (job.status !== JobStatus.PENDING) {
-      throw new ForbiddenException('Only pending jobs can be rejected');
-    }
-    return this.updateStatus(id, JobStatus.REJECTED);
+    this.ensureValidTransition(job.status, JobStatus.CANCELLED);
+    return this.applyStatusUpdate(id, JobStatus.CANCELLED);
   }
 
   async completeJob(id: number, userId: number) {
     const job = await this.ensureJobParticipant(id, userId);
-    if (job.status !== JobStatus.IN_PROGRESS) {
-      throw new ForbiddenException('Only in-progress jobs can be completed');
-    }
-    return this.updateStatus(id, JobStatus.COMPLETED);
+    this.ensureValidTransition(job.status, JobStatus.COMPLETED);
+    return this.applyStatusUpdate(id, JobStatus.COMPLETED);
   }
 
   async disputeJob(id: number, userId: number, dto: DisputeJobDto) {
-    await this.ensureJobParticipant(id, userId);
+    const job = await this.ensureJobParticipant(id, userId);
+    this.ensureValidTransition(job.status, JobStatus.DISPUTED);
+    return this.applyStatusUpdate(id, JobStatus.DISPUTED, dto.reason);
+  }
+
+  async updateStatus(
+    id: number,
+    userId: number,
+    role: UserRole,
+    dto: UpdateJobStatusDto,
+  ) {
+    if (role !== UserRole.FREELANCER) {
+      throw new ForbiddenException('Only freelancers can update job status');
+    }
+
+    const job = await this.ensureJobForFreelancer(id, userId);
+    this.ensureValidTransition(job.status, dto.status);
+    return this.applyStatusUpdate(id, dto.status);
+  }
+
+  private ensureValidTransition(current: JobStatus, next: JobStatus) {
+    const transitions: Record<JobStatus, JobStatus[]> = {
+      [JobStatus.PENDING]: [
+        JobStatus.ACCEPTED,
+        JobStatus.IN_PROGRESS,
+        JobStatus.CANCELLED,
+      ],
+      [JobStatus.ACCEPTED]: [JobStatus.IN_PROGRESS, JobStatus.CANCELLED],
+      [JobStatus.IN_PROGRESS]: [
+        JobStatus.COMPLETED,
+        JobStatus.CANCELLED,
+        JobStatus.DISPUTED,
+      ],
+      [JobStatus.COMPLETED]: [JobStatus.DISPUTED],
+      [JobStatus.CANCELLED]: [],
+      [JobStatus.REJECTED]: [JobStatus.CANCELLED],
+      [JobStatus.DISPUTED]: [],
+    };
+
+    const allowedNextStates = transitions[current] ?? [];
+    if (!allowedNextStates.includes(next)) {
+      throw new ForbiddenException(
+        `Cannot change job status from ${current} to ${next}`,
+      );
+    }
+  }
+
+  private applyStatusUpdate(id: number, status: JobStatus, disputeReason?: string) {
     return this.prisma.job.update({
       where: { id },
       data: {
-        status: JobStatus.DISPUTED,
-        disputeReason: dto.reason,
+        status,
+        disputeReason: disputeReason ?? null,
       },
-      include: this.jobInclude,
-    });
-  }
-
-  private updateStatus(id: number, status: JobStatus) {
-    return this.prisma.job.update({
-      where: { id },
-      data: { status },
       include: this.jobInclude,
     });
   }
