@@ -21,7 +21,9 @@ class AppColors {
 class AppSpacing {
   AppSpacing._();
 
+  static const double s4 = 4;
   static const double s8 = 8;
+  static const double s12 = 12;
   static const double s16 = 16;
   static const double s24 = 24;
 
@@ -148,7 +150,7 @@ class AppTheme {
         titleTextStyle: AppTextStyles.headlineSmall,
         surfaceTintColor: Colors.white,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 2,
         margin: const EdgeInsets.all(AppSpacing.s16),
         color: Colors.white,
