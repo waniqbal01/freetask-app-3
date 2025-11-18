@@ -58,9 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() {
           _errorMessage = 'Log masuk gagal. Sila cuba lagi.';
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Log masuk gagal. Sila cuba lagi.')),
-        );
+        showErrorSnackBar(context, 'Log masuk gagal. Sila cuba lagi.');
       }
     } catch (error) {
       if (error is DioException) {
@@ -69,18 +67,14 @@ class _LoginScreenState extends State<LoginScreen> {
           setState(() {
             _errorMessage = message;
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(message)),
-          );
+          showErrorSnackBar(context, message);
         }
       } else {
         if (mounted) {
           setState(() {
             _errorMessage = 'Ralat: $error';
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Ralat: $error')),
-          );
+          showErrorSnackBar(context, 'Ralat: $error');
         }
       }
     } finally {

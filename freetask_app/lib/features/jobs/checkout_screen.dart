@@ -17,6 +17,7 @@ class JobCheckoutScreen extends StatefulWidget {
 
 class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
   bool _isSubmitting = false;
+  String? _errorMessage;
 
   Map<String, dynamic> get _summary => widget.serviceSummary ?? <String, dynamic>{};
 
@@ -48,6 +49,7 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
 
     setState(() {
       _isSubmitting = true;
+      _errorMessage = null;
     });
 
     try {
@@ -73,16 +75,20 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(resolveDioErrorMessage(error))),
-      );
+      final message = resolveDioErrorMessage(error);
+      setState(() {
+        _errorMessage = message;
+      });
+      showErrorSnackBar(context, message);
     } catch (error) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ralat mencipta order: $error')),
-      );
+      final message = 'Ralat mencipta order: $error';
+      setState(() {
+        _errorMessage = message;
+      });
+      showErrorSnackBar(context, message);
     } finally {
       if (!mounted) {
         return;
@@ -147,6 +153,13 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
               const SizedBox(height: 16),
             ],
             const Spacer(),
+            if (_errorMessage != null) ...[
+              Text(
+                _errorMessage!,
+                style: const TextStyle(color: Colors.red),
+              ),
+              const SizedBox(height: 12),
+            ],
             SizedBox(
               width: double.infinity,
               child: FilledButton(
