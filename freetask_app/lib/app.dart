@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'core/router.dart';
 import 'core/notifications/notification_service.dart';
+import 'theme/app_theme.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -10,12 +11,7 @@ class App extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'FreeTask',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-        useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFF7F8FA),
-        appBarTheme: const AppBarTheme(centerTitle: true),
-      ),
+      theme: AppTheme.lightTheme,
       routerConfig: appRouter,
       scaffoldMessengerKey: notificationService.messengerKey,
     );
