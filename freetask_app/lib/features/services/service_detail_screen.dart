@@ -330,7 +330,7 @@ class _ServiceBanner extends StatelessWidget {
                 height: 160,
                 width: 160,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.08),
+                  color: Colors.white.withValues(alpha: 0.08),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -349,7 +349,7 @@ class _ServiceBanner extends StatelessWidget {
                         service.category,
                         style: AppTextStyles.bodySmall.copyWith(color: Colors.white),
                       ),
-                      backgroundColor: Colors.white.withOpacity(0.18),
+                      backgroundColor: Colors.white.withValues(alpha: 0.18),
                       side: BorderSide.none,
                     ),
                     AppSpacing.vertical16,
@@ -409,7 +409,7 @@ class _FreelancerProfile extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 28,
-            backgroundColor: AppColors.primary.withOpacity(0.1),
+            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
             child: Text(
               initials,
               style: AppTextStyles.headlineSmall.copyWith(color: AppColors.primary),

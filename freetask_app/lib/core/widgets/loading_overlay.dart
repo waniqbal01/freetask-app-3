@@ -15,7 +15,7 @@ class LoadingOverlay extends StatelessWidget {
     final theme = Theme.of(context);
     return Positioned.fill(
       child: Container(
-        color: theme.colorScheme.surface.withOpacity(backgroundOpacity),
+        color: theme.colorScheme.surface.withValues(alpha: backgroundOpacity),
         child: Center(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -24,7 +24,7 @@ class LoadingOverlay extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: theme.shadowColor.withOpacity(0.12),
+                  color: theme.shadowColor.withValues(alpha: 0.12),
                   blurRadius: 16,
                   offset: const Offset(0, 8),
                 ),

@@ -10,7 +10,6 @@ import '../../models/job.dart';
 import '../../theme/app_theme.dart';
 import '../reviews/review_dialog.dart';
 import '../reviews/reviews_repository.dart';
-import 'job_detail_screen.dart';
 import 'jobs_repository.dart';
 import 'widgets/job_card_skeleton.dart';
 import 'widgets/job_status_badge.dart';
@@ -242,7 +241,7 @@ class _JobListScreenState extends State<JobListScreen> {
                     height: 46,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: statusVisual.color.withOpacity(0.12),
+                      color: statusVisual.color.withValues(alpha: 0.12),
                     ),
                     child: Icon(
                       statusVisual.icon,

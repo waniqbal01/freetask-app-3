@@ -170,7 +170,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       Chip(
                         label: Text(_jobStatusLabel(job.status)),
                         backgroundColor: _jobStatusColor(job.status, context)
-                            .withOpacity(0.15),
+                            .withValues(alpha: 0.15),
                         labelStyle: TextStyle(
                           color: _jobStatusColor(job.status, context),
                           fontWeight: FontWeight.w600,
@@ -178,7 +178,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ),
                       Chip(
                         label: Text('Escrow: $escrowLabel'),
-                        backgroundColor: escrowColor?.withOpacity(0.15),
+                        backgroundColor: escrowColor?.withValues(alpha: 0.15),
                         labelStyle: TextStyle(
                           color: escrowColor ?? Colors.grey,
                           fontWeight: FontWeight.w600,
@@ -238,7 +238,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     Chip(
                       label: Text(_escrowStatusLabel(record.status)),
                       backgroundColor:
-                          _escrowStatusColor(record.status).withOpacity(0.15),
+                          _escrowStatusColor(record.status).withValues(alpha: 0.15),
                       labelStyle: TextStyle(
                         color: _escrowStatusColor(record.status),
                         fontWeight: FontWeight.w600,

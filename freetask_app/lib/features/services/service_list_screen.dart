@@ -270,7 +270,7 @@ class _MarketplaceHero extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.08),
+                  color: AppColors.primary.withValues(alpha: 0.08),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.store_mall_directory_outlined, color: AppColors.primary),
@@ -318,7 +318,7 @@ class _MarketplaceHero extends StatelessWidget {
                   label: Text(category),
                   selected: isSelected,
                   onSelected: (_) => onCategorySelected(category),
-                  selectedColor: AppColors.primary.withOpacity(0.12),
+                  selectedColor: AppColors.primary.withValues(alpha: 0.12),
                   labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: isSelected ? AppColors.primary : AppColors.neutral400,
                         fontWeight: FontWeight.w600,
