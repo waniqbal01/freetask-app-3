@@ -120,7 +120,7 @@ class ServiceCardSkeleton extends StatelessWidget {
               child: Container(
                 height: 86,
                 width: 86,
-                color: theme.colorScheme.surfaceVariant,
+                color: theme.colorScheme.surfaceContainerHighest,
               ),
             ),
             const SizedBox(width: 16),
@@ -170,7 +170,7 @@ class _SkeletonLine extends StatelessWidget {
       child: Container(
         height: height,
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceVariant,
+          color: theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(8),
         ),
       ),
