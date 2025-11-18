@@ -14,9 +14,11 @@ enum UserRole {
 
 enum JobStatus {
   PENDING
+  ACCEPTED
   IN_PROGRESS
-  REJECTED
   COMPLETED
+  CANCELLED
+  REJECTED
   DISPUTED
 }
 

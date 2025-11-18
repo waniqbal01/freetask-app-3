@@ -12,6 +12,7 @@ import {
 import { JobsService } from './jobs.service';
 import { CreateJobDto } from './dto/create-job.dto';
 import { DisputeJobDto } from './dto/dispute-job.dto';
+import { UpdateJobStatusDto } from './dto/update-job-status.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { GetUser } from '../auth/get-user.decorator';
 import { UserRole } from '@prisma/client';
@@ -41,6 +42,16 @@ export class JobsController {
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
     return this.jobsService.findOneForUser(id, userId);
+  }
+
+  @Patch(':id/status')
+  updateStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('userId') userId: number,
+    @GetUser('role') role: UserRole,
+    @Body() dto: UpdateJobStatusDto,
+  ) {
+    return this.jobsService.updateStatus(id, userId, role, dto);
   }
 
   @Patch(':id/accept')
