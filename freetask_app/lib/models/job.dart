@@ -11,6 +11,7 @@ class Job {
     this.status = JobStatus.pending,
     this.isDisputed = false,
     this.disputeReason,
+    this.createdAt,
   });
 
   factory Job.fromJson(Map<String, dynamic> json) {
@@ -35,6 +36,7 @@ class Job {
           false,
       disputeReason: json['dispute_reason']?.toString() ??
           json['disputeReason']?.toString(),
+      createdAt: _parseDateTime(json['created_at'] ?? json['createdAt']),
     );
   }
 
@@ -42,6 +44,7 @@ class Job {
     JobStatus? status,
     bool? isDisputed,
     String? disputeReason,
+    DateTime? createdAt,
   }) {
     return Job(
       id: id,
@@ -53,6 +56,7 @@ class Job {
       status: status ?? this.status,
       isDisputed: isDisputed ?? this.isDisputed,
       disputeReason: disputeReason ?? this.disputeReason,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 
@@ -65,6 +69,7 @@ class Job {
   final JobStatus status;
   final bool isDisputed;
   final String? disputeReason;
+  final DateTime? createdAt;
 
   static JobStatus _parseStatus(dynamic value) {
     if (value is JobStatus) {
@@ -98,5 +103,15 @@ class Job {
       return double.tryParse(value) ?? 0;
     }
     return 0;
+  }
+
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value is DateTime) {
+      return value;
+    }
+    if (value is String && value.isNotEmpty) {
+      return DateTime.tryParse(value);
+    }
+    return null;
   }
 }
