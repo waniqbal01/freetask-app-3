@@ -1,32 +1,34 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../core/notifications/notification_service.dart';
 import '../../models/job.dart';
 import '../../services/http_client.dart';
+import '../../services/token_storage.dart';
 import '../auth/auth_repository.dart';
 
 class JobsRepository {
-  JobsRepository({FlutterSecureStorage? secureStorage, Dio? dio})
-      : _secureStorage = secureStorage ?? const FlutterSecureStorage(),
-        _dio = dio ?? HttpClient().dio;
+  JobsRepository({TokenStorage? tokenStorage, Dio? dio})
+      : _tokenStorage = tokenStorage ?? createTokenStorage(),
+        _dio = dio ?? HttpClient(tokenStorage: tokenStorage).dio;
 
-  final FlutterSecureStorage _secureStorage;
+  final TokenStorage _tokenStorage;
   final Dio _dio;
 
   Future<Job> createOrder(
     String serviceId,
-    double amount,
-    String description,
-  ) async {
+    double? amount,
+    String description, {
+    String? title,
+  }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         '/jobs',
         data: <String, dynamic>{
-          'serviceId': serviceId,
-          'amount': amount,
+          'serviceId': int.tryParse(serviceId) ?? serviceId,
+          if (title != null && title.isNotEmpty) 'title': title,
+          if (amount != null) 'amount': amount,
           'description': description,
         },
         options: await _authorizedOptions(),
@@ -169,7 +171,7 @@ class JobsRepository {
   }
 
   Future<Options> _authorizedOptions() async {
-    final token = await _secureStorage.read(key: AuthRepository.tokenStorageKey);
+    final token = await _tokenStorage.read(AuthRepository.tokenStorageKey);
     if (token == null || token.isEmpty) {
       throw StateError('Token tidak ditemui. Sila log masuk semula.');
     }

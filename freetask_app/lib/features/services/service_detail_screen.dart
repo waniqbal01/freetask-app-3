@@ -77,8 +77,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       'title': service.title,
       'description': service.description,
       'price': service.price,
-      'deliveryDays': service.deliveryDays,
-      'includes': service.includes,
+      'freelancerName': service.freelancerName,
     };
 
     try {
@@ -163,22 +162,10 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                     style: AppTextStyles.headlineMedium,
                   ),
                   AppSpacing.vertical8,
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.star, color: AppColors.secondary, size: 22),
-                      const SizedBox(width: AppSpacing.s8),
-                      Text(
-                        service.rating.toStringAsFixed(1),
-                        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.neutral500),
-                      ),
-                      const SizedBox(width: AppSpacing.s16),
-                      Chip(
-                        label: Text(service.category),
-                        backgroundColor: theme.colorScheme.surface,
-                        shape: const StadiumBorder(),
-                      ),
-                    ],
+                  Chip(
+                    label: Text(service.category),
+                    backgroundColor: theme.colorScheme.surface,
+                    shape: const StadiumBorder(),
                   ),
                   AppSpacing.vertical16,
                   Container(
@@ -195,25 +182,20 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Harga Pakej',
-                                style: AppTextStyles.labelSmall,
-                              ),
-                              AppSpacing.vertical8,
-                              Text(
-                                'RM${service.price.toStringAsFixed(2)}',
-                                style: AppTextStyles.headlineSmall,
-                              ),
-                              AppSpacing.vertical8,
-                              Text(
-                                'Siap dalam ${service.deliveryDays} hari',
-                                style: AppTextStyles.bodySmall,
-                              ),
-                            ],
+                          const Text(
+                            'Harga Pakej',
+                            style: AppTextStyles.labelSmall,
                           ),
-                        ),
-                        const Icon(Icons.payments_rounded, color: AppColors.primary, size: 36),
-                      ],
+                          AppSpacing.vertical8,
+                          Text(
+                            'RM${service.price.toStringAsFixed(2)}',
+                            style: AppTextStyles.headlineSmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.payments_rounded, color: AppColors.primary, size: 36),
+                  ],
                     ),
                   ),
                   AppSpacing.vertical24,
@@ -227,34 +209,10 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                     style: AppTextStyles.bodyMedium,
                   ),
                   AppSpacing.vertical24,
-                  const Text(
-                    'Termasuk',
-                    style: AppTextStyles.headlineSmall,
+                  _FreelancerProfile(
+                    freelancerId: service.freelancerId,
+                    freelancerName: service.freelancerName,
                   ),
-                  AppSpacing.vertical8,
-                  ...service.includes.map(
-                    (String include) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s8 / 2),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Padding(
-                            padding: EdgeInsets.only(top: 4),
-                            child: Icon(Icons.check_circle, color: AppColors.primary, size: 18),
-                          ),
-                          const SizedBox(width: AppSpacing.s8),
-                          Expanded(
-                            child: Text(
-                              include,
-                              style: AppTextStyles.bodyMedium,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  AppSpacing.vertical24,
-                  _FreelancerProfile(freelancerId: service.freelancerId),
                 ],
               ),
             ),
@@ -360,20 +318,16 @@ class _ServiceBanner extends StatelessWidget {
                       style: AppTextStyles.headlineSmall.copyWith(color: Colors.white),
                     ),
                     AppSpacing.vertical8,
-                    Row(
-                      children: [
-                        const Icon(Icons.star_rounded, color: Colors.amber, size: 22),
-                        const SizedBox(width: AppSpacing.s8),
-                        Text(
-                          service.rating.toStringAsFixed(1),
-                          style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
-                        ),
-                        const SizedBox(width: AppSpacing.s16),
-                        Text(
-                          'RM${service.price.toStringAsFixed(2)}',
-                          style: AppTextStyles.headlineSmall.copyWith(color: Colors.white),
-                        ),
-                      ],
+                    Text(
+                      service.freelancerName?.isNotEmpty == true
+                          ? 'Oleh ${service.freelancerName}'
+                          : 'Freelancer ID: ${service.freelancerId}',
+                      style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
+                    ),
+                    AppSpacing.vertical8,
+                    Text(
+                      'RM${service.price.toStringAsFixed(2)}',
+                      style: AppTextStyles.headlineSmall.copyWith(color: Colors.white),
                     ),
                   ],
                 ),
@@ -387,14 +341,17 @@ class _ServiceBanner extends StatelessWidget {
 }
 
 class _FreelancerProfile extends StatelessWidget {
-  const _FreelancerProfile({required this.freelancerId});
+  const _FreelancerProfile({required this.freelancerId, this.freelancerName});
 
   final String freelancerId;
+  final String? freelancerName;
 
   @override
   Widget build(BuildContext context) {
-    final initials = freelancerId.isNotEmpty
-        ? freelancerId.substring(0, min(2, freelancerId.length)).toUpperCase()
+    final displayName =
+        freelancerName?.isNotEmpty == true ? freelancerName! : 'Freelancer $freelancerId';
+    final initials = displayName.isNotEmpty
+        ? displayName.substring(0, min(2, displayName.length)).toUpperCase()
         : 'FR';
 
     return Container(
@@ -426,7 +383,7 @@ class _FreelancerProfile extends StatelessWidget {
                 ),
                 AppSpacing.vertical8,
                 Text(
-                  'ID: $freelancerId',
+                  displayName,
                   style: AppTextStyles.bodyMedium.copyWith(color: AppColors.neutral500),
                 ),
                 AppSpacing.vertical8,

@@ -2,18 +2,18 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path/path.dart' as p;
 
 import 'http_client.dart';
+import 'token_storage.dart';
 
 class UploadService {
-  UploadService({Dio? dio, FlutterSecureStorage? secureStorage})
-      : _dio = dio ?? HttpClient().dio,
-        _storage = secureStorage ?? const FlutterSecureStorage();
+  UploadService({Dio? dio, TokenStorage? tokenStorage})
+      : _dio = dio ?? HttpClient(tokenStorage: tokenStorage).dio,
+        _storage = tokenStorage ?? createTokenStorage();
 
   final Dio _dio;
-  final FlutterSecureStorage _storage;
+  final TokenStorage _storage;
 
   Future<String> uploadFile(String filePath) async {
     final fileName = p.basename(filePath);
@@ -21,8 +21,8 @@ class UploadService {
       'file': await MultipartFile.fromFile(filePath, filename: fileName),
     });
 
-    final token = await _storage.read(key: _authTokenKey) ??
-        await _storage.read(key: _legacyAccessTokenKey);
+    final token = await _storage.read(_authTokenKey) ??
+        await _storage.read(_legacyAccessTokenKey);
     final headers = <String, dynamic>{};
     if (token != null && token.isNotEmpty) {
       headers['Authorization'] = 'Bearer $token';
