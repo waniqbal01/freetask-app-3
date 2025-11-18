@@ -7,6 +7,7 @@ import '../../core/utils/error_utils.dart';
 import '../../core/widgets/ft_button.dart';
 import '../../core/widgets/loading_overlay.dart';
 import '../../models/job.dart';
+import '../../theme/app_theme.dart';
 import '../reviews/review_dialog.dart';
 import '../reviews/reviews_repository.dart';
 import 'job_detail_screen.dart';
@@ -224,128 +225,128 @@ class _JobListScreenState extends State<JobListScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.largeRadius,
         onTap: () => _openJobDetail(job, isClientView: isClientView),
-        child: Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: AppRadius.largeRadius,
+            boxShadow: AppShadows.card,
           ),
-          elevation: 0.5,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: statusVisual.color.withOpacity(0.12),
-                      ),
-                      child: Icon(
-                        statusVisual.icon,
-                        color: statusVisual.color,
-                      ),
+          padding: const EdgeInsets.all(AppSpacing.s16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: statusVisual.color.withOpacity(0.12),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            job.serviceTitle,
-                            style: textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              JobStatusBadge(visual: statusVisual),
-                            ],
-                          ),
-                        ],
-                      ),
+                    child: Icon(
+                      statusVisual.icon,
+                      color: statusVisual.color,
                     ),
-                    Icon(
-                      Icons.chevron_right,
-                      color: theme.colorScheme.onSurface.withOpacity(0.6),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.calendar_today_outlined,
-                      size: 18,
-                      color: theme.colorScheme.onSurface.withOpacity(0.6),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      dateText,
-                      style: textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.payments_outlined,
-                      size: 18,
-                      color: theme.colorScheme.onSurface.withOpacity(0.6),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      amountText,
-                      style: textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'ID Servis: ${job.serviceId}',
-                  style: textTheme.bodySmall,
-                ),
-                if (job.isDisputed)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Row(
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.report_problem_outlined,
-                          color: Colors.orange.shade700,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'Dispute: ${job.disputeReason ?? 'Tiada maklumat tambahan.'}',
-                            style: textTheme.bodySmall?.copyWith(
-                              color: Colors.orange.shade700,
-                              fontWeight: FontWeight.w600,
-                            ),
+                        Text(
+                          job.serviceTitle,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.neutral900,
                           ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            JobStatusBadge(visual: statusVisual),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                const SizedBox(height: 12),
-                _buildActionSection(
-                  job,
-                  isClientView: isClientView,
-                  alreadyReviewed: alreadyReviewed,
+                  const Icon(
+                    Icons.chevron_right,
+                    color: AppColors.neutral300,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.calendar_today_outlined,
+                    size: 18,
+                    color: AppColors.neutral300,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    dateText,
+                    style: textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.payments_outlined,
+                    size: 18,
+                    color: AppColors.neutral300,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    amountText,
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'ID Servis: ${job.serviceId}',
+                style: textTheme.bodySmall,
+              ),
+              if (job.isDisputed)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.report_problem_outlined,
+                        color: Colors.orange.shade700,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Dispute: ${job.disputeReason ?? 'Tiada maklumat tambahan.'}',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: Colors.orange.shade700,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
+              const SizedBox(height: 12),
+              _buildActionSection(
+                job,
+                isClientView: isClientView,
+                alreadyReviewed: alreadyReviewed,
+              ),
+            ],
           ),
         ),
       ),
@@ -507,50 +508,80 @@ class _JobListScreenState extends State<JobListScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Jobs'),
-          leading: BackButton(
-            onPressed: () {
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                context.go('/home');
-              }
-            },
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFEEF3FC), Colors.white],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
           ),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Client Jobs'),
-              Tab(text: 'Freelancer Jobs'),
-            ],
-          ),
-        ),
-        body: Stack(
-          children: [
-            TabBarView(
+          child: SafeArea(
+            child: Column(
               children: [
-                _buildJobsTab(
-                  jobs: _clientJobs,
-                  isClientView: true,
-                  isLoading: _isLoadingClient,
-                  errorMessage: _clientErrorMessage,
-                  onRefresh: _refreshClientJobs,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          if (context.canPop()) {
+                            context.pop();
+                          } else {
+                            context.go('/home');
+                          }
+                        },
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Jobs & Orders',
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
                 ),
-                _buildJobsTab(
-                  jobs: _freelancerJobs,
-                  isClientView: false,
-                  isLoading: _isLoadingFreelancer,
-                  errorMessage: _freelancerErrorMessage,
-                  onRefresh: _refreshFreelancerJobs,
+                const TabBar(
+                  tabs: [
+                    Tab(text: 'Client Jobs'),
+                    Tab(text: 'Freelancer Jobs'),
+                  ],
+                ),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      TabBarView(
+                        children: [
+                          _buildJobsTab(
+                            jobs: _clientJobs,
+                            isClientView: true,
+                            isLoading: _isLoadingClient,
+                            errorMessage: _clientErrorMessage,
+                            onRefresh: _refreshClientJobs,
+                          ),
+                          _buildJobsTab(
+                            jobs: _freelancerJobs,
+                            isClientView: false,
+                            isLoading: _isLoadingFreelancer,
+                            errorMessage: _freelancerErrorMessage,
+                            onRefresh: _refreshFreelancerJobs,
+                          ),
+                        ],
+                      ),
+                      if (_isProcessing)
+                        const LoadingOverlay(
+                          message: 'Memproses tindakan...',
+                          backgroundOpacity: 0.4,
+                        ),
+                    ],
+                  ),
                 ),
               ],
             ),
-            if (_isProcessing)
-              const LoadingOverlay(
-                message: 'Memproses tindakan...',
-                backgroundOpacity: 0.4,
-              ),
-          ],
+          ),
         ),
       ),
     );

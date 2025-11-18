@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/notifications/notification_service.dart';
 import '../../core/utils/error_utils.dart';
 import '../../services/upload_service.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/section_card.dart';
 import 'auth_redirect.dart';
 import 'auth_repository.dart';
 
@@ -201,213 +203,249 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final isFreelancer = normalizedRole == 'Freelancer';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Daftar Akaun'),
-        leading: BackButton(
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/login');
-            }
-          },
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFEEF3FC), Colors.white],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
         ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Daftar sebagai $normalizedRole',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 680),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(AppSpacing.s24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go('/login');
+                        }
+                      },
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                      color: AppColors.neutral500,
                     ),
-              ),
-              const SizedBox(height: 24),
-              DropdownButtonFormField<String>(
-                value: _selectedRole,
-                items: const [
-                  DropdownMenuItem(value: 'Client', child: Text('Client')),
-                  DropdownMenuItem(
-                    value: 'Freelancer',
-                    child: Text('Freelancer'),
-                  ),
-                ],
-                onChanged: (value) {
-                  if (value == null) {
-                    return;
-                  }
-                  setState(() {
-                    _selectedRole = value;
-                  });
-                },
-                decoration: const InputDecoration(
-                  labelText: 'Jenis Akaun',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Email diperlukan';
-                  }
-                  if (!value.contains('@')) {
-                    return 'Email tidak sah';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Nama penuh',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Nama diperlukan';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Kata laluan',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Kata laluan diperlukan';
-                  }
-                  if (value.length < 6) {
-                    return 'Kata laluan perlu sekurang-kurangnya 6 aksara';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _confirmPasswordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Sahkan kata laluan',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Sila sahkan kata laluan';
-                  }
-                  if (value != _passwordController.text) {
-                    return 'Kata laluan tidak sepadan';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _avatarController,
-                readOnly: true,
-                onTap: () {
-                  if (_isUploadingAvatar) {
-                    return;
-                  }
-                  FocusScope.of(context).requestFocus(FocusNode());
-                  _handlePickAvatar();
-                },
-                decoration: InputDecoration(
-                  labelText: 'Avatar (URL)',
-                  border: const OutlineInputBorder(),
-                  suffixIcon: _isUploadingAvatar
-                      ? const Padding(
-                          padding: EdgeInsets.all(12),
-                          child: SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                    const SizedBox(height: AppSpacing.s8),
+                    Text(
+                      'Daftar akaun baharu',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
                           ),
-                        )
-                      : IconButton(
-                          icon: const Icon(Icons.upload_file),
-                          onPressed: _isUploadingAvatar ? null : _handlePickAvatar,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Pilih peranan dan siapkan profil anda untuk pengalaman marketplace yang lancar.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.s24),
+                    SectionCard(
+                      title: 'Maklumat Akaun',
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            DropdownButtonFormField<String>(
+                              value: _selectedRole,
+                              items: const [
+                                DropdownMenuItem(value: 'Client', child: Text('Client')),
+                                DropdownMenuItem(
+                                  value: 'Freelancer',
+                                  child: Text('Freelancer'),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                if (value == null) {
+                                  return;
+                                }
+                                setState(() {
+                                  _selectedRole = value;
+                                });
+                              },
+                              decoration: const InputDecoration(
+                                labelText: 'Jenis Akaun',
+                                prefixIcon: Icon(Icons.work_outline_rounded),
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.s16),
+                            TextFormField(
+                              controller: _emailController,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: const InputDecoration(
+                                labelText: 'Email',
+                                prefixIcon: Icon(Icons.email_outlined),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Email diperlukan';
+                                }
+                                if (!value.contains('@')) {
+                                  return 'Email tidak sah';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: AppSpacing.s16),
+                            TextFormField(
+                              controller: _nameController,
+                              decoration: const InputDecoration(
+                                labelText: 'Nama penuh',
+                                prefixIcon: Icon(Icons.person_outline),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Nama diperlukan';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: AppSpacing.s16),
+                            TextFormField(
+                              controller: _passwordController,
+                              obscureText: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Kata laluan',
+                                prefixIcon: Icon(Icons.lock_outline),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Kata laluan diperlukan';
+                                }
+                                if (value.length < 6) {
+                                  return 'Kata laluan perlu sekurang-kurangnya 6 aksara';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: AppSpacing.s16),
+                            TextFormField(
+                              controller: _confirmPasswordController,
+                              obscureText: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Sahkan kata laluan',
+                                prefixIcon: Icon(Icons.lock_person_outlined),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Sila sahkan kata laluan';
+                                }
+                                if (value != _passwordController.text) {
+                                  return 'Kata laluan tidak sepadan';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: AppSpacing.s16),
+                            TextFormField(
+                              controller: _avatarController,
+                              readOnly: true,
+                              onTap: () {
+                                if (_isUploadingAvatar) {
+                                  return;
+                                }
+                                FocusScope.of(context).requestFocus(FocusNode());
+                                _handlePickAvatar();
+                              },
+                              decoration: InputDecoration(
+                                labelText: 'Avatar (URL)',
+                                prefixIcon: const Icon(Icons.image_outlined),
+                                suffixIcon: _isUploadingAvatar
+                                    ? const Padding(
+                                        padding: EdgeInsets.all(12),
+                                        child: SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        ),
+                                      )
+                                    : IconButton(
+                                        icon: const Icon(Icons.upload_file),
+                                        onPressed: _isUploadingAvatar ? null : _handlePickAvatar,
+                                      ),
+                              ),
+                            ),
+                            if (isFreelancer) ...[
+                              const SizedBox(height: AppSpacing.s16),
+                              TextFormField(
+                                controller: _bioController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Bio',
+                                  prefixIcon: Icon(Icons.badge_outlined),
+                                ),
+                                maxLines: 3,
+                              ),
+                              const SizedBox(height: AppSpacing.s16),
+                              TextFormField(
+                                controller: _skillsController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Kemahiran (dipisah dengan koma)',
+                                  prefixIcon: Icon(Icons.handyman_outlined),
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.s16),
+                              TextFormField(
+                                controller: _rateController,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                  labelText: 'Kadar (contoh: 50.0)',
+                                  prefixIcon: Icon(Icons.payments_outlined),
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return null;
+                                  }
+                                  final parsed = double.tryParse(value);
+                                  if (parsed == null) {
+                                    return 'Sila masukkan nombor yang sah';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ],
+                            if (_errorMessage != null) ...[
+                              const SizedBox(height: AppSpacing.s16),
+                              Container(
+                                padding: const EdgeInsets.all(AppSpacing.s12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.error.withOpacity(0.08),
+                                  borderRadius: AppRadius.mediumRadius,
+                                ),
+                                child: Text(
+                                  _errorMessage!,
+                                  style: const TextStyle(color: AppColors.error),
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: AppSpacing.s24),
+                            ElevatedButton(
+                              onPressed: _isSubmitting ? null : _handleRegister,
+                              child: _isSubmitting
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                    )
+                                  : Text('Daftar sebagai $normalizedRole'),
+                            ),
+                            const SizedBox(height: AppSpacing.s16),
+                            TextButton(
+                              onPressed: () => context.go('/login'),
+                              child: const Text('Sudah ada akaun? Log masuk'),
+                            ),
+                          ],
                         ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              if (isFreelancer) ...[
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _bioController,
-                  decoration: const InputDecoration(
-                    labelText: 'Bio',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _skillsController,
-                  decoration: const InputDecoration(
-                    labelText: 'Kemahiran (dipisah dengan koma)',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _rateController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Kadar (contoh: 50.0)',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return null;
-                    }
-                    final parsed = double.tryParse(value);
-                    if (parsed == null) {
-                      return 'Sila masukkan nombor yang sah';
-                    }
-                    return null;
-                  },
-                ),
-              ],
-              if (_errorMessage != null) ...[
-                const SizedBox(height: 16),
-                Text(
-                  _errorMessage!,
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ],
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _isSubmitting ? null : _handleRegister,
-                child: _isSubmitting
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Daftar'),
-              ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () => context.go('/login'),
-                child: const Text('Sudah ada akaun? Log masuk'),
-              ),
-            ],
+            ),
           ),
         ),
       ),
