@@ -1,11 +1,14 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
+import '../../core/utils/error_utils.dart';
 import '../../models/job.dart';
 import '../reviews/review_dialog.dart';
 import '../reviews/reviews_repository.dart';
+import 'job_detail_screen.dart';
 import 'jobs_repository.dart';
-import '../../core/utils/error_utils.dart';
+import 'widgets/job_status_badge.dart';
 
 class JobListScreen extends StatefulWidget {
   const JobListScreen({super.key});
@@ -190,148 +193,239 @@ class _JobListScreenState extends State<JobListScreen> {
     }
   }
 
-  String _statusLabel(JobStatus status) {
-    switch (status) {
-      case JobStatus.pending:
-        return 'Booked';
-      case JobStatus.inProgress:
-        return 'In Progress';
-      case JobStatus.completed:
-        return 'Completed';
-      case JobStatus.rejected:
-        return 'Rejected';
-      case JobStatus.disputed:
-        return 'Disputed';
-    }
+  JobStatusVisual _statusVisual(JobStatus status) {
+    return mapJobStatusVisual(status);
   }
 
-  Color _statusColor(JobStatus status, BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    switch (status) {
-      case JobStatus.pending:
-        return scheme.secondary;
-      case JobStatus.inProgress:
-        return scheme.primary;
-      case JobStatus.completed:
-        return Colors.green;
-      case JobStatus.rejected:
-        return Colors.red;
-      case JobStatus.disputed:
-        return Colors.orange;
+  String _formatJobDate(DateTime? date) {
+    if (date == null) {
+      return 'Tarikh tidak tersedia';
     }
+
+    return DateFormat('dd MMM yyyy, h:mm a').format(date.toLocal());
   }
 
-  Widget _buildJobCard(Job job, {required bool isClientView}) {
-    final statusText = _statusLabel(job.status);
-    final statusColor = _statusColor(job.status, context);
-    final alreadyReviewed = reviewsRepository.hasSubmittedReview(job.id);
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              job.serviceTitle,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text('Service ID: ${job.serviceId}'),
-            const SizedBox(height: 8),
-            Text('Jumlah: RM${job.amount.toStringAsFixed(2)}'),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Status: $statusText',
-                  style: TextStyle(
-                    color: statusColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (isClientView && job.status == JobStatus.inProgress)
-                  FilledButton(
-                    onPressed: _isProcessing
-                        ? null
-                        : () => _handleAction(
-                              () async {
-                                return jobsRepository.markCompleted(job.id);
-                              },
-                              'Job ditandakan selesai. Status kini Completed.',
-                            ),
-                    child: const Text('Mark as Completed'),
-                  )
-                else if (!isClientView && job.status == JobStatus.pending)
-                  Row(
-                    children: [
-                      TextButton(
-                        onPressed: _isProcessing
-                            ? null
-                            : () => _handleAction(
-                                  () async {
-                                final success =
-                                    await jobsRepository.rejectJob(job.id);
-                                return success;
-                              },
-                              'Job telah ditolak dan dikemas kini.',
-                            ),
-                        child: const Text('Reject'),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: _isProcessing
-                            ? null
-                            : () => _handleAction(
-                                  () => jobsRepository.startJob(job.id),
-                                  'Job dimulakan! Status kini In Progress.',
-                                ),
-                        child: const Text('Start Job'),
-                      ),
-                    ],
-                  )
-                else
-                  const SizedBox.shrink(),
-              ],
-            ),
-            if (job.isDisputed)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  'Dispute: ${job.disputeReason ?? 'Tiada maklumat tambahan.'}',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: Colors.orange.shade700),
-                ),
-              ),
-            if (isClientView && job.status == JobStatus.completed)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: alreadyReviewed
-                      ? Chip(
-                          avatar: const Icon(
-                            Icons.check_circle,
-                            color: Colors.green,
-                          ),
-                          label: const Text('Review dihantar'),
-                        )
-                      : TextButton.icon(
-                          onPressed: () => _openReviewDialog(job),
-                          icon: const Icon(Icons.rate_review_outlined),
-                          label: const Text('Tulis review'),
-                        ),
-                ),
-              ),
-          ],
+  void _openJobDetail(Job job, {required bool isClientView}) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => JobDetailScreen(
+          job: job,
+          isClientView: isClientView,
         ),
       ),
     );
+  }
+
+  Widget _buildJobCard(Job job, {required bool isClientView}) {
+    final statusVisual = _statusVisual(job.status);
+    final alreadyReviewed = reviewsRepository.hasSubmittedReview(job.id);
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    final dateText = _formatJobDate(job.createdAt);
+    final amountText = 'RM${job.amount.toStringAsFixed(2)}';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _openJobDetail(job, isClientView: isClientView),
+        child: Card(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 0.5,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: statusVisual.color.withOpacity(0.12),
+                      ),
+                      child: Icon(
+                        statusVisual.icon,
+                        color: statusVisual.color,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            job.serviceTitle,
+                            style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              JobStatusBadge(visual: statusVisual),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right,
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today_outlined,
+                      size: 18,
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      dateText,
+                      style: textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.payments_outlined,
+                      size: 18,
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      amountText,
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'ID Servis: ${job.serviceId}',
+                  style: textTheme.bodySmall,
+                ),
+                if (job.isDisputed)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.report_problem_outlined,
+                          color: Colors.orange.shade700,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Dispute: ${job.disputeReason ?? 'Tiada maklumat tambahan.'}',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: Colors.orange.shade700,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 12),
+                _buildActionSection(
+                  job,
+                  isClientView: isClientView,
+                  alreadyReviewed: alreadyReviewed,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionSection(
+    Job job, {
+    required bool isClientView,
+    required bool alreadyReviewed,
+  }) {
+    if (isClientView && job.status == JobStatus.inProgress) {
+      return Align(
+        alignment: Alignment.centerRight,
+        child: FilledButton(
+          onPressed: _isProcessing
+              ? null
+              : () => _handleAction(
+                    () async {
+                      return jobsRepository.markCompleted(job.id);
+                    },
+                    'Job ditandakan selesai. Status kini Completed.',
+                  ),
+          child: const Text('Mark as Completed'),
+        ),
+      );
+    }
+
+    if (!isClientView && job.status == JobStatus.pending) {
+      return Row(
+        children: [
+          TextButton(
+            onPressed: _isProcessing
+                ? null
+                : () => _handleAction(
+                      () async {
+                        final success = await jobsRepository.rejectJob(job.id);
+                        return success;
+                      },
+                      'Job telah ditolak dan dikemas kini.',
+                    ),
+            child: const Text('Reject'),
+          ),
+          const SizedBox(width: 8),
+          FilledButton(
+            onPressed: _isProcessing
+                ? null
+                : () => _handleAction(
+                      () => jobsRepository.startJob(job.id),
+                      'Job dimulakan! Status kini In Progress.',
+                    ),
+            child: const Text('Start Job'),
+          ),
+        ],
+      );
+    }
+
+    if (isClientView && job.status == JobStatus.completed) {
+      return Align(
+        alignment: Alignment.centerRight,
+        child: alreadyReviewed
+            ? Chip(
+                avatar: const Icon(
+                  Icons.check_circle,
+                  color: Colors.green,
+                ),
+                label: const Text('Review dihantar'),
+              )
+            : TextButton.icon(
+                onPressed: () => _openReviewDialog(job),
+                icon: const Icon(Icons.rate_review_outlined),
+                label: const Text('Tulis review'),
+              ),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   Widget _buildJobsTab({
