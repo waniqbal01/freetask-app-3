@@ -188,21 +188,21 @@ class AppTheme {
         ),
         filled: true,
         fillColor: Colors.white,
-        enabledBorder: OutlineInputBorder(
+        enabledBorder: const OutlineInputBorder(
           borderRadius: AppRadius.mediumRadius,
-          borderSide: const BorderSide(color: AppColors.neutral200),
+          borderSide: BorderSide(color: AppColors.neutral200),
         ),
-        focusedBorder: OutlineInputBorder(
+        focusedBorder: const OutlineInputBorder(
           borderRadius: AppRadius.mediumRadius,
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.4),
+          borderSide: BorderSide(color: AppColors.primary, width: 1.4),
         ),
-        errorBorder: OutlineInputBorder(
+        errorBorder: const OutlineInputBorder(
           borderRadius: AppRadius.mediumRadius,
-          borderSide: const BorderSide(color: AppColors.error),
+          borderSide: BorderSide(color: AppColors.error),
         ),
-        focusedErrorBorder: OutlineInputBorder(
+        focusedErrorBorder: const OutlineInputBorder(
           borderRadius: AppRadius.mediumRadius,
-          borderSide: const BorderSide(color: AppColors.error, width: 1.4),
+          borderSide: BorderSide(color: AppColors.error, width: 1.4),
         ),
         hintStyle: AppTextStyles.bodySmall.copyWith(color: AppColors.neutral300),
         labelStyle: AppTextStyles.bodySmall,

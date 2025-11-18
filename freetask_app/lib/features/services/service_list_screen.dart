@@ -194,13 +194,13 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                       SliverFillRemaining(
                         hasScrollBody: false,
                         child: const Center(
-                          child: Column(
+                          child: const Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: <Widget>[
-                              Icon(Icons.store_mall_directory_outlined,
+                              const Icon(Icons.store_mall_directory_outlined,
                                   size: 52, color: Colors.grey),
-                              SizedBox(height: 12),
-                              Text('Tiada servis buat masa ini'),
+                              const SizedBox(height: 12),
+                              const Text('Tiada servis buat masa ini'),
                             ],
                           ),
                         ),

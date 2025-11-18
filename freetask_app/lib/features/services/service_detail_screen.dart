@@ -430,11 +430,11 @@ class _FreelancerProfile extends StatelessWidget {
                   style: AppTextStyles.bodyMedium.copyWith(color: AppColors.neutral500),
                 ),
                 AppSpacing.vertical8,
-                Row(
-                  children: const [
+                const Row(
+                  children: [
                     Icon(Icons.verified_rounded, color: AppColors.secondary, size: 18),
                     SizedBox(width: AppSpacing.s8),
-                    const Text(
+                    Text(
                       'Ready to collaborate',
                       style: AppTextStyles.bodySmall,
                     ),

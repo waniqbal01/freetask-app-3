@@ -28,7 +28,7 @@ JobStatusVisual mapJobStatusVisual(JobStatus status) {
         icon: Icons.schedule_outlined,
       );
     case JobStatus.inProgress:
-      return JobStatusVisual(
+      return const JobStatusVisual(
         label: 'In Progress',
         badgeText: 'IN_PROGRESS',
         color: Colors.deepPurple,

@@ -128,19 +128,19 @@ class ServiceCardSkeleton extends StatelessWidget {
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  _SkeletonLine(widthFactor: 0.75, height: 18),
-                  SizedBox(height: 8),
-                  _SkeletonLine(widthFactor: 0.4, height: 14),
-                  SizedBox(height: 10),
-                  _SkeletonLine(widthFactor: 1, height: 12),
-                  SizedBox(height: 6),
-                  _SkeletonLine(widthFactor: 0.85, height: 12),
-                  SizedBox(height: 14),
-                  const Row(
+                  const _SkeletonLine(widthFactor: 0.75, height: 18),
+                  const SizedBox(height: 8),
+                  const _SkeletonLine(widthFactor: 0.4, height: 14),
+                  const SizedBox(height: 10),
+                  const _SkeletonLine(widthFactor: 1, height: 12),
+                  const SizedBox(height: 6),
+                  const _SkeletonLine(widthFactor: 0.85, height: 12),
+                  const SizedBox(height: 14),
+                  Row(
                     children: <Widget>[
-                      _SkeletonLine(widthFactor: 0.3, height: 16),
-                      Spacer(),
-                      _SkeletonLine(widthFactor: 0.18, height: 14),
+                      const _SkeletonLine(widthFactor: 0.3, height: 16),
+                      const Spacer(),
+                      const _SkeletonLine(widthFactor: 0.18, height: 14),
                     ],
                   ),
                 ],
