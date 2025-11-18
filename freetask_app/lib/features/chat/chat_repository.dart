@@ -60,7 +60,13 @@ class ChatRepository {
       chatId,
       () => StreamController<List<ChatMessage>>.broadcast(),
     );
-    unawaited(_loadMessages(chatId));
+    unawaited(
+      _loadMessages(chatId).catchError(
+        (Object error, StackTrace stackTrace) {
+          controller.addError(error, stackTrace);
+        },
+      ),
+    );
     controller.add(List<ChatMessage>.unmodifiable(_messages[chatId] ?? <ChatMessage>[]));
     return controller.stream;
   }
