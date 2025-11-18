@@ -166,7 +166,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Icon(Icons.star, color: AppColors.secondary, size: 22),
+                      const Icon(Icons.star, color: AppColors.secondary, size: 22),
                       const SizedBox(width: AppSpacing.s8),
                       Text(
                         service.rating.toStringAsFixed(1),

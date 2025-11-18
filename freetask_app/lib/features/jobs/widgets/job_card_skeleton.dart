@@ -75,7 +75,7 @@ class _SkeletonLine extends StatelessWidget {
       child: Container(
         height: height,
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceVariant,
+          color: theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(8),
         ),
       ),
@@ -95,7 +95,7 @@ class _SkeletonCircle extends StatelessWidget {
       height: diameter,
       width: diameter,
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceVariant,
+        color: theme.colorScheme.surfaceContainerHighest,
         shape: BoxShape.circle,
       ),
     );

@@ -13,7 +13,7 @@ class Env {
       return 'http://10.0.2.2:4000';
     }
 
-    // TODO: Confirm the correct host for iOS simulator; typically http://localhost:4000 works.
+    // NOTE: Confirm the correct host for iOS simulator; typically http://localhost:4000 works.
     return 'http://localhost:4000';
   }
 }

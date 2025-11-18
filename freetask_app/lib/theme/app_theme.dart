@@ -121,7 +121,6 @@ class AppTheme {
       primary: AppColors.primary,
       secondary: AppColors.secondary,
       surface: Colors.white,
-      background: AppColors.neutral50,
       error: AppColors.error,
       brightness: Brightness.light,
     );
@@ -161,21 +160,21 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ButtonStyle(
-          backgroundColor: MaterialStateProperty.resolveWith((states) {
-            if (states.contains(MaterialState.disabled)) return ButtonStateColors.disabled;
-            if (states.contains(MaterialState.pressed) || states.contains(MaterialState.hovered)) {
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) return ButtonStateColors.disabled;
+            if (states.contains(WidgetState.pressed) || states.contains(WidgetState.hovered)) {
               return ButtonStateColors.loading;
             }
             return ButtonStateColors.normal;
           }),
-          foregroundColor: MaterialStateProperty.all<Color>(Colors.white),
-          padding: MaterialStateProperty.all<EdgeInsets>(
+          foregroundColor: WidgetStateProperty.all<Color>(Colors.white),
+          padding: WidgetStateProperty.all<EdgeInsets>(
             const EdgeInsets.symmetric(
               vertical: AppSpacing.s16,
               horizontal: AppSpacing.s16,
             ),
           ),
-          shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+          shape: WidgetStateProperty.all<RoundedRectangleBorder>(
             const RoundedRectangleBorder(
               borderRadius: AppRadius.mediumRadius,
             ),

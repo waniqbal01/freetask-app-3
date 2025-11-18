@@ -406,12 +406,12 @@ class _JobListScreenState extends State<JobListScreen> {
       return Align(
         alignment: Alignment.centerRight,
         child: alreadyReviewed
-            ? Chip(
-                avatar: const Icon(
+            ? const Chip(
+                avatar: Icon(
                   Icons.check_circle,
                   color: Colors.green,
                 ),
-                label: const Text('Review dihantar'),
+                label: Text('Review dihantar'),
               )
             : FTButton(
                 label: 'Tulis review',
