@@ -112,6 +112,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Servis'),
+        automaticallyImplyLeading: false,
       ),
       body: SafeArea(
         child: LayoutBuilder(

@@ -10,9 +10,11 @@ import '../features/chat/chat_list_screen.dart';
 import '../features/chat/chat_room_screen.dart';
 import '../features/checkout/checkout_screen.dart';
 import '../features/jobs/checkout_screen.dart';
+import '../features/jobs/job_detail_screen.dart';
 import '../features/jobs/job_list_screen.dart';
 import '../features/services/service_detail_screen.dart';
 import '../features/services/service_list_screen.dart';
+import '../models/job.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/startup',
@@ -73,6 +75,24 @@ final appRouter = GoRouter(
       path: '/jobs',
       builder: (BuildContext context, GoRouterState state) {
         return const JobListScreen();
+      },
+    ),
+    GoRoute(
+      path: '/jobs/:id',
+      builder: (BuildContext context, GoRouterState state) {
+        final extras = state.extra as Map<String, dynamic>?;
+        final job = extras?['job'] as Job?;
+        final isClientView = extras?['isClientView'] as bool? ?? true;
+
+        if (job == null) {
+          return const Scaffold(
+            body: Center(
+              child: Text('Maklumat job tidak tersedia.'),
+            ),
+          );
+        }
+
+        return JobDetailScreen(job: job, isClientView: isClientView);
       },
     ),
     GoRoute(

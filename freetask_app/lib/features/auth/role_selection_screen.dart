@@ -70,6 +70,15 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Pilih Peranan'),
+        leading: BackButton(
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/login');
+            }
+          },
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),

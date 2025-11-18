@@ -201,7 +201,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final isFreelancer = normalizedRole == 'Freelancer';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Daftar Akaun')),
+      appBar: AppBar(
+        title: const Text('Daftar Akaun'),
+        leading: BackButton(
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/login');
+            }
+          },
+        ),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Form(
