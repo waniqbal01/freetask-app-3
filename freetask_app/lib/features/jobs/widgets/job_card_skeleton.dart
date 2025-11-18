@@ -37,8 +37,8 @@ class _SkeletonRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: const [
+    return const Row(
+      children: [
         _SkeletonCircle(),
         SizedBox(width: 12),
         Expanded(

@@ -193,10 +193,10 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                     else if (_services.isEmpty)
                       SliverFillRemaining(
                         hasScrollBody: false,
-                        child: Center(
+                        child: const Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children: const <Widget>[
+                            children: <Widget>[
                               Icon(Icons.store_mall_directory_outlined,
                                   size: 52, color: Colors.grey),
                               SizedBox(height: 12),

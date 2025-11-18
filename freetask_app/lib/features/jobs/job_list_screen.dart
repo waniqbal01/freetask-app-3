@@ -472,10 +472,10 @@ class _JobListScreenState extends State<JobListScreen> {
     }
 
     if (jobs.isEmpty) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
+          children: [
             Icon(Icons.assignment_outlined, size: 48, color: Colors.grey),
             SizedBox(height: 12),
             Text('Tiada job ditemui'),

@@ -134,9 +134,9 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
 
         final service = _service;
         if (service == null) {
-          return Column(
+          return const Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
+            children: [
               Icon(Icons.store_mall_directory_outlined, size: 52, color: Colors.grey),
               SizedBox(height: AppSpacing.s12),
               Text('Tiada servis buat masa ini'),
@@ -195,7 +195,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
+                              const Text(
                                 'Harga Pakej',
                                 style: AppTextStyles.labelSmall,
                               ),
@@ -217,7 +217,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                     ),
                   ),
                   AppSpacing.vertical24,
-                  Text(
+                  const Text(
                     'Butiran Servis',
                     style: AppTextStyles.headlineSmall,
                   ),
@@ -227,7 +227,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                     style: AppTextStyles.bodyMedium,
                   ),
                   AppSpacing.vertical24,
-                  Text(
+                  const Text(
                     'Termasuk',
                     style: AppTextStyles.headlineSmall,
                   ),
@@ -434,7 +434,7 @@ class _FreelancerProfile extends StatelessWidget {
                   children: const [
                     Icon(Icons.verified_rounded, color: AppColors.secondary, size: 18),
                     SizedBox(width: AppSpacing.s8),
-                    Text(
+                    const Text(
                       'Ready to collaborate',
                       style: AppTextStyles.bodySmall,
                     ),
