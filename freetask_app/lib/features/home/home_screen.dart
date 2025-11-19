@@ -166,6 +166,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final name = _user?.name ?? 'FreeTasker';
     final role = _user?.role?.toUpperCase();
     final isFreelancer = role == 'FREELANCER';
+    final isAdmin = role == 'ADMIN';
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.s20),
@@ -194,6 +195,12 @@ class _HomeScreenState extends State<HomeScreen> {
             spacing: AppSpacing.s12,
             runSpacing: AppSpacing.s12,
             children: [
+              if (isAdmin)
+                FTButton(
+                  label: 'Admin Dashboard',
+                  onPressed: () => context.push('/admin'),
+                  expanded: false,
+                ),
               FTButton(
                 label: isFreelancer ? 'Servis Saya' : 'Browse Servis',
                 onPressed: () => context.push(isFreelancer ? '/freelancer/services' : '/services'),
