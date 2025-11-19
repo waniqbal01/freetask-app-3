@@ -1,145 +1,91 @@
 import 'dart:async';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/utils/error_utils.dart';
+import '../../core/widgets/async_state_view.dart';
 import '../../core/widgets/ft_button.dart';
 import '../../models/service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/service_card.dart';
-import 'services_repository.dart';
+import 'service_list_controller.dart';
 
-class ServiceListScreen extends StatefulWidget {
+class ServiceListScreen extends ConsumerStatefulWidget {
   const ServiceListScreen({super.key, this.initialCategory, this.initialQuery});
 
   final String? initialCategory;
   final String? initialQuery;
 
   @override
-  State<ServiceListScreen> createState() => _ServiceListScreenState();
+  ConsumerState<ServiceListScreen> createState() => _ServiceListScreenState();
 }
 
-class _ServiceListScreenState extends State<ServiceListScreen> {
+class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
   final TextEditingController _searchController = TextEditingController();
-  final List<Service> _services = <Service>[];
-  bool _isLoading = false;
-  String? _errorMessage;
-  List<String> _categories = const <String>['Semua'];
-  late String _selectedCategory = 'Semua';
   Timer? _debounce;
+  ProviderSubscription<ServiceListState>? _errorListener;
 
   @override
   void initState() {
     super.initState();
-    _selectedCategory = _normalizeCategory(widget.initialCategory);
-    if (widget.initialQuery?.isNotEmpty == true) {
-      _searchController.text = widget.initialQuery!;
-    }
-    _fetchServices();
-    _loadCategories();
     _searchController.addListener(_onSearchChanged);
-  }
+    _errorListener = ref.listen<ServiceListState>(
+      serviceListControllerProvider,
+      (previous, next) {
+        final previousStatus = previous?.services;
+        final nextStatus = next.services;
+        if (nextStatus.hasError && previousStatus != nextStatus) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            final message = nextStatus.message ??
+                friendlyErrorMessage(nextStatus.error ?? 'Tidak dapat memuatkan servis.');
+            showErrorSnackBar(context, message);
+          });
+        }
+      },
+    );
 
-  @override
-  void didUpdateWidget(covariant ServiceListScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.initialQuery != oldWidget.initialQuery &&
-        widget.initialQuery != null &&
-        widget.initialQuery != _searchController.text) {
-      _searchController.text = widget.initialQuery!;
-      _fetchServices();
-    }
-    if (widget.initialCategory != oldWidget.initialCategory &&
-        widget.initialCategory != null &&
-        widget.initialCategory!.isNotEmpty) {
-      final normalized = _normalizeCategory(widget.initialCategory);
-      if (normalized != _selectedCategory) {
-        _selectedCategory = normalized;
-        _fetchServices();
-      }
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(serviceListControllerProvider.notifier).bootstrap(
+            initialCategory: widget.initialCategory,
+            initialQuery: widget.initialQuery,
+          );
+    });
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
     _searchController.dispose();
+    _errorListener?.close();
     super.dispose();
   }
 
   void _onSearchChanged() {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), _fetchServices);
-  }
-
-  Future<void> _fetchServices() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+    _debounce = Timer(const Duration(milliseconds: 350), () {
+      ref
+          .read(serviceListControllerProvider.notifier)
+          .updateSearchQuery(_searchController.text);
     });
-
-    try {
-      final services = await servicesRepository.getServices(
-        q: _searchController.text,
-        category: _selectedCategory,
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _services
-          ..clear()
-          ..addAll(services);
-      });
-    } on AppException catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = error.message;
-      });
-      showErrorSnackBar(context, error);
-    } catch (error) {
-      if (!mounted) return;
-      const message = 'Tidak dapat memuatkan servis. Sila cuba lagi.';
-      setState(() {
-        _errorMessage = message;
-      });
-      showErrorSnackBar(context, '$message\n$error');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _loadCategories() async {
-    try {
-      final categories = await servicesRepository.getCategories();
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _categories = <String>['Semua', ...categories];
-        if (!_categories.contains(_selectedCategory)) {
-          _selectedCategory = 'Semua';
-        }
-      });
-    } on AppException catch (error) {
-      if (!mounted) return;
-      showErrorSnackBar(context, error);
-    } catch (error) {
-      if (!mounted) return;
-      showErrorSnackBar(context, 'Gagal memuat kategori: $error');
-    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(serviceListControllerProvider);
+    final filters = state.filters;
+    final servicesState = state.services;
+
+    if (_searchController.text != filters.searchQuery) {
+      _searchController.value = TextEditingValue(
+        text: filters.searchQuery,
+        selection: TextSelection.collapsed(offset: filters.searchQuery.length),
+      );
+    }
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -163,96 +109,128 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                           child: _MarketplaceHero(
                             searchController: _searchController,
                             onSearchChanged: _onSearchChanged,
-                            categories: _categories,
-                            selectedCategory: _selectedCategory,
+                            categories: state.categories,
+                            selectedCategory: filters.category,
                             onCategorySelected: (String value) {
-                              setState(() => _selectedCategory = value);
-                              _fetchServices();
+                              ref
+                                  .read(serviceListControllerProvider.notifier)
+                                  .selectCategory(value);
                             },
                           ),
                         ),
                       ),
-                    if (_isLoading)
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (BuildContext context, int index) {
-                              if (index.isOdd) {
-                                return const SizedBox(height: 12);
-                              }
-                              return const ServiceCardSkeleton();
-                            },
-                            childCount: (6 * 2) - 1,
-                          ),
-                        ),
-                      )
-                    else if (_errorMessage != null)
-                      SliverFillRemaining(
-                        hasScrollBody: false,
+                      SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: <Widget>[
-                              Icon(
-                                Icons.error_outline,
-                                size: 42,
-                                color: Theme.of(context).colorScheme.error,
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                _errorMessage!,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color:
-                                      Theme.of(context).colorScheme.error,
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                          child: _FilterToolbar(
+                            filters: filters,
+                            onPriceSelected: (PriceTier tier) => ref
+                                .read(serviceListControllerProvider.notifier)
+                                .updatePriceTier(tier),
+                            onRatingSelected: (double rating) => ref
+                                .read(serviceListControllerProvider.notifier)
+                                .updateRating(rating),
+                          ),
+                        ),
+                      ),
+                      AsyncStateView<List<Service>>(
+                        state: servicesState,
+                        onRetry: () =>
+                            ref.read(serviceListControllerProvider.notifier).refresh(),
+                        loading: (_) => SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (BuildContext context, int index) {
+                                if (index.isOdd) {
+                                  return const SizedBox(height: 12);
+                                }
+                                return const ServiceCardSkeleton();
+                              },
+                              childCount: (6 * 2) - 1,
+                            ),
+                          ),
+                        ),
+                        empty: (BuildContext context, String message) {
+                          return SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.store_mall_directory_outlined,
+                                    size: 52, color: Colors.grey),
+                                const SizedBox(height: 12),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                                  child: Text(
+                                    message,
+                                    textAlign: TextAlign.center,
+                                  ),
                                 ),
+                                const SizedBox(height: 12),
+                                FTButton(
+                                  label: 'Cari Servis Lain',
+                                  expanded: false,
+                                  onPressed: () =>
+                                      ref.read(serviceListControllerProvider.notifier).refresh(),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        error: (BuildContext context, String message, VoidCallback? onRetry) {
+                          return SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: <Widget>[
+                                  Icon(
+                                    Icons.error_outline,
+                                    size: 42,
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    message,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.error,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  FTButton(
+                                    label: 'Cuba Lagi',
+                                    onPressed: onRetry,
+                                    expanded: false,
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 12),
-                              FTButton(
-                                label: 'Cuba Lagi',
-                                onPressed: _fetchServices,
-                                expanded: false,
+                            ),
+                          );
+                        },
+                        data: (BuildContext context, List<Service> services) {
+                          return SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                            sliver: SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (BuildContext context, int index) {
+                                  if (index.isOdd) {
+                                    return const SizedBox(height: 12);
+                                  }
+                                  final service = services[index ~/ 2];
+                                  return ServiceCard(
+                                    service: service,
+                                    onTap: () =>
+                                        context.push('/service/${service.id}'),
+                                  );
+                                },
+                                childCount: (services.length * 2) - 1,
                               ),
-                            ],
-                          ),
-                        ),
-                      )
-                    else if (_services.isEmpty)
-                      const SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: <Widget>[
-                              Icon(Icons.store_mall_directory_outlined,
-                                  size: 52, color: Colors.grey),
-                              SizedBox(height: 12),
-                              Text('Tiada servis buat masa ini'),
-                            ],
-                          ),
-                        ),
-                      )
-                    else
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (BuildContext context, int index) {
-                              if (index.isOdd) {
-                                return const SizedBox(height: 12);
-                              }
-                              final service = _services[index ~/ 2];
-                              return ServiceCard(
-                                service: service,
-                                onTap: () =>
-                                    context.push('/service/${service.id}'),
-                              );
-                            },
-                            childCount: (_services.length * 2) - 1,
-                          ),
-                        ),
+                            ),
+                          );
+                        },
                       ),
                   ],
                 ),
@@ -264,13 +242,6 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
     ),
   );
   }
-}
-
-String _normalizeCategory(String? value) {
-  if (value == null || value.isEmpty) {
-    return 'Semua';
-  }
-  return value;
 }
 
 class _MarketplaceHero extends StatelessWidget {
@@ -376,3 +347,109 @@ class _MarketplaceHero extends StatelessWidget {
     );
   }
 }
+
+class _FilterToolbar extends StatelessWidget {
+  const _FilterToolbar({
+    required this.filters,
+    required this.onPriceSelected,
+    required this.onRatingSelected,
+  });
+
+  final ServiceListFilters filters;
+  final ValueChanged<PriceTier> onPriceSelected;
+  final ValueChanged<double> onRatingSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        _FilterDropdown<PriceTier>(
+          label: 'Harga',
+          value: filters.priceTier,
+          options: PriceTier.values,
+          displayLabel: (PriceTier tier) => tier.label,
+          onChanged: onPriceSelected,
+        ),
+        _FilterDropdown<double>(
+          label: 'Rating',
+          value: filters.minRating,
+          options: _ratingOptions,
+          displayLabel: (double rating) => _ratingLabel(rating),
+          onChanged: onRatingSelected,
+        ),
+      ],
+    );
+  }
+}
+
+class _FilterDropdown<T> extends StatelessWidget {
+  const _FilterDropdown({
+    required this.label,
+    required this.value,
+    required this.options,
+    required this.displayLabel,
+    required this.onChanged,
+  });
+
+  final String label;
+  final T value;
+  final List<T> options;
+  final String Function(T value) displayLabel;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: textTheme.labelSmall?.copyWith(color: AppColors.neutral500),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: AppColors.neutral100),
+            color: Colors.white,
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<T>(
+              value: value,
+              icon: const Icon(Icons.keyboard_arrow_down_rounded),
+              style: textTheme.labelLarge,
+              onChanged: (T? newValue) {
+                if (newValue == null) {
+                  return;
+                }
+                onChanged(newValue);
+              },
+              items: options
+                  .map(
+                    (T option) => DropdownMenuItem<T>(
+                      value: option,
+                      child: Text(displayLabel(option)),
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+String _ratingLabel(double rating) {
+  if (rating <= 0) {
+    return 'Semua rating';
+  }
+  return '≥ ${rating.toStringAsFixed(rating.truncateToDouble() == rating ? 0 : 1)} bintang';
+}
+
+const List<double> _ratingOptions = <double>[0, 3, 4, 4.5];

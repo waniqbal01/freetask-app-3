@@ -33,7 +33,7 @@ class ServiceCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const _ServiceThumbnail(),
+                _ServiceThumbnail(imageUrl: service.thumbnailUrl),
                 const SizedBox(width: AppSpacing.s16),
                 Expanded(
                   child: Column(
@@ -60,9 +60,8 @@ class ServiceCard extends StatelessWidget {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Icon(Icons.person_outline,
-                              size: 18, color: AppColors.neutral400),
-                          const SizedBox(width: 6),
+                          _FreelancerAvatar(imageUrl: service.freelancerAvatarUrl),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               service.freelancerName?.isNotEmpty == true
@@ -71,14 +70,29 @@ class ServiceCard extends StatelessWidget {
                               style: textTheme.bodySmall,
                             ),
                           ),
-                          const SizedBox(width: AppSpacing.s12),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
                           const Icon(Icons.star_rate_rounded,
                               size: 18, color: Colors.amber),
                           const SizedBox(width: 4),
                           Text(
-                            'Tiada rating',
+                            _buildRatingLabel(service),
                             style: textTheme.bodySmall
-                                ?.copyWith(color: AppColors.neutral400),
+                                ?.copyWith(color: AppColors.neutral500),
+                          ),
+                          const Spacer(),
+                          const Icon(Icons.work_outline,
+                              size: 18, color: AppColors.neutral400),
+                          const SizedBox(width: 6),
+                          Text(
+                            service.completedJobs != null
+                                ? '${service.completedJobs} job selesai'
+                                : 'Job pertama menanti',
+                            style: textTheme.bodySmall
+                                ?.copyWith(color: AppColors.neutral500),
                           ),
                         ],
                       ),
@@ -202,30 +216,86 @@ class _SkeletonLine extends StatelessWidget {
 }
 
 class _ServiceThumbnail extends StatelessWidget {
-  const _ServiceThumbnail();
+  const _ServiceThumbnail({this.imageUrl});
+
+  final String? imageUrl;
 
   @override
   Widget build(BuildContext context) {
+    final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: Container(
         height: 90,
         width: 90,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppColors.primary.withValues(alpha: 0.12), Colors.white],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: const Icon(
-          Icons.design_services_rounded,
-          color: AppColors.primary,
-          size: 32,
-        ),
+        color: AppColors.neutral50,
+        child: hasImage
+            ? Image.network(
+                imageUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const _ThumbnailPlaceholder(),
+              )
+            : const _ThumbnailPlaceholder(),
       ),
     );
   }
+}
+
+class _ThumbnailPlaceholder extends StatelessWidget {
+  const _ThumbnailPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.primary.withValues(alpha: 0.12), Colors.white],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: const Icon(
+        Icons.design_services_rounded,
+        color: AppColors.primary,
+        size: 32,
+      ),
+    );
+  }
+}
+
+class _FreelancerAvatar extends StatelessWidget {
+  const _FreelancerAvatar({this.imageUrl});
+
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    if (imageUrl == null || imageUrl!.isEmpty) {
+      return CircleAvatar(
+        radius: 16,
+        backgroundColor: AppColors.neutral100,
+        child: const Icon(Icons.person_outline, size: 18, color: AppColors.neutral500),
+      );
+    }
+    return CircleAvatar(
+      radius: 16,
+      backgroundImage: NetworkImage(imageUrl!),
+      backgroundColor: AppColors.neutral100,
+    );
+  }
+}
+
+String _buildRatingLabel(Service service) {
+  final rating = service.averageRating;
+  final reviews = service.reviewCount ?? 0;
+  if (rating == null || rating == 0) {
+    return 'Belum ada rating';
+  }
+  final formattedRating = rating.toStringAsFixed(1);
+  if (reviews <= 0) {
+    return formattedRating;
+  }
+  return '$formattedRating · ${reviews} ulasan';
 }
 
 class _CategoryChip extends StatelessWidget {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/utils/error_utils.dart';
@@ -6,86 +7,46 @@ import '../../core/widgets/ft_button.dart';
 import '../../models/service.dart';
 import '../../models/user.dart';
 import '../../theme/app_theme.dart';
+import '../../core/widgets/async_state_view.dart';
 import '../../widgets/service_card.dart';
-import '../auth/auth_repository.dart';
-import '../services/services_repository.dart';
+import 'home_controller.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  AppUser? _user;
-  List<String> _categories = const <String>[];
-  List<Service> _featured = const <Service>[];
-  bool _isLoading = true;
-  String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadContent();
-  }
-
-  Future<void> _loadContent() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen<HomeState>(homeControllerProvider, (previous, next) {
+      if (next.featured.hasError && previous?.featured != next.featured) {
+        final message = next.featured.message ??
+            friendlyErrorMessage(next.featured.error ?? 'Tidak dapat memuatkan dashboard.');
+        showErrorSnackBar(context, message);
+      }
     });
 
-    try {
-      final results = await Future.wait([
-        authRepository.getCurrentUser(),
-        servicesRepository.getCategories(),
-        servicesRepository.getServices(),
-      ]);
-      if (!mounted) return;
-      setState(() {
-        _user = results[0] as AppUser?;
-        _categories = (results[1] as List<String>?) ?? const <String>[];
-        _featured = ((results[2] as List<Service>?) ?? const <Service>[]) 
-            .take(6)
-            .toList(growable: false);
-      });
-    } on AppException catch (error) {
-      if (!mounted) return;
-      setState(() => _errorMessage = error.message);
-      showErrorSnackBar(context, error);
-    } catch (error) {
-      if (!mounted) return;
-      setState(() => _errorMessage = 'Tidak dapat memuatkan dashboard.');
-      showErrorSnackBar(context, error);
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
+    final state = ref.watch(homeControllerProvider);
+    final categories = state.categories;
+    final featuredState = state.featured;
 
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: _loadContent,
+          onRefresh: () => ref.read(homeControllerProvider.notifier).refresh(),
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.s20),
-                  child: _buildHero(context),
+                  child: _HomeHero(user: state.user),
                 ),
               ),
-              if (_categories.isNotEmpty)
+              if (categories.isNotEmpty)
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s20),
                     child: _CategorySection(
-                      categories: _categories,
+                      categories: categories,
                       onSelected: (String category) {
                         final uri = Uri(path: '/services', queryParameters: {'category': category});
                         context.push(uri.toString());
@@ -113,58 +74,90 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-              if (_isLoading)
-                const SliverFillRemaining(
+              AsyncStateView<List<Service>>(
+                state: featuredState,
+                onRetry: () => ref.read(homeControllerProvider.notifier).refresh(),
+                loading: (_) => const SliverFillRemaining(
                   hasScrollBody: false,
                   child: Center(child: CircularProgressIndicator()),
-                )
-              else if (_errorMessage != null)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.s20),
-                      child: Text(
-                        _errorMessage!,
-                        textAlign: TextAlign.center,
+                ),
+                empty: (BuildContext context, String message) {
+                  return SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.s20),
+                        child: Text(
+                          message,
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ),
-                  ),
-                )
-              else if (_featured.isEmpty)
-                const SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Center(child: Text('Belum ada servis popular.')),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.s20, 0, AppSpacing.s20, AppSpacing.s20),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (BuildContext context, int index) {
-                        if (index.isOdd) {
-                          return const SizedBox(height: AppSpacing.s12);
-                        }
-                        final service = _featured[index ~/ 2];
-                        return ServiceCard(
-                          service: service,
-                          onTap: () => context.push('/service/${service.id}'),
-                        );
-                      },
-                      childCount: (_featured.length * 2) - 1,
+                  );
+                },
+                error: (BuildContext context, String message, VoidCallback? onRetry) {
+                  return SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.s20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              message,
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: AppSpacing.s12),
+                            FTButton(
+                              label: 'Cuba Lagi',
+                              expanded: false,
+                              onPressed: onRetry,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
+                data: (BuildContext context, List<Service> services) {
+                  return SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(AppSpacing.s20, 0, AppSpacing.s20, AppSpacing.s20),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (BuildContext context, int index) {
+                          if (index.isOdd) {
+                            return const SizedBox(height: AppSpacing.s12);
+                          }
+                          final service = services[index ~/ 2];
+                          return ServiceCard(
+                            service: service,
+                            onTap: () => context.push('/service/${service.id}'),
+                          );
+                        },
+                        childCount: (services.length * 2) - 1,
+                      ),
+                    ),
+                  );
+                },
+              ),
             ],
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildHero(BuildContext context) {
-    final name = _user?.name ?? 'FreeTasker';
-    final role = _user?.role?.toUpperCase();
+class _HomeHero extends StatelessWidget {
+  const _HomeHero({this.user});
+
+  final AppUser? user;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = user?.name ?? 'FreeTasker';
+    final role = user?.role?.toUpperCase();
     final isFreelancer = role == 'FREELANCER';
     final isAdmin = role == 'ADMIN';
 

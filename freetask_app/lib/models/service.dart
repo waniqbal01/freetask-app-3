@@ -8,6 +8,11 @@ class Service {
     required this.freelancerId,
     this.freelancerName,
     this.createdAt,
+    this.averageRating,
+    this.reviewCount,
+    this.completedJobs,
+    this.thumbnailUrl,
+    this.freelancerAvatarUrl,
   });
 
   factory Service.fromJson(Map<String, dynamic> json) {
@@ -24,6 +29,12 @@ class Service {
           '',
       freelancerName: freelancer?['name']?.toString(),
       createdAt: _parseDateTime(json['createdAt'] ?? json['created_at']),
+      averageRating: _parseDouble(json['averageRating'] ?? json['average_rating']),
+      reviewCount: _parseInt(json['reviewCount'] ?? json['review_count']),
+      completedJobs: _parseInt(json['completedJobs'] ?? json['completed_jobs']),
+      thumbnailUrl: json['thumbnailUrl']?.toString() ?? json['thumbnail_url']?.toString(),
+      freelancerAvatarUrl: freelancer?['avatarUrl']?.toString() ??
+          json['freelancerAvatar']?.toString(),
     );
   }
 
@@ -35,6 +46,11 @@ class Service {
   final String freelancerId;
   final String? freelancerName;
   final DateTime? createdAt;
+  final double? averageRating;
+  final int? reviewCount;
+  final int? completedJobs;
+  final String? thumbnailUrl;
+  final String? freelancerAvatarUrl;
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
@@ -46,6 +62,11 @@ class Service {
       'freelancerId': freelancerId,
       if (freelancerName != null) 'freelancerName': freelancerName,
       if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
+      if (averageRating != null) 'averageRating': averageRating,
+      if (reviewCount != null) 'reviewCount': reviewCount,
+      if (completedJobs != null) 'completedJobs': completedJobs,
+      if (thumbnailUrl != null) 'thumbnailUrl': thumbnailUrl,
+      if (freelancerAvatarUrl != null) 'freelancerAvatar': freelancerAvatarUrl,
     };
   }
 
@@ -55,6 +76,29 @@ class Service {
     }
     if (value is String && value.isNotEmpty) {
       return DateTime.tryParse(value);
+    }
+    return null;
+  }
+
+  static double? _parseDouble(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    if (value is String) {
+      return double.tryParse(value);
+    }
+    return null;
+  }
+
+  static int? _parseInt(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    if (value is String) {
+      return int.tryParse(value);
     }
     return null;
   }
