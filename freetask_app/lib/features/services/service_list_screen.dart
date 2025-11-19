@@ -12,7 +12,10 @@ import '../../widgets/service_card.dart';
 import 'services_repository.dart';
 
 class ServiceListScreen extends StatefulWidget {
-  const ServiceListScreen({super.key});
+  const ServiceListScreen({super.key, this.initialCategory, this.initialQuery});
+
+  final String? initialCategory;
+  final String? initialQuery;
 
   @override
   State<ServiceListScreen> createState() => _ServiceListScreenState();
@@ -24,15 +27,39 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
   bool _isLoading = false;
   String? _errorMessage;
   List<String> _categories = const <String>['Semua'];
-  String _selectedCategory = 'Semua';
+  late String _selectedCategory = 'Semua';
   Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
+    _selectedCategory = _normalizeCategory(widget.initialCategory);
+    if (widget.initialQuery?.isNotEmpty == true) {
+      _searchController.text = widget.initialQuery!;
+    }
     _fetchServices();
     _loadCategories();
     _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant ServiceListScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialQuery != oldWidget.initialQuery &&
+        widget.initialQuery != null &&
+        widget.initialQuery != _searchController.text) {
+      _searchController.text = widget.initialQuery!;
+      _fetchServices();
+    }
+    if (widget.initialCategory != oldWidget.initialCategory &&
+        widget.initialCategory != null &&
+        widget.initialCategory!.isNotEmpty) {
+      final normalized = _normalizeCategory(widget.initialCategory);
+      if (normalized != _selectedCategory) {
+        _selectedCategory = normalized;
+        _fetchServices();
+      }
+    }
   }
 
   @override
@@ -68,13 +95,12 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
           ..clear()
           ..addAll(services);
       });
-    } on DioException catch (error) {
+    } on AppException catch (error) {
       if (!mounted) return;
-      final message = resolveDioErrorMessage(error);
       setState(() {
-        _errorMessage = message;
+        _errorMessage = error.message;
       });
-      showErrorSnackBar(context, message);
+      showErrorSnackBar(context, error);
     } catch (error) {
       if (!mounted) return;
       const message = 'Tidak dapat memuatkan servis. Sila cuba lagi.';
@@ -103,6 +129,9 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
           _selectedCategory = 'Semua';
         }
       });
+    } on AppException catch (error) {
+      if (!mounted) return;
+      showErrorSnackBar(context, error);
     } catch (error) {
       if (!mounted) return;
       showErrorSnackBar(context, 'Gagal memuat kategori: $error');
@@ -235,6 +264,13 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
     ),
   );
   }
+}
+
+String _normalizeCategory(String? value) {
+  if (value == null || value.isEmpty) {
+    return 'Semua';
+  }
+  return value;
 }
 
 class _MarketplaceHero extends StatelessWidget {

@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -47,16 +46,14 @@ class ChatListScreen extends ConsumerWidget {
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (Object error, StackTrace stackTrace) {
-        if (error is DioException) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            final messenger = ScaffoldMessenger.maybeOf(context);
-            if (messenger != null) {
-              messenger.showSnackBar(
-                SnackBar(content: Text(resolveDioErrorMessage(error))),
-              );
-            }
-          });
-        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final messenger = ScaffoldMessenger.maybeOf(context);
+          if (messenger != null) {
+            messenger.showSnackBar(
+              SnackBar(content: Text(friendlyErrorMessage(error))),
+            );
+          }
+        });
         return Scaffold(
           appBar: AppBar(title: const Text('Chat')),
           body: const Center(

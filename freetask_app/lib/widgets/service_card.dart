@@ -40,6 +40,7 @@ class ServiceCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
                             child: Text(
@@ -53,45 +54,57 @@ class ServiceCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: AppSpacing.s8),
-                          if (service.freelancerName != null &&
-                              service.freelancerName!.isNotEmpty)
-                            _RatingPill(label: service.freelancerName!),
+                          _PriceTag(price: service.price),
                         ],
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
                       Row(
                         children: [
-                          _CategoryChip(label: service.category),
-                          const SizedBox(width: AppSpacing.s8),
                           const Icon(Icons.person_outline,
-                              size: 16, color: AppColors.neutral300),
-                          const SizedBox(width: 4),
+                              size: 18, color: AppColors.neutral400),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               service.freelancerName?.isNotEmpty == true
                                   ? service.freelancerName!
-                                  : 'Freelancer ID: ${service.freelancerId}',
+                                  : 'Freelancer #${service.freelancerId}',
                               style: textTheme.bodySmall,
-                              overflow: TextOverflow.ellipsis,
                             ),
+                          ),
+                          const SizedBox(width: AppSpacing.s12),
+                          const Icon(Icons.star_rate_rounded,
+                              size: 18, color: Colors.amber),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Tiada rating',
+                            style: textTheme.bodySmall
+                                ?.copyWith(color: AppColors.neutral400),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
                       Text(
                         service.description,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: textTheme.bodyMedium
-                            ?.copyWith(color: AppColors.neutral400),
+                            ?.copyWith(color: AppColors.neutral500),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 12),
                       Row(
                         children: <Widget>[
-                          _PriceTag(price: service.price),
+                          _CategoryChip(label: service.category),
                           const Spacer(),
+                          Text(
+                            'Lihat servis',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
                           const Icon(Icons.arrow_forward_ios,
-                              size: 14, color: AppColors.neutral300),
+                              size: 14, color: AppColors.primary),
                         ],
                       ),
                     ],
@@ -234,37 +247,6 @@ class _CategoryChip extends StatelessWidget {
               color: AppColors.primary,
               fontWeight: FontWeight.w600,
             ),
-      ),
-    );
-  }
-}
-
-class _RatingPill extends StatelessWidget {
-  const _RatingPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.amber.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.person, size: 16, color: Colors.amber),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.neutral400,
-                ),
-          ),
-        ],
       ),
     );
   }

@@ -1,6 +1,5 @@
 import 'dart:math';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -44,13 +43,12 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       setState(() {
         _service = service;
       });
-    } on DioException catch (error) {
+    } on AppException catch (error) {
       if (!mounted) return;
-      final message = resolveDioErrorMessage(error);
       setState(() {
-        _errorMessage = message;
+        _errorMessage = error.message;
       });
-      showErrorSnackBar(context, message);
+      showErrorSnackBar(context, error);
     } catch (error) {
       if (!mounted) return;
       const message = 'Ralat memuat servis.';

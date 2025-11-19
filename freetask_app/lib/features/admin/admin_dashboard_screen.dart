@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/job.dart';
@@ -335,16 +334,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   Builder(
                     builder: (BuildContext context) {
                       final error = snapshot.error;
-                      if (error is DioException) {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          final messenger = ScaffoldMessenger.maybeOf(context);
-                          if (messenger != null) {
-                            messenger.showSnackBar(
-                              SnackBar(content: Text(resolveDioErrorMessage(error))),
-                            );
-                          }
-                        });
-                      }
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        final messenger = ScaffoldMessenger.maybeOf(context);
+                        if (messenger != null) {
+                          messenger.showSnackBar(
+                            SnackBar(content: Text(friendlyErrorMessage(error ?? 'Ralat memuat job.'))),
+                          );
+                        }
+                      });
                       return const Card(
                         child: Padding(
                           padding: EdgeInsets.all(16),

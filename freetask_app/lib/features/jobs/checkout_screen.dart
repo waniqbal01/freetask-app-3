@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -83,15 +82,14 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       if (mounted) {
         context.go('/jobs/${job.id}', extra: <String, dynamic>{'job': job});
       }
-    } on DioException catch (error) {
+    } on AppException catch (error) {
       if (!mounted) {
         return;
       }
-      final message = resolveDioErrorMessage(error);
       setState(() {
-        _errorMessage = message;
+        _errorMessage = error.message;
       });
-      showErrorSnackBar(context, message);
+      showErrorSnackBar(context, error);
     } catch (error) {
       if (!mounted) {
         return;
