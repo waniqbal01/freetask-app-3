@@ -8,10 +8,24 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateJobDto } from './dto/create-job.dto';
 import { DisputeJobDto } from './dto/dispute-job.dto';
 import { UpdateJobStatusDto } from './dto/update-job-status.dto';
+import { ChatsGateway } from '../chats/chats.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
+
+type JobWithRelations = Prisma.JobGetPayload<{
+  include: {
+    service: { select: { id: true; title: true } };
+    client: { select: { id: true; name: true } };
+    freelancer: { select: { id: true; name: true } };
+  };
+}>;
 
 @Injectable()
 export class JobsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly chatsGateway: ChatsGateway,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async create(userId: number, role: UserRole, dto: CreateJobDto) {
     if (role !== UserRole.CLIENT) {
@@ -28,7 +42,7 @@ export class JobsService {
     const amount =
       dto.amount !== undefined ? new Prisma.Decimal(dto.amount) : service.price;
 
-    return this.prisma.job.create({
+    const job = await this.prisma.job.create({
       data: {
         title: dto.title ?? service.title,
         description: dto.description,
@@ -39,6 +53,16 @@ export class JobsService {
       },
       include: this.jobInclude,
     });
+
+    await this.notificationsService.notifyUser(
+      job.freelancerId,
+      'JOB_CREATED',
+      'Job baharu diterima',
+      `${job.client.name} menempah ${job.service.title}.`,
+      { jobId: job.id, serviceId: job.service.id },
+    );
+
+    return job;
   }
 
   async findAllForUser(
@@ -145,8 +169,12 @@ export class JobsService {
     }
   }
 
-  private applyStatusUpdate(id: number, status: JobStatus, disputeReason?: string) {
-    return this.prisma.job.update({
+  private async applyStatusUpdate(
+    id: number,
+    status: JobStatus,
+    disputeReason?: string,
+  ) {
+    const job = await this.prisma.job.update({
       where: { id },
       data: {
         status,
@@ -154,6 +182,11 @@ export class JobsService {
       },
       include: this.jobInclude,
     });
+
+    this.chatsGateway.emitJobStatusUpdate(job);
+    await this.notifyParticipantsOfStatus(job);
+
+    return job;
   }
 
   private async ensureJobForFreelancer(id: number, userId: number) {
@@ -190,5 +223,47 @@ export class JobsService {
         select: { id: true, name: true },
       },
     } as const;
+  }
+
+  private async notifyParticipantsOfStatus(job: JobWithRelations) {
+    const metadata = {
+      jobId: job.id,
+      status: job.status,
+      disputeReason: job.disputeReason,
+    };
+    const body = this.buildStatusBody(job);
+    const title = `Status job ${job.title}`;
+
+    await Promise.all(
+      [job.clientId, job.freelancerId]
+        .filter((value, index, array) => array.indexOf(value) === index)
+        .map((userId) =>
+          this.notificationsService.notifyUser(
+            userId,
+            'JOB_STATUS_UPDATED',
+            title,
+            body,
+            metadata,
+          ),
+        ),
+    );
+  }
+
+  private buildStatusBody(job: JobWithRelations): string {
+    const statusCopy: Record<JobStatus, string> = {
+      [JobStatus.PENDING]: 'menunggu pengesahan',
+      [JobStatus.ACCEPTED]: 'telah diterima',
+      [JobStatus.IN_PROGRESS]: 'sedang dijalankan',
+      [JobStatus.COMPLETED]: 'telah siap',
+      [JobStatus.CANCELLED]: 'telah dibatalkan',
+      [JobStatus.REJECTED]: 'telah ditolak',
+      [JobStatus.DISPUTED]: 'dalam pertikaian',
+    };
+
+    const base = statusCopy[job.status] ?? job.status.toLowerCase();
+    if (job.status === JobStatus.DISPUTED && job.disputeReason) {
+      return `Job ${job.title} ${base}. Sebab: ${job.disputeReason}`;
+    }
+    return `Job ${job.title} ${base}.`;
   }
 }

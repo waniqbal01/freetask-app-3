@@ -1,12 +1,17 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Job } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { ChatMessageDto } from './dto/chat-message.dto';
 import { ChatThreadDto } from './dto/chat-thread.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ChatsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async listThreads(userId: number): Promise<ChatThreadDto[]> {
     const jobs = await this.prisma.job.findMany({
@@ -59,7 +64,7 @@ export class ChatsService {
   }
 
   async postMessage(jobId: number, userId: number, dto: CreateMessageDto): Promise<ChatMessageDto> {
-    await this.ensureJobParticipant(jobId, userId);
+    const job = await this.ensureJobParticipant(jobId, userId);
     const message = await this.prisma.chatMessage.create({
       data: {
         content: dto.content,
@@ -73,15 +78,27 @@ export class ChatsService {
       },
     });
 
-    return {
+    const payload = {
       id: message.id,
       sender: message.sender.name,
       text: message.content,
       timestamp: message.createdAt,
     } satisfies ChatMessageDto;
+
+    const recipientId =
+      job.clientId === userId ? job.freelancerId : job.clientId;
+    await this.notificationsService.notifyUser(
+      recipientId,
+      'MESSAGE_RECEIVED',
+      `Mesej baharu untuk ${job.title}`,
+      dto.content,
+      { jobId },
+    );
+
+    return payload;
   }
 
-  private async ensureJobParticipant(jobId: number, userId: number) {
+  async ensureJobParticipant(jobId: number, userId: number): Promise<Job> {
     const job = await this.prisma.job.findUnique({ where: { id: jobId } });
     if (!job) {
       throw new NotFoundException('Job not found');
@@ -89,5 +106,6 @@ export class ChatsService {
     if (job.clientId !== userId && job.freelancerId !== userId) {
       throw new ForbiddenException('You are not part of this job');
     }
+    return job;
   }
 }

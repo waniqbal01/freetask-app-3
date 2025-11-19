@@ -18,7 +18,7 @@ import { AdminGuard } from './admin.guard';
   ],
   providers: [AuthService, PrismaService, JwtStrategy, JwtAuthGuard, AdminGuard],
   controllers: [AuthController],
-  exports: [AuthService, JwtAuthGuard, AdminGuard],
+  exports: [AuthService, JwtAuthGuard, AdminGuard, JwtModule],
 })
 export class AuthModule {}
 

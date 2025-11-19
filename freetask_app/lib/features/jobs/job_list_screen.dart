@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
@@ -12,15 +15,16 @@ import '../reviews/reviews_repository.dart';
 import 'jobs_repository.dart';
 import 'widgets/job_card_skeleton.dart';
 import 'widgets/job_status_badge.dart';
+import '../../services/socket/job_updates_socket_service.dart';
 
-class JobListScreen extends StatefulWidget {
+class JobListScreen extends ConsumerStatefulWidget {
   const JobListScreen({super.key});
 
   @override
-  State<JobListScreen> createState() => _JobListScreenState();
+  ConsumerState<JobListScreen> createState() => _JobListScreenState();
 }
 
-class _JobListScreenState extends State<JobListScreen> {
+class _JobListScreenState extends ConsumerState<JobListScreen> {
   final List<Job> _clientJobs = <Job>[];
   final List<Job> _freelancerJobs = <Job>[];
   bool _isLoadingClient = false;
@@ -28,15 +32,25 @@ class _JobListScreenState extends State<JobListScreen> {
   String? _clientErrorMessage;
   String? _freelancerErrorMessage;
   bool _isProcessing = false;
+  StreamSubscription<JobStatusUpdate>? _jobUpdatesSub;
 
   @override
   void initState() {
     super.initState();
+    _jobUpdatesSub =
+        ref.read(jobUpdatesSocketProvider).updates.listen(_handleJobUpdate);
     _loadJobs();
+  }
+
+  @override
+  void dispose() {
+    _jobUpdatesSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadJobs() async {
     await Future.wait([_fetchClientJobs(), _fetchFreelancerJobs()]);
+    await _registerRealtimeRooms();
   }
 
   Future<void> _refreshClientJobs() async {
@@ -166,6 +180,40 @@ class _JobListScreenState extends State<JobListScreen> {
         _isProcessing = false;
       });
       showErrorSnackBar(context, 'Ralat melaksanakan tindakan.');
+    }
+  }
+
+  Future<void> _registerRealtimeRooms() async {
+    final jobIds = <String>{
+      ..._clientJobs.map((Job job) => job.id),
+      ..._freelancerJobs.map((Job job) => job.id),
+    };
+    if (jobIds.isEmpty) {
+      return;
+    }
+    try {
+      await ref.read(jobUpdatesSocketProvider).registerJobs(jobIds);
+    } catch (error) {
+      debugPrint('Gagal menyertai bilik job: $error');
+    }
+  }
+
+  void _handleJobUpdate(JobStatusUpdate update) {
+    bool changed = false;
+    for (final list in <List<Job>>[_clientJobs, _freelancerJobs]) {
+      final index = list.indexWhere((Job job) => job.id == update.jobId);
+      if (index >= 0) {
+        final job = list[index];
+        list[index] = job.copyWith(
+          status: update.status,
+          disputeReason: update.disputeReason ?? job.disputeReason,
+          createdAt: update.updatedAt ?? job.createdAt,
+        );
+        changed = true;
+      }
+    }
+    if (changed && mounted) {
+      setState(() {});
     }
   }
 

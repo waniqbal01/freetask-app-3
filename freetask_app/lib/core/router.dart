@@ -20,6 +20,7 @@ import '../features/services/service_form_screen.dart';
 import '../features/services/service_list_screen.dart';
 import '../models/job.dart';
 import '../models/service.dart';
+import '../features/notifications/notifications_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/startup',
@@ -28,6 +29,12 @@ final appRouter = GoRouter(
       path: '/startup',
       builder: (BuildContext context, GoRouterState state) {
         return const StartupScreen();
+      },
+    ),
+    GoRoute(
+      path: '/notifications',
+      builder: (BuildContext context, GoRouterState state) {
+        return const NotificationsScreen();
       },
     ),
     GoRoute(
