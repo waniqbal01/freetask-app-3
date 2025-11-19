@@ -5,7 +5,7 @@ String resolveHomeRouteForRole(String? role) {
   final normalizedRole = role?.toUpperCase();
   switch (normalizedRole) {
     case 'FREELANCER':
-      return '/jobs';
+      return '/home';
     case 'ADMIN':
       return '/admin';
     case 'CLIENT':

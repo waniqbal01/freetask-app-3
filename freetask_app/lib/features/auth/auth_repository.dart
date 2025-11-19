@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../core/utils/error_utils.dart';
 import '../../models/user.dart';
 import '../../services/http_client.dart';
 import '../../services/token_storage.dart';
@@ -18,7 +19,7 @@ class AuthRepository {
   AppUser? get currentUser => _cachedUser;
 
   Future<bool> login(String email, String password) async {
-    try {
+    return _guardRequest(() async {
       final response = await _dio.post<Map<String, dynamic>>(
         '/auth/login',
         data: <String, dynamic>{
@@ -29,7 +30,7 @@ class AuthRepository {
       final data = response.data;
       final token = data?['accessToken']?.toString();
       if (token == null || token.isEmpty) {
-        return false;
+        throw const AppException('Token tidak diterima.', type: AppErrorType.server);
       }
       await _saveToken(token);
       final userJson = data?['user'];
@@ -37,16 +38,11 @@ class AuthRepository {
         _cachedUser = AppUser.fromJson(userJson);
       }
       return true;
-    } on DioException catch (error) {
-      if (error.response?.statusCode == 401) {
-        await logout();
-      }
-      rethrow;
-    }
+    }, clearOn401: false);
   }
 
   Future<bool> register(Map<String, dynamic> payload) async {
-    try {
+    return _guardRequest(() async {
       final response = await _dio.post<Map<String, dynamic>>(
         '/auth/register',
         data: _buildRegisterPayload(payload),
@@ -63,12 +59,7 @@ class AuthRepository {
         _cachedUser = null;
       }
       return true;
-    } on DioException catch (error) {
-      if (error.response?.statusCode == 401) {
-        await logout();
-      }
-      rethrow;
-    }
+    }, clearOn401: false);
   }
 
   Future<AppUser?> getCurrentUser() async {
@@ -81,7 +72,7 @@ class AuthRepository {
       return null;
     }
 
-    try {
+    return _guardRequest(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/auth/me',
         options: Options(headers: _bearerHeader(token)),
@@ -93,13 +84,7 @@ class AuthRepository {
       final user = AppUser.fromJson(data);
       _cachedUser = user;
       return user;
-    } on DioException catch (error) {
-      if (error.response?.statusCode == 401) {
-        await logout();
-        return null;
-      }
-      rethrow;
-    }
+    });
   }
 
   Future<String?> getSavedToken() {
@@ -129,6 +114,22 @@ class AuthRepository {
 
   Future<void> _saveToken(String token) {
     return _tokenStorage.write(tokenStorageKey, token);
+  }
+
+  Future<T> _guardRequest<T>(
+    Future<T> Function() runner, {
+    bool clearOn401 = true,
+  }) async {
+    try {
+      return await runner();
+    } on DioException catch (error) {
+      final mapped = mapDioError(error);
+      if (clearOn401 && mapped.isUnauthorized) {
+        _cachedUser = null;
+        await _tokenStorage.delete(tokenStorageKey);
+      }
+      throw mapped;
+    }
   }
 
   Map<String, dynamic> _buildRegisterPayload(Map<String, dynamic> payload) {

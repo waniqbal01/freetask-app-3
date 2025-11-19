@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -62,23 +61,19 @@ class _LoginScreenState extends State<LoginScreen> {
         });
         showErrorSnackBar(context, 'Log masuk gagal. Sila cuba lagi.');
       }
+    } on AppException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = error.message;
+      });
+      showErrorSnackBar(context, error);
     } catch (error) {
-      if (error is DioException) {
-        final message = resolveDioErrorMessage(error);
-        if (mounted) {
-          setState(() {
-            _errorMessage = message;
-          });
-          showErrorSnackBar(context, message);
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _errorMessage = 'Ralat: $error';
-          });
-          showErrorSnackBar(context, 'Ralat: $error');
-        }
-      }
+      if (!mounted) return;
+      final message = 'Ralat: $error';
+      setState(() {
+        _errorMessage = message;
+      });
+      showErrorSnackBar(context, message);
     } finally {
       if (mounted) {
         setState(() {

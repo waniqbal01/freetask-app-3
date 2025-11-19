@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 
 import '../../core/notifications/notification_service.dart';
+import '../../core/utils/error_utils.dart';
 import '../../models/job.dart';
 import '../../services/http_client.dart';
 import '../../services/token_storage.dart';
@@ -21,8 +22,8 @@ class JobsRepository {
     double? amount,
     String description, {
     String? title,
-  }) async {
-    try {
+  }) {
+    return _guardRequest(() async {
       final response = await _dio.post<Map<String, dynamic>>(
         '/jobs',
         data: <String, dynamic>{
@@ -34,32 +35,30 @@ class JobsRepository {
         options: await _authorizedOptions(),
       );
       final data = response.data ?? <String, dynamic>{};
-      final job = Job.fromJson(data);
-      return job;
-    } on DioException catch (error) {
-      await _handleDioError(error);
-      rethrow;
-    }
+      return Job.fromJson(data);
+    });
   }
 
   Future<bool> startJob(String jobId) async {
     try {
-      final response = await _dio.patch<Map<String, dynamic>>(
-        '/jobs/$jobId/start',
-        options: await _authorizedOptions(),
-      );
-      final data = response.data;
-      if (data != null) {
-        final job = Job.fromJson(data);
-        notificationService.pushLocal(
-          'Job Dimulakan',
-          'Job ${job.serviceTitle} kini In Progress.',
+      await _guardRequest(() async {
+        final response = await _dio.patch<Map<String, dynamic>>(
+          '/jobs/$jobId/start',
+          options: await _authorizedOptions(),
         );
-      }
+        final data = response.data;
+        if (data != null) {
+          final job = Job.fromJson(data);
+          notificationService.pushLocal(
+            'Job Dimulakan',
+            'Job ${job.serviceTitle} kini In Progress.',
+          );
+        }
+        return true;
+      });
       return true;
-    } on DioException catch (error) {
-      await _handleDioError(error);
-      if (error.response?.statusCode == 409) {
+    } on AppException catch (error) {
+      if (error.statusCode == 409) {
         return false;
       }
       rethrow;
@@ -68,22 +67,24 @@ class JobsRepository {
 
   Future<bool> rejectJob(String jobId) async {
     try {
-      final response = await _dio.patch<Map<String, dynamic>>(
-        '/jobs/$jobId/reject',
-        options: await _authorizedOptions(),
-      );
-      final data = response.data;
-      if (data != null) {
-        final job = Job.fromJson(data);
-        notificationService.pushLocal(
-          'Job Ditolak',
-          'Job ${job.serviceTitle} telah ditolak oleh freelancer.',
+      await _guardRequest(() async {
+        final response = await _dio.patch<Map<String, dynamic>>(
+          '/jobs/$jobId/reject',
+          options: await _authorizedOptions(),
         );
-      }
+        final data = response.data;
+        if (data != null) {
+          final job = Job.fromJson(data);
+          notificationService.pushLocal(
+            'Job Ditolak',
+            'Job ${job.serviceTitle} telah ditolak oleh freelancer.',
+          );
+        }
+        return true;
+      });
       return true;
-    } on DioException catch (error) {
-      await _handleDioError(error);
-      if (error.response?.statusCode == 409) {
+    } on AppException catch (error) {
+      if (error.statusCode == 409) {
         return false;
       }
       rethrow;
@@ -92,68 +93,68 @@ class JobsRepository {
 
   Future<bool> markCompleted(String jobId) async {
     try {
-      await _dio.patch<void>(
-        '/jobs/$jobId/complete',
-        options: await _authorizedOptions(),
-      );
+      await _guardRequest(() async {
+        await _dio.patch<void>(
+          '/jobs/$jobId/complete',
+          options: await _authorizedOptions(),
+        );
+        return true;
+      });
       return true;
-    } on DioException catch (error) {
-      await _handleDioError(error);
-      if (error.response?.statusCode == 409) {
+    } on AppException catch (error) {
+      if (error.statusCode == 409) {
         return false;
       }
       rethrow;
     }
   }
 
-  Future<bool> setDispute(String jobId, String reason) async {
-    try {
+  Future<bool> setDispute(String jobId, String reason) {
+    return _guardRequest(() async {
       await _dio.patch<void>(
         '/jobs/$jobId/dispute',
         data: <String, dynamic>{'reason': reason},
         options: await _authorizedOptions(),
       );
       return true;
-    } on DioException catch (error) {
-      await _handleDioError(error);
-      rethrow;
-    }
+    });
   }
 
-  Future<List<Job>> getClientJobs() async {
+  Future<List<Job>> getClientJobs() {
     return _fetchJobs(<String, dynamic>{'filter': 'client'});
   }
 
-  Future<List<Job>> getFreelancerJobs() async {
+  Future<List<Job>> getFreelancerJobs() {
     return _fetchJobs(<String, dynamic>{'filter': 'freelancer'});
   }
 
-  Future<List<Job>> getAllJobs() async {
+  Future<List<Job>> getAllJobs() {
     return _fetchJobs(<String, dynamic>{'filter': 'all'});
   }
 
   Future<Job?> getJobById(String jobId) async {
     try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        '/jobs/$jobId',
-        options: await _authorizedOptions(),
-      );
-      final data = response.data;
-      if (data == null) {
-        return null;
-      }
-      return Job.fromJson(data);
-    } on DioException catch (error) {
-      await _handleDioError(error);
-      if (error.response?.statusCode == 404) {
+      return await _guardRequest(() async {
+        final response = await _dio.get<Map<String, dynamic>>(
+          '/jobs/$jobId',
+          options: await _authorizedOptions(),
+        );
+        final data = response.data;
+        if (data == null) {
+          return null;
+        }
+        return Job.fromJson(data);
+      });
+    } on AppException catch (error) {
+      if (error.statusCode == 404) {
         return null;
       }
       rethrow;
     }
   }
 
-  Future<List<Job>> _fetchJobs(Map<String, dynamic> queryParameters) async {
-    try {
+  Future<List<Job>> _fetchJobs(Map<String, dynamic> queryParameters) {
+    return _guardRequest(() async {
       final response = await _dio.get<List<dynamic>>(
         '/jobs',
         queryParameters: queryParameters,
@@ -164,23 +165,29 @@ class JobsRepository {
           .whereType<Map<String, dynamic>>()
           .map(Job.fromJson)
           .toList(growable: false);
-    } on DioException catch (error) {
-      await _handleDioError(error);
-      rethrow;
-    }
+    });
   }
 
   Future<Options> _authorizedOptions() async {
     final token = await _tokenStorage.read(AuthRepository.tokenStorageKey);
     if (token == null || token.isEmpty) {
-      throw StateError('Token tidak ditemui. Sila log masuk semula.');
+      throw const AppException(
+        'Token tidak ditemui. Sila log masuk semula.',
+        type: AppErrorType.unauthorized,
+      );
     }
     return Options(headers: <String, String>{'Authorization': 'Bearer $token'});
   }
 
-  Future<void> _handleDioError(DioException error) async {
-    if (error.response?.statusCode == 401) {
-      await authRepository.logout();
+  Future<T> _guardRequest<T>(Future<T> Function() runner) async {
+    try {
+      return await runner();
+    } on DioException catch (error) {
+      final mapped = mapDioError(error);
+      if (mapped.isUnauthorized) {
+        await authRepository.logout();
+      }
+      throw mapped;
     }
   }
 }

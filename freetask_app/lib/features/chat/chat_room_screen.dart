@@ -148,14 +148,12 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
               },
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (Object error, StackTrace stackTrace) {
-                if (error is DioException) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (!mounted) {
-                      return;
-                    }
-                    _showSnackBar(resolveDioErrorMessage(error));
-                  });
-                }
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) {
+                    return;
+                  }
+                  _showSnackBar(friendlyErrorMessage(error));
+                });
                 return const Center(
                   child: Text('Chat akan datang (Coming Soon). Sila cuba lagi nanti.'),
                 );
@@ -184,11 +182,11 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
             text: trimmed,
           );
       _controller.clear();
-    } on DioException catch (error) {
+    } on AppException catch (error) {
       if (!mounted) {
         return;
       }
-      _showSnackBar(resolveDioErrorMessage(error));
+      _showSnackBar(error.message);
     } catch (_) {
       if (!mounted) {
         return;
@@ -213,7 +211,12 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
       if (!mounted) {
         return;
       }
-      _showSnackBar(resolveDioErrorMessage(error));
+      _showSnackBar(mapDioError(error).message);
+    } on AppException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showSnackBar(error.message);
     } catch (error) {
       if (!mounted) {
         return;

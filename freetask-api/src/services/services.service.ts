@@ -29,7 +29,7 @@ export class ServicesService {
     });
   }
 
-  findAll(q?: string, category?: string) {
+  findAll(q?: string, category?: string, freelancerId?: number) {
     return this.prisma.service.findMany({
       where: {
         ...(q
@@ -41,7 +41,21 @@ export class ServicesService {
             }
           : {}),
         ...(category ? { category } : {}),
+        ...(freelancerId ? { freelancerId } : {}),
       },
+      include: {
+        freelancer: {
+          select: { id: true, name: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  findMine(userId: number) {
+    return this.prisma.service.findMany({
+      where: { freelancerId: userId },
+      orderBy: { createdAt: 'desc' },
       include: {
         freelancer: {
           select: { id: true, name: true },

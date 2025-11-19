@@ -101,6 +101,24 @@ class Job {
 
   bool get isDisputed => status == JobStatus.disputed;
 
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'title': title,
+      'description': description,
+      'clientId': clientId,
+      'freelancerId': freelancerId,
+      'serviceId': serviceId,
+      'serviceTitle': serviceTitle,
+      'clientName': clientName,
+      'freelancerName': freelancerName,
+      'amount': amount,
+      'status': status.name.toUpperCase(),
+      if (disputeReason != null) 'disputeReason': disputeReason,
+      if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
+    };
+  }
+
   static JobStatus _parseStatus(dynamic value) {
     if (value is JobStatus) {
       return value;

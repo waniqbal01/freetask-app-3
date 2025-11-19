@@ -1,59 +1,136 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
-String resolveDioErrorMessage(
+enum AppErrorType {
+  network,
+  unauthorized,
+  validation,
+  forbidden,
+  notFound,
+  server,
+  unknown,
+}
+
+class AppException implements Exception {
+  const AppException(
+    this.message, {
+    this.type = AppErrorType.unknown,
+    this.statusCode,
+  });
+
+  final String message;
+  final AppErrorType type;
+  final int? statusCode;
+
+  bool get isUnauthorized => type == AppErrorType.unauthorized;
+  bool get isNetworkError => type == AppErrorType.network;
+}
+
+AppException mapDioError(
   DioException error, {
   String fallback = 'Ralat rangkaian berlaku. Sila cuba lagi.',
 }) {
+  if (error.type == DioExceptionType.connectionTimeout ||
+      error.type == DioExceptionType.connectionError ||
+      error.type == DioExceptionType.receiveTimeout ||
+      error.type == DioExceptionType.sendTimeout) {
+    return const AppException(
+      'Tiada sambungan internet. Sila semak rangkaian anda.',
+      type: AppErrorType.network,
+    );
+  }
+
   final statusCode = error.response?.statusCode;
-  final path = error.requestOptions.path;
+  final data = error.response?.data;
+  final messageFromServer = _extractMessage(data);
 
-  if (statusCode == 401 && path.contains('/auth/login')) {
-    return 'Email atau kata laluan salah.';
+  if (statusCode == 0 || statusCode == null) {
+    return AppException(messageFromServer ?? fallback, type: AppErrorType.unknown);
   }
 
-  if (statusCode == 409 && path.contains('/auth/register')) {
-    return 'Email ini sudah berdaftar. Sila log masuk.';
+  switch (statusCode) {
+    case 400:
+      return AppException(
+        messageFromServer ?? 'Sila semak semula maklumat yang diisi.',
+        type: AppErrorType.validation,
+        statusCode: statusCode,
+      );
+    case 401:
+      return AppException(
+        messageFromServer ?? 'Sesi tamat. Sila log masuk semula.',
+        type: AppErrorType.unauthorized,
+        statusCode: statusCode,
+      );
+    case 403:
+      return AppException(
+        messageFromServer ?? 'Anda tidak mempunyai akses untuk tindakan ini.',
+        type: AppErrorType.forbidden,
+        statusCode: statusCode,
+      );
+    case 404:
+      return AppException(
+        messageFromServer ?? 'Maklumat tidak dijumpai.',
+        type: AppErrorType.notFound,
+        statusCode: statusCode,
+      );
+    default:
+      if (statusCode >= 500) {
+        return AppException(
+          messageFromServer ?? 'Server bermasalah, sila cuba lagi.',
+          type: AppErrorType.server,
+          statusCode: statusCode,
+        );
+      }
+      return AppException(
+        messageFromServer ?? fallback,
+        type: AppErrorType.unknown,
+        statusCode: statusCode,
+      );
   }
+}
 
-  if (statusCode == 400) {
-    return 'Sila semak semula maklumat yang diisi.';
+String friendlyErrorMessage(Object error, {String fallback = 'Ralat berlaku. Sila cuba lagi.'}) {
+  if (error is String && error.isNotEmpty) {
+    return error;
   }
+  if (error is AppException) {
+    return error.message;
+  }
+  if (error is DioException) {
+    return mapDioError(error, fallback: fallback).message;
+  }
+  if (error is Exception) {
+    return error.toString();
+  }
+  return fallback;
+}
 
-  final responseData = error.response?.data;
+void showErrorSnackBar(BuildContext context, Object error, {String? fallback}) {
+  final message = friendlyErrorMessage(error, fallback: fallback ?? 'Ralat berlaku.');
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(message)),
+  );
+}
 
-  if (responseData is Map<String, dynamic>) {
-    final message = responseData['message'];
+String? _extractMessage(dynamic data) {
+  if (data is Map<String, dynamic>) {
+    final message = data['message'];
     if (message is String && message.trim().isNotEmpty) {
       return message.trim();
     }
     if (message is List) {
-      final joined = message
+      final combined = message
           .whereType<String>()
           .map((String item) => item.trim())
           .where((String item) => item.isNotEmpty)
           .join('\n');
-      if (joined.isNotEmpty) {
-        return joined;
+      if (combined.isNotEmpty) {
+        return combined;
       }
     }
   }
-
-  final message = error.message;
-  if (message != null && message.trim().isNotEmpty) {
-    return message.trim();
+  if (data is String && data.isNotEmpty) {
+    return data;
   }
-
-  final statusMessage = error.response?.statusMessage;
-  if (statusMessage != null && statusMessage.trim().isNotEmpty) {
-    return statusMessage.trim();
-  }
-
-  return fallback;
-}
-
-void showErrorSnackBar(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(message)),
-  );
+  return null;
 }

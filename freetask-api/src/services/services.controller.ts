@@ -35,8 +35,16 @@ export class ServicesController {
   findAll(
     @Query('q') q?: string,
     @Query('category') category?: string,
+    @Query('freelancerId') freelancerId?: string,
   ) {
-    return this.servicesService.findAll(q, category);
+    const parsedFreelancerId = freelancerId ? Number(freelancerId) : undefined;
+    return this.servicesService.findAll(q, category, parsedFreelancerId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('mine')
+  findMine(@GetUser('userId') userId: number) {
+    return this.servicesService.findMine(userId);
   }
 
   @Get('categories')

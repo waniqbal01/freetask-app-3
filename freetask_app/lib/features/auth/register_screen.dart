@@ -136,23 +136,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
         });
         showErrorSnackBar(context, 'Pendaftaran gagal. Sila cuba lagi.');
       }
+    } on AppException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = error.message;
+      });
+      showErrorSnackBar(context, error);
     } catch (error) {
-      if (error is DioException) {
-        final message = resolveDioErrorMessage(error);
-        if (mounted) {
-          setState(() {
-            _errorMessage = message;
-          });
-          showErrorSnackBar(context, message);
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _errorMessage = 'Ralat: $error';
-          });
-          showErrorSnackBar(context, 'Ralat: $error');
-        }
-      }
+      if (!mounted) return;
+      final message = 'Ralat: $error';
+      setState(() {
+        _errorMessage = message;
+      });
+      showErrorSnackBar(context, message);
     } finally {
       if (mounted) {
         setState(() {
@@ -181,7 +177,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     } on DioException catch (error) {
       if (mounted) {
-        showErrorSnackBar(context, resolveDioErrorMessage(error));
+        showErrorSnackBar(context, mapDioError(error));
       }
     } catch (error) {
       if (mounted) {

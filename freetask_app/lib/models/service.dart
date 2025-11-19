@@ -36,6 +36,19 @@ class Service {
   final String? freelancerName;
   final DateTime? createdAt;
 
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'title': title,
+      'category': category,
+      'description': description,
+      'price': price,
+      'freelancerId': freelancerId,
+      if (freelancerName != null) 'freelancerName': freelancerName,
+      if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
+    };
+  }
+
   static DateTime? _parseDateTime(dynamic value) {
     if (value is DateTime) {
       return value;

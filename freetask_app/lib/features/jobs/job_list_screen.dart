@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -62,13 +61,12 @@ class _JobListScreenState extends State<JobListScreen> {
           ..clear()
           ..addAll(jobs);
       });
-    } on DioException catch (error) {
+    } on AppException catch (error) {
       if (!mounted) return;
-      final message = resolveDioErrorMessage(error);
       setState(() {
-        _clientErrorMessage = message;
+        _clientErrorMessage = error.message;
       });
-      showErrorSnackBar(context, message);
+      showErrorSnackBar(context, error);
     } catch (error) {
       if (!mounted) return;
       const message = 'Ralat memuat job pelanggan.';
@@ -99,13 +97,12 @@ class _JobListScreenState extends State<JobListScreen> {
           ..clear()
           ..addAll(jobs);
       });
-    } on DioException catch (error) {
+    } on AppException catch (error) {
       if (!mounted) return;
-      final message = resolveDioErrorMessage(error);
       setState(() {
-        _freelancerErrorMessage = message;
+        _freelancerErrorMessage = error.message;
       });
-      showErrorSnackBar(context, message);
+      showErrorSnackBar(context, error);
     } catch (error) {
       if (!mounted) return;
       const message = 'Ralat memuat job freelancer.';
@@ -153,14 +150,14 @@ class _JobListScreenState extends State<JobListScreen> {
           ),
         );
       }
-    } on DioException catch (error) {
+    } on AppException catch (error) {
       if (!mounted) {
         return;
       }
       setState(() {
         _isProcessing = false;
       });
-      showErrorSnackBar(context, resolveDioErrorMessage(error));
+      showErrorSnackBar(context, error);
     } catch (_) {
       if (!mounted) {
         return;

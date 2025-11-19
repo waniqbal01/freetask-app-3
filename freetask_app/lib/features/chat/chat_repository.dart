@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/utils/error_utils.dart';
 import '../../services/http_client.dart';
 import '../../services/token_storage.dart';
 import '../auth/auth_repository.dart';
@@ -38,7 +39,7 @@ class ChatRepository {
       <String, StreamController<List<ChatMessage>>>{};
 
   Future<List<ChatThread>> fetchThreads() async {
-    try {
+    return _guardRequest(() async {
       final response = await _dio.get<List<dynamic>>(
         '/chats',
         options: await _authorizedOptions(),
@@ -49,10 +50,7 @@ class ChatRepository {
           .map(ChatThread.fromJson)
           .toList(growable: false);
       return _threads;
-    } on DioException catch (error) {
-      await _handleError(error);
-      rethrow;
-    }
+    });
   }
 
   Stream<List<ChatMessage>> streamMessages(String chatId) {
@@ -75,7 +73,7 @@ class ChatRepository {
     required String chatId,
     required String text,
   }) async {
-    try {
+    await _guardRequest(() async {
       await _dio.post<void>(
         '/chats/$chatId/messages',
         data: <String, dynamic>{
@@ -84,17 +82,14 @@ class ChatRepository {
         options: await _authorizedOptions(),
       );
       await _loadMessages(chatId);
-    } on DioException catch (error) {
-      await _handleError(error);
-      rethrow;
-    }
+    });
   }
 
   Future<void> sendImage({
     required String chatId,
     required String imageUrl,
   }) async {
-    try {
+    await _guardRequest(() async {
       await _dio.post<void>(
         '/chats/$chatId/messages',
         data: <String, dynamic>{
@@ -103,10 +98,7 @@ class ChatRepository {
         options: await _authorizedOptions(),
       );
       await _loadMessages(chatId);
-    } on DioException catch (error) {
-      await _handleError(error);
-      rethrow;
-    }
+    });
   }
 
   void dispose() {
@@ -116,7 +108,7 @@ class ChatRepository {
   }
 
   Future<void> _loadMessages(String chatId) async {
-    try {
+    await _guardRequest(() async {
       final response = await _dio.get<List<dynamic>>(
         '/chats/$chatId/messages',
         options: await _authorizedOptions(),
@@ -133,10 +125,7 @@ class ChatRepository {
         () => StreamController<List<ChatMessage>>.broadcast(),
       );
       controller.add(List<ChatMessage>.unmodifiable(messages));
-    } on DioException catch (error) {
-      await _handleError(error);
-      rethrow;
-    }
+    });
   }
 
   Future<Options> _authorizedOptions() async {
@@ -147,9 +136,15 @@ class ChatRepository {
     return Options(headers: <String, String>{'Authorization': 'Bearer $token'});
   }
 
-  Future<void> _handleError(DioException error) async {
-    if (error.response?.statusCode == 401) {
-      await authRepository.logout();
+  Future<T> _guardRequest<T>(Future<T> Function() runner) async {
+    try {
+      return await runner();
+    } on DioException catch (error) {
+      final mapped = mapDioError(error);
+      if (mapped.isUnauthorized) {
+        await authRepository.logout();
+      }
+      throw mapped;
     }
   }
 }
