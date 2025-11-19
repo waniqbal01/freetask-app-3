@@ -6,6 +6,7 @@ import '../features/auth/login_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/auth/role_selection_screen.dart';
 import '../features/auth/startup_screen.dart';
+import '../features/auth/auth_repository.dart';
 import '../features/chat/chat_list_screen.dart';
 import '../features/chat/chat_room_screen.dart';
 import '../features/checkout/checkout_screen.dart';
@@ -149,6 +150,17 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/admin',
+      redirect: (BuildContext context, GoRouterState state) {
+        final user = authRepository.currentUser;
+        if (user == null) {
+          return '/login';
+        }
+        final role = user.role.toUpperCase();
+        if (role != 'ADMIN') {
+          return '/home';
+        }
+        return null;
+      },
       builder: (BuildContext context, GoRouterState state) {
         return const AdminDashboardScreen();
       },
