@@ -10,6 +10,7 @@ import '../../theme/app_theme.dart';
 import '../../core/widgets/async_state_view.dart';
 import '../../widgets/service_card.dart';
 import 'home_controller.dart';
+import '../notifications/notifications_controller.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -29,6 +30,12 @@ class HomeScreen extends ConsumerWidget {
     final featuredState = state.featured;
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('FreeTask'),
+        actions: const [
+          _NotificationBell(),
+        ],
+      ),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () => ref.read(homeControllerProvider.notifier).refresh(),
@@ -144,6 +151,35 @@ class HomeScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _NotificationBell extends ConsumerWidget {
+  const _NotificationBell();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unread = ref.watch(unreadNotificationsCountProvider);
+    final bool showBadge = unread > 0;
+    final icon = IconButton(
+      tooltip: 'Notifikasi',
+      icon: const Icon(Icons.notifications_outlined),
+      onPressed: () => context.push('/notifications'),
+    );
+
+    if (!showBadge) {
+      return icon;
+    }
+
+    final badgeLabel = unread > 9 ? '9+' : unread.toString();
+    return IconButton(
+      tooltip: 'Notifikasi',
+      onPressed: () => context.push('/notifications'),
+      icon: Badge(
+        label: Text(badgeLabel),
+        child: const Icon(Icons.notifications_outlined),
       ),
     );
   }
