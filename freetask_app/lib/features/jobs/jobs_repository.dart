@@ -40,6 +40,17 @@ class JobsRepository {
     });
   }
 
+  Future<Job> acceptJob(String jobId) {
+    return _guardRequest(() async {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        '/jobs/$jobId/accept',
+        options: await _authorizedOptions(),
+      );
+      final data = response.data ?? <String, dynamic>{};
+      return Job.fromJson(data);
+    });
+  }
+
   Future<bool> startJob(String jobId) async {
     try {
       await _guardRequest(() async {

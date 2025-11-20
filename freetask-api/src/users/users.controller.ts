@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { GetUser } from '../auth/get-user.decorator';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateDeviceTokenDto } from './dto/update-device-token.dto';
 
 @ApiTags('Users')
 @UseGuards(JwtAuthGuard)
@@ -27,8 +28,8 @@ export class UsersController {
   @Patch('me/device-token')
   updateDeviceToken(
     @GetUser('userId') userId: number,
-    @Body('deviceToken') deviceToken: string | null,
+    @Body() dto: UpdateDeviceTokenDto,
   ) {
-    return this.usersService.updateDeviceToken(userId, deviceToken ?? null);
+    return this.usersService.updateDeviceToken(userId, dto.deviceToken ?? null);
   }
 }

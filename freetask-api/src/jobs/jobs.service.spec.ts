@@ -16,7 +16,12 @@ describe('JobsService', () => {
       findFirst: jest.Mock;
       findMany: jest.Mock;
     };
+    jobHistory: {
+      create: jest.Mock;
+    };
   };
+  let chatsGateway: { emitJobStatusUpdate: jest.Mock };
+  let notificationsService: { notifyUser: jest.Mock };
 
   const mockService = {
     id: 10,
@@ -31,6 +36,8 @@ describe('JobsService', () => {
     status: JobStatus.PENDING,
     clientId: 11,
     freelancerId: 77,
+    title: 'UX Review',
+    updatedAt: new Date(),
   };
 
   beforeEach(() => {
@@ -45,9 +52,23 @@ describe('JobsService', () => {
         findFirst: jest.fn(),
         findMany: jest.fn(),
       },
+      jobHistory: {
+        create: jest.fn(),
+      },
     };
 
-    service = new JobsService(prisma as unknown as PrismaService);
+    chatsGateway = {
+      emitJobStatusUpdate: jest.fn(),
+    };
+    notificationsService = {
+      notifyUser: jest.fn(),
+    };
+
+    service = new JobsService(
+      prisma as unknown as PrismaService,
+      chatsGateway as any,
+      notificationsService as any,
+    );
   });
 
   it('allows client to create job for a service', async () => {
@@ -76,16 +97,15 @@ describe('JobsService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
-  it('lets freelancer move job through lifecycle', async () => {
+  it('lets a client accept and a freelancer progress the job', async () => {
     prisma.job.findUnique
       .mockResolvedValueOnce({ ...baseJob })
       .mockResolvedValueOnce({ ...baseJob, status: JobStatus.ACCEPTED })
-      .mockResolvedValueOnce({ ...baseJob, status: JobStatus.IN_PROGRESS })
       .mockResolvedValue({ ...baseJob, status: JobStatus.IN_PROGRESS });
 
     prisma.job.update.mockImplementation(({ data }) => ({ ...baseJob, status: data.status }));
 
-    const accepted = await service.acceptJob(baseJob.id, baseJob.freelancerId);
+    const accepted = await service.acceptJob(baseJob.id, baseJob.clientId, UserRole.CLIENT);
     expect(accepted.status).toBe(JobStatus.ACCEPTED);
 
     const started = await service.startJob(baseJob.id, baseJob.freelancerId);
@@ -95,16 +115,26 @@ describe('JobsService', () => {
     expect(completed.status).toBe(JobStatus.COMPLETED);
   });
 
-  it('prevents other freelancers from updating jobs they do not own', async () => {
+  it('prevents non-clients from accepting jobs', async () => {
     prisma.job.findUnique.mockResolvedValue(baseJob);
 
-    await expect(service.acceptJob(baseJob.id, 1000)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.acceptJob(baseJob.id, baseJob.freelancerId, UserRole.FREELANCER),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('prevents clients from accepting jobs they do not own', async () => {
+    prisma.job.findUnique.mockResolvedValue(baseJob);
+
+    await expect(service.acceptJob(baseJob.id, 999, UserRole.CLIENT)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
   });
 
   it('throws when job not found on status updates', async () => {
     prisma.job.findUnique.mockResolvedValue(null);
-    await expect(service.acceptJob(baseJob.id, baseJob.freelancerId)).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      service.acceptJob(baseJob.id, baseJob.clientId, UserRole.CLIENT),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

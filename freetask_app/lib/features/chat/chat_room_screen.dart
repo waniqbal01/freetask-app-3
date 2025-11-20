@@ -21,6 +21,18 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
+  Future<void> _refreshMessages() async {
+    try {
+      await ref.read(chatRepositoryProvider).refreshMessages(widget.chatId);
+    } on AppException catch (error) {
+      if (!mounted) return;
+      _showSnackBar(error.message);
+    } catch (_) {
+      if (!mounted) return;
+      _showSnackBar('Gagal memuatkan semula mesej.');
+    }
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -67,8 +79,16 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
             child: asyncMessages.when(
               data: (List<ChatMessage> messages) {
                 if (messages.isEmpty) {
-                  return const Center(
-                    child: Text('Tiada data'),
+                  return RefreshIndicator(
+                    onRefresh: _refreshMessages,
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(16),
+                      children: const <Widget>[
+                        SizedBox(height: 80),
+                        Center(child: Text('Belum ada mesej lagi.')),
+                      ],
+                    ),
                   );
                 }
                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -78,72 +98,76 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                     );
                   }
                 });
-                return ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(16),
-                  itemCount: messages.length,
-                  itemBuilder: (BuildContext context, int index) {
-                    final message = messages[index];
-                    final isMe = message.sender == 'me';
-                    final bubbleColor = isMe
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.grey.shade300;
-                    final textColor = isMe ? Colors.white : Colors.grey.shade800;
-                    return Align(
-                      alignment:
-                          isMe ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(vertical: 6),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: bubbleColor,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            if (message.hasImage) ...<Widget>[
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  message.imageUrl!,
-                                  width: 160,
-                                  height: 160,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (
-                                    BuildContext context,
-                                    Object error,
-                                    StackTrace? stackTrace,
-                                  ) {
-                                    return Container(
-                                      width: 160,
-                                      height: 160,
-                                      color: Colors.black12,
-                                      alignment: Alignment.center,
-                                      child: Text(
-                                        'Gagal memuat gambar',
-                                        style: TextStyle(
-                                          color: textColor,
-                                          fontSize: 12,
+                return RefreshIndicator(
+                  onRefresh: _refreshMessages,
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    itemCount: messages.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      final message = messages[index];
+                      final isMe = message.sender == 'me';
+                      final bubbleColor = isMe
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.grey.shade300;
+                      final textColor = isMe ? Colors.white : Colors.grey.shade800;
+                      return Align(
+                        alignment:
+                            isMe ? Alignment.centerRight : Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: bubbleColor,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              if (message.hasImage) ...<Widget>[
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    message.imageUrl!,
+                                    width: 160,
+                                    height: 160,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (
+                                      BuildContext context,
+                                      Object error,
+                                      StackTrace? stackTrace,
+                                    ) {
+                                      return Container(
+                                        width: 160,
+                                        height: 160,
+                                        color: Colors.black12,
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          'Gagal memuat gambar',
+                                          style: TextStyle(
+                                            color: textColor,
+                                            fontSize: 12,
+                                          ),
+                                          textAlign: TextAlign.center,
                                         ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    );
-                                  },
+                                      );
+                                    },
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 8),
+                                const SizedBox(height: 8),
+                              ],
+                              if (message.text != null)
+                                Text(
+                                  message.text!,
+                                  style: TextStyle(color: textColor),
+                                ),
                             ],
-                            if (message.text != null)
-                              Text(
-                                message.text!,
-                                style: TextStyle(color: textColor),
-                              ),
-                          ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -154,8 +178,19 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                   }
                   _showSnackBar(friendlyErrorMessage(error));
                 });
-                return const Center(
-                  child: Text('Chat akan datang (Coming Soon). Sila cuba lagi nanti.'),
+                return RefreshIndicator(
+                  onRefresh: _refreshMessages,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    children: const <Widget>[
+                      SizedBox(height: 80),
+                      Center(
+                        child:
+                            Text('Gagal memuatkan mesej. Tarik ke bawah untuk cuba lagi.'),
+                      ),
+                    ],
+                  ),
                 );
               },
             ),
