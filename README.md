@@ -66,6 +66,11 @@ flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:4000
 - `flutter test` – Run widget/provider tests
 - `dart format .` / `flutter analyze` – Format and analyze code
 
+## Dev Notes – Phase 1
+- Backend: copy `.env.example` to `.env`, update credentials, then `npm run prisma:migrate` and `npm run prisma:seed` before `npm run start:dev`.
+- Flutter: run with `--dart-define=API_BASE_URL=http://10.0.2.2:4000` on Android emulators or `http://localhost:4000` on web/desktop.
+- CORS: `ALLOWED_ORIGINS` in the backend `.env` accepts comma-separated origins; defaults already include common local hosts and `10.0.2.2` for Android.
+
 ## Architecture & Docs
 - [Backend architecture](freetask-api/docs/backend-architecture.md)
 - [Flutter app architecture](freetask_app/docs/flutter-architecture.md)
