@@ -20,6 +20,7 @@ export class ServicesService {
         price: new Prisma.Decimal(dto.price),
         category: dto.category,
         freelancerId: userId,
+        deliveryDays: dto.deliveryDays,
       },
       include: {
         freelancer: {
@@ -29,29 +30,55 @@ export class ServicesService {
     });
   }
 
-  findAll(q?: string, category?: string, freelancerId?: number) {
-    return this.prisma.service
-      .findMany({
-        where: {
-          ...(q
-            ? {
-                OR: [
-                  { title: { contains: q, mode: 'insensitive' } },
-                  { description: { contains: q, mode: 'insensitive' } },
-                ],
-              }
-            : {}),
-          ...(category ? { category } : {}),
-          ...(freelancerId ? { freelancerId } : {}),
+  async findAll(
+    q?: string,
+    category?: string,
+    freelancerId?: number,
+    minPrice?: number,
+    maxPrice?: number,
+    minRating?: number,
+    maxDeliveryDays?: number,
+  ) {
+    const where: Prisma.ServiceWhereInput = {
+      active: true,
+      ...(category ? { category } : {}),
+      ...(freelancerId ? { freelancerId } : {}),
+    };
+
+    if (q) {
+      where.OR = [
+        { title: { contains: q, mode: 'insensitive' } },
+        { description: { contains: q, mode: 'insensitive' } },
+      ];
+    }
+
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      where.price = {
+        ...(minPrice !== undefined ? { gte: new Prisma.Decimal(minPrice) } : {}),
+        ...(maxPrice !== undefined ? { lte: new Prisma.Decimal(maxPrice) } : {}),
+      } as Prisma.DecimalFilter;
+    }
+
+    if (maxDeliveryDays !== undefined) {
+      where.deliveryDays = { lte: maxDeliveryDays };
+    }
+
+    const services = await this.prisma.service.findMany({
+      where,
+      include: {
+        freelancer: {
+          select: { id: true, name: true },
         },
-        include: {
-          freelancer: {
-            select: { id: true, name: true },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-      })
-      .then((services) => this.attachRatingSummary(services));
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const withRatings = await this.attachRatingSummary(services);
+    if (minRating === undefined) {
+      return withRatings;
+    }
+
+    return withRatings.filter((service) => (service.averageRating ?? 0) >= minRating);
   }
 
   findMine(userId: number) {
@@ -116,6 +143,7 @@ export class ServicesService {
     const results = await this.prisma.service.findMany({
       distinct: ['category'],
       select: { category: true },
+      where: { active: true },
       orderBy: { category: 'asc' },
     });
 

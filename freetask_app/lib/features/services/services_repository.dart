@@ -16,7 +16,14 @@ class ServicesRepository {
   final TokenStorage _tokenStorage;
   final Dio _dio;
 
-  Future<List<Service>> getServices({String? q, String? category}) async {
+  Future<List<Service>> getServices({
+    String? q,
+    String? category,
+    double? minPrice,
+    double? maxPrice,
+    double? minRating,
+    int? maxDeliveryDays,
+  }) async {
     return _guardRequest(() async {
       final response = await _dio.get<List<dynamic>>(
         '/services',
@@ -24,6 +31,10 @@ class ServicesRepository {
           if (q != null && q.isNotEmpty) 'q': q,
           if (category != null && category.isNotEmpty && category != 'Semua')
             'category': category,
+          if (minPrice != null) 'minPrice': minPrice,
+          if (maxPrice != null) 'maxPrice': maxPrice,
+          if (minRating != null) 'minRating': minRating,
+          if (maxDeliveryDays != null) 'maxDeliveryDays': maxDeliveryDays,
         },
         options: await _authorizedOptions(requireAuth: false),
       );
@@ -150,12 +161,14 @@ class ServiceRequestPayload {
     required this.description,
     required this.price,
     required this.category,
+    this.deliveryDays,
   });
 
   final String title;
   final String description;
   final double price;
   final String category;
+  final int? deliveryDays;
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
@@ -163,6 +176,7 @@ class ServiceRequestPayload {
       'description': description,
       'price': price,
       'category': category,
+      if (deliveryDays != null) 'deliveryDays': deliveryDays,
     };
   }
 }

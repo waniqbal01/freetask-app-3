@@ -6,6 +6,8 @@ import '../../services/token_storage.dart';
 import '../auth/auth_repository.dart';
 import 'admin_job_model.dart';
 import 'overview_stats_model.dart';
+import 'report_model.dart';
+import 'trend_metrics.dart';
 
 class AdminRepository {
   AdminRepository({TokenStorage? tokenStorage, Dio? dio})
@@ -47,6 +49,59 @@ class AdminRepository {
         data: <String, dynamic>{'status': status},
         options: await _authorizedOptions(),
       );
+    });
+  }
+
+  Future<List<AdminReport>> getOpenReports() {
+    return _guardRequest(() async {
+      final response = await _dio.get<List<dynamic>>(
+        '/admin/reports',
+        options: await _authorizedOptions(),
+      );
+      final data = response.data ?? <dynamic>[];
+      return data
+          .whereType<Map<String, dynamic>>()
+          .map(AdminReport.fromJson)
+          .toList(growable: false);
+    });
+  }
+
+  Future<void> updateReportStatus(int reportId, String status) {
+    return _guardRequest(() async {
+      await _dio.patch<void>(
+        '/admin/reports/$reportId/status',
+        data: <String, dynamic>{'status': status},
+        options: await _authorizedOptions(),
+      );
+    });
+  }
+
+  Future<void> deactivateService(int serviceId) {
+    return _guardRequest(() async {
+      await _dio.patch<void>(
+        '/admin/services/$serviceId/deactivate',
+        options: await _authorizedOptions(),
+      );
+    });
+  }
+
+  Future<void> disableUser(int userId) {
+    return _guardRequest(() async {
+      await _dio.patch<void>(
+        '/admin/users/$userId/disable',
+        options: await _authorizedOptions(),
+      );
+    });
+  }
+
+  Future<TrendMetrics> get7DayMetrics() {
+    return _guardRequest(() async {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/admin/metrics/7d',
+        options: await _authorizedOptions(),
+      );
+      final data = response.data ?? <String, dynamic>{};
+      return TrendMetrics.fromJson(data);
     });
   }
 

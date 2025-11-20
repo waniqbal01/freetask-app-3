@@ -1,6 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsNumber, IsPositive, IsString, MaxLength } from 'class-validator';
+import {
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateServiceDto {
   @ApiProperty({ example: 'Logo Design' })
@@ -24,4 +32,11 @@ export class CreateServiceDto {
   @IsString()
   @IsNotEmpty()
   category: string;
+
+  @ApiProperty({ example: 5, required: false, description: 'Anggaran hari penghantaran' })
+  @Type(() => Number)
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  deliveryDays?: number;
 }

@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { JobStatus, UserRole } from '@prisma/client';
+import { JobStatus, ReportStatus, UserRole } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -57,5 +57,33 @@ export class AdminController {
   ) {
     const status = body.status as JobStatus;
     return this.adminService.resolveDispute(id, status);
+  }
+
+  @Patch('services/:id/deactivate')
+  deactivateService(@Param('id', ParseIntPipe) id: number) {
+    return this.adminService.deactivateService(id);
+  }
+
+  @Patch('users/:id/disable')
+  disableUser(@Param('id', ParseIntPipe) id: number) {
+    return this.adminService.disableUser(id);
+  }
+
+  @Get('reports')
+  getOpenReports() {
+    return this.adminService.getOpenReports();
+  }
+
+  @Patch('reports/:id/status')
+  updateReportStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('status') status: ReportStatus,
+  ) {
+    return this.adminService.updateReportStatus(id, status);
+  }
+
+  @Get('metrics/7d')
+  get7DayMetrics() {
+    return this.adminService.get7DayMetrics();
   }
 }

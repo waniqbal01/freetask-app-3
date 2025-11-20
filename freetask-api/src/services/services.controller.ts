@@ -41,9 +41,31 @@ export class ServicesController {
     @Query('q') q?: string,
     @Query('category') category?: string,
     @Query('freelancerId') freelancerId?: string,
+    @Query('minPrice') minPrice?: string,
+    @Query('maxPrice') maxPrice?: string,
+    @Query('minRating') minRating?: string,
+    @Query('maxDeliveryDays') maxDeliveryDays?: string,
   ) {
     const parsedFreelancerId = freelancerId ? Number(freelancerId) : undefined;
-    return this.servicesService.findAll(q, category, parsedFreelancerId);
+    const parseNumber = (value?: string) => {
+      if (value === undefined) return undefined;
+      const num = Number(value);
+      return Number.isNaN(num) ? undefined : num;
+    };
+    const parsedMinPrice = parseNumber(minPrice);
+    const parsedMaxPrice = parseNumber(maxPrice);
+    const parsedMinRating = parseNumber(minRating);
+    const parsedMaxDeliveryDays = parseNumber(maxDeliveryDays);
+
+    return this.servicesService.findAll(
+      q,
+      category,
+      parsedFreelancerId,
+      parsedMinPrice,
+      parsedMaxPrice,
+      parsedMinRating,
+      parsedMaxDeliveryDays,
+    );
   }
 
   @ApiOperation({ summary: 'List services for the authenticated freelancer' })

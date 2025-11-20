@@ -9,6 +9,7 @@ import '../../models/service.dart';
 import '../../theme/app_theme.dart';
 import 'services_repository.dart';
 import '../../core/utils/error_utils.dart';
+import '../reports/reports_repository.dart';
 
 class ServiceDetailScreen extends StatefulWidget {
   const ServiceDetailScreen({required this.serviceId, super.key});
@@ -23,6 +24,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   Service? _service;
   bool _isLoading = false;
   bool _isHireLoading = false;
+  bool _isReporting = false;
   String? _errorMessage;
 
   @override
@@ -60,6 +62,80 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _reportService(Service service) async {
+    final reasonController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Lapor servis ini'),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: reasonController,
+              maxLength: 500,
+              decoration: const InputDecoration(
+                labelText: 'Sebab laporan',
+                hintText: 'Nyatakan isu yang ditemui...',
+              ),
+              validator: (String? value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Sila masukkan sebab laporan';
+                }
+                return null;
+              },
+              maxLines: 3,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (formKey.currentState?.validate() != true) {
+                  return;
+                }
+                Navigator.of(context).pop(true);
+              },
+              child: const Text('Hantar laporan'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    setState(() {
+      _isReporting = true;
+    });
+
+    try {
+      await reportsRepository.createReport(
+        reportedServiceId: int.tryParse(service.id),
+        reason: reasonController.text.trim(),
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Laporan anda telah dihantar.')));
+    } catch (error) {
+      if (!mounted) return;
+      showErrorSnackBar(context, error);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isReporting = false;
         });
       }
     }
@@ -220,7 +296,17 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Maklumat Servis')),
+      appBar: AppBar(
+        title: const Text('Maklumat Servis'),
+        actions: [
+          if (_service != null)
+            IconButton(
+              onPressed: _isReporting ? null : () => _reportService(_service!),
+              icon: const Icon(Icons.flag_outlined),
+              tooltip: 'Lapor servis',
+            ),
+        ],
+      ),
       body: Stack(
         children: [
           bodyContent,
@@ -228,6 +314,11 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
             const LoadingOverlay(
               message: 'Memproses tempahan...',
               backgroundOpacity: 0.25,
+            ),
+          if (_isReporting)
+            const LoadingOverlay(
+              message: 'Menghantar laporan...',
+              backgroundOpacity: 0.15,
             ),
         ],
       ),

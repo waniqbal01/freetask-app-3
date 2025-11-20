@@ -5,6 +5,8 @@ import '../../core/utils/error_utils.dart';
 import 'admin_job_model.dart';
 import 'admin_repository.dart';
 import 'overview_stats_model.dart';
+import 'report_model.dart';
+import 'trend_metrics.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -16,6 +18,8 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   OverviewStats? _stats;
   List<AdminJob> _disputedJobs = <AdminJob>[];
+  List<AdminReport> _reports = <AdminReport>[];
+  TrendMetrics? _metrics;
   bool _isLoading = true;
   String? _errorMessage;
   final DateFormat _dateFormat = DateFormat('dd MMM yyyy');
@@ -36,11 +40,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       final results = await Future.wait([
         adminRepository.getOverview(),
         adminRepository.getDisputedJobs(),
+        adminRepository.getOpenReports(),
+        adminRepository.get7DayMetrics(),
       ]);
       if (!mounted) return;
       setState(() {
         _stats = results[0] as OverviewStats;
         _disputedJobs = results[1] as List<AdminJob>;
+        _reports = results[2] as List<AdminReport>;
+        _metrics = results[3] as TrendMetrics;
       });
     } catch (error) {
       if (!mounted) return;
@@ -289,6 +297,137 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  Widget _buildReportsSection() {
+    if (_reports.isEmpty) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Text('Tiada laporan baharu buat masa ini.'),
+        ),
+      );
+    }
+
+    return Column(
+      children: _reports.map((AdminReport report) {
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Laporan #${report.id}',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                if (report.reporterName != null)
+                  Text('Pelapor: ${report.reporterName}'),
+                if (report.reportedUserName != null)
+                  Text('Terhadap pengguna: ${report.reportedUserName}'),
+                if (report.reportedServiceTitle != null)
+                  Text('Servis: ${report.reportedServiceTitle}'),
+                const SizedBox(height: 8),
+                Text(report.reason),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Wrap(
+                    spacing: 8,
+                    children: [
+                      OutlinedButton(
+                        onPressed: () => _handleReportStatus(report, 'REVIEWED'),
+                        child: const Text('Tandai Diteliti'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => _handleReportStatus(report, 'ACTION_TAKEN'),
+                        child: const Text('Tindakan Diambil'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildTrendSection() {
+    final metrics = _metrics;
+    if (metrics == null) return const SizedBox.shrink();
+
+    Widget buildList(String title, List<TrendDataPoint> data, Color color) {
+      return Expanded(
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                ...data.map((point) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(point.date),
+                          Text(
+                            point.count.toString(),
+                            style: TextStyle(
+                              color: color,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Trend 7 Hari',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            buildList('Job baharu', metrics.jobsPerDay, Colors.orange),
+            const SizedBox(width: 12),
+            buildList('Servis baharu', metrics.servicesPerDay, Colors.indigo),
+            const SizedBox(width: 12),
+            buildList('Pengguna baharu', metrics.usersPerDay, Colors.green),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _handleReportStatus(AdminReport report, String status) async {
+    try {
+      await adminRepository.updateReportStatus(report.id, status);
+      if (!mounted) return;
+      showSuccessSnackBar(context, 'Laporan dikemas kini.');
+      await _loadDashboard();
+    } catch (error) {
+      if (!mounted) return;
+      showErrorSnackBar(context, error);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -315,12 +454,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             else ...[
               _buildOverviewSection(),
               const SizedBox(height: 24),
+              _buildTrendSection(),
+              const SizedBox(height: 24),
               Text(
                 'Job dalam dispute',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
               _buildDisputedJobs(),
+              const SizedBox(height: 24),
+              Text(
+                'Laporan pengguna & servis',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              _buildReportsSection(),
             ],
           ],
         ),

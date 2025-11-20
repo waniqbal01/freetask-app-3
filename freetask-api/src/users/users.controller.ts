@@ -22,4 +22,13 @@ export class UsersController {
   updateMe(@GetUser('userId') userId: number, @Body() dto: UpdateUserDto) {
     return this.usersService.updateProfile(userId, dto);
   }
+
+  @ApiOperation({ summary: 'Register or clear device token for push notifications' })
+  @Patch('me/device-token')
+  updateDeviceToken(
+    @GetUser('userId') userId: number,
+    @Body('deviceToken') deviceToken: string | null,
+  ) {
+    return this.usersService.updateDeviceToken(userId, deviceToken ?? null);
+  }
 }

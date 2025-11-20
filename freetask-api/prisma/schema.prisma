@@ -13,6 +13,18 @@ enum UserRole {
   ADMIN
 }
 
+enum ReportStatus {
+  OPEN
+  REVIEWED
+  ACTION_TAKEN
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
 enum JobStatus {
   PENDING
   ACCEPTED
@@ -35,6 +47,8 @@ model User {
   bio          String?
   skills       Json?
   rate         Decimal?      @db.Decimal(10, 2)
+  enabled      Boolean       @default(true)
+  deviceToken  String?
   services     Service[]
   jobsAsClient Job[]         @relation("ClientJobs")
   jobsAsFreelancer Job[]     @relation("FreelancerJobs")
@@ -42,6 +56,8 @@ model User {
   reviewsGiven Review[]      @relation("ReviewerReviews")
   reviewsReceived Review[]   @relation("RevieweeReviews")
   notifications Notification[]
+  reportsFiled Report[]      @relation("ReporterReports")
+  reportsReceived Report[]   @relation("ReportedUserReports")
 }
 
 model Service {
@@ -52,9 +68,12 @@ model Service {
   description  String
   price        Decimal   @db.Decimal(10, 2)
   category     String
+  deliveryDays Int?
+  active       Boolean   @default(true)
   freelancer   User      @relation(fields: [freelancerId], references: [id])
   freelancerId Int
   jobs         Job[]
+  reports      Report[]
 }
 
 model Job {
@@ -74,6 +93,7 @@ model Job {
   freelancerId   Int
   messages       ChatMessage[]
   review         Review?
+  histories      JobHistory[]
 }
 
 model ChatMessage {
@@ -111,4 +131,39 @@ model Notification {
   body      String
   metadata  Json?
   isRead    Boolean @default(false)
+}
+
+model JobHistory {
+  id        Int      @id @default(autoincrement())
+  job       Job      @relation(fields: [jobId], references: [id])
+  jobId     Int
+  actor     User?    @relation(fields: [actorId], references: [id])
+  actorId   Int?
+  action    String
+  message   String?
+  createdAt DateTime @default(now())
+}
+
+model Report {
+  id                Int      @id @default(autoincrement())
+  reporter          User     @relation("ReporterReports", fields: [reporterId], references: [id])
+  reporterId        Int
+  reportedUser      User?    @relation("ReportedUserReports", fields: [reportedUserId], references: [id])
+  reportedUserId    Int?
+  reportedService   Service? @relation(fields: [reportedServiceId], references: [id])
+  reportedServiceId Int?
+  reason            String
+  status            ReportStatus @default(OPEN)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model EmailQueue {
+  id        Int         @id @default(autoincrement())
+  to        String
+  subject   String
+  body      String
+  status    EmailStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 }

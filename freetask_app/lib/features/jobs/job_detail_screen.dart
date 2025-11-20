@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/job.dart';
+import '../../models/job_history.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/section_card.dart';
+import 'jobs_repository.dart';
 import 'widgets/job_status_badge.dart';
 
 class JobDetailScreen extends StatelessWidget {
@@ -177,6 +179,15 @@ class JobDetailScreen extends StatelessWidget {
                           ),
                         ),
                       ],
+                      const SizedBox(height: AppSpacing.s16),
+                      const Divider(),
+                      const SizedBox(height: AppSpacing.s12),
+                      Text(
+                        'Timeline Aktiviti',
+                        style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: AppSpacing.s12),
+                      _JobHistoryTimeline(jobId: job.id),
                     ],
                   ),
                 ),
@@ -185,6 +196,112 @@ class JobDetailScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _JobHistoryTimeline extends StatelessWidget {
+  const _JobHistoryTimeline({required this.jobId});
+
+  final String jobId;
+
+  String _actionLabel(JobHistory history) {
+    switch (history.action) {
+      case 'JOB_CREATED':
+        return 'Job dicipta';
+      case 'JOB_ACCEPTED':
+        return 'Job diterima freelancer';
+      case 'JOB_STARTED':
+        return 'Kerja bermula';
+      case 'JOB_COMPLETED':
+        return 'Job ditandakan selesai';
+      case 'JOB_DISPUTED':
+        return 'Pertikaian dibuka';
+      case 'JOB_RESOLVED_ADMIN':
+        return 'Diselesaikan oleh admin';
+      case 'JOB_REJECTED':
+        return 'Job ditolak/batal';
+      default:
+        return history.action;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return FutureBuilder<List<JobHistory>>(
+      future: jobsRepository.getJobHistory(jobId),
+      builder: (BuildContext context, AsyncSnapshot<List<JobHistory>> snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Text(
+            'Gagal memuatkan timeline.',
+            style: textTheme.bodyMedium?.copyWith(color: AppColors.error),
+          );
+        }
+
+        final histories = snapshot.data ?? <JobHistory>[];
+        if (histories.isEmpty) {
+          return Text(
+            'Tiada aktiviti direkodkan lagi.',
+            style: textTheme.bodyMedium?.copyWith(color: AppColors.neutral500),
+          );
+        }
+
+        return Column(
+          children: histories.map((history) {
+            final label = _actionLabel(history);
+            final timestamp = DateFormat('dd MMM yyyy, h:mm a').format(history.createdAt.toLocal());
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.s8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    margin: const EdgeInsets.only(top: 6),
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.s12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          timestamp,
+                          style: textTheme.bodySmall?.copyWith(color: AppColors.neutral500),
+                        ),
+                        if (history.message?.isNotEmpty == true) ...[
+                          const SizedBox(height: 4),
+                          Text(history.message!, style: textTheme.bodyMedium),
+                        ],
+                        if (history.actorName?.isNotEmpty == true) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Oleh: ${history.actorName}',
+                            style: textTheme.bodySmall?.copyWith(color: AppColors.neutral500),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        );
+      },
     );
   }
 }

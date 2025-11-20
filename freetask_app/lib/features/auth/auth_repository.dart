@@ -4,6 +4,7 @@ import '../../core/utils/error_utils.dart';
 import '../../models/user.dart';
 import '../../services/http_client.dart';
 import '../../services/token_storage.dart';
+import '../notifications/device_token_service.dart';
 
 class AuthRepository {
   AuthRepository({TokenStorage? tokenStorage, Dio? dio})
@@ -37,6 +38,8 @@ class AuthRepository {
       if (userJson is Map<String, dynamic>) {
         _cachedUser = AppUser.fromJson(userJson);
       }
+      await deviceTokenService
+          .registerDeviceToken('TODO_REPLACE_WITH_REAL_DEVICE_TOKEN_AFTER_FCM');
       return true;
     }, clearOn401: false);
   }
@@ -58,6 +61,8 @@ class AuthRepository {
       } else {
         _cachedUser = null;
       }
+      await deviceTokenService
+          .registerDeviceToken('TODO_REPLACE_WITH_REAL_DEVICE_TOKEN_AFTER_FCM');
       return true;
     }, clearOn401: false);
   }
