@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/app_info.dart';
 import '../../core/utils/error_utils.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/section_card.dart';
@@ -81,6 +82,12 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       }
     }
+  }
+
+  Future<void> _loginAsDemo(String email, String password) async {
+    _emailController.text = email;
+    _passwordController.text = password;
+    await _handleLogin();
   }
 
   @override
@@ -212,6 +219,47 @@ class _LoginScreenState extends State<LoginScreen> {
                               onPressed: () => context.push('/register'),
                               child: const Text('Belum ada akaun? Daftar'),
                             ),
+                            if (AppInfo.isDev) ...[
+                              const Divider(height: AppSpacing.s32),
+                              Text(
+                                'Log masuk pantas (demo)',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: AppSpacing.s12),
+                              Wrap(
+                                spacing: AppSpacing.s12,
+                                runSpacing: AppSpacing.s12,
+                                children: [
+                                  OutlinedButton(
+                                    onPressed: _isSubmitting
+                                        ? null
+                                        : () => _loginAsDemo(
+                                              'admin@freetask.local',
+                                              'password123',
+                                            ),
+                                    child: const Text('Login Admin Demo'),
+                                  ),
+                                  OutlinedButton(
+                                    onPressed: _isSubmitting
+                                        ? null
+                                        : () => _loginAsDemo(
+                                              'aisyah.client@freetask.local',
+                                              'password123',
+                                            ),
+                                    child: const Text('Login Client Demo'),
+                                  ),
+                                  OutlinedButton(
+                                    onPressed: _isSubmitting
+                                        ? null
+                                        : () => _loginAsDemo(
+                                              'amira.freelancer@freetask.local',
+                                              'password123',
+                                            ),
+                                    child: const Text('Login Freelancer Demo'),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ],
                         ),
                       ),
