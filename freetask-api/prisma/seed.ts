@@ -1,185 +1,196 @@
-import { PrismaClient, UserRole, JobStatus } from '@prisma/client';
+import { PrismaClient, UserRole, JobStatus, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
-async function createUser(email: string, name: string, role: UserRole) {
-  const password = await bcrypt.hash('password123', 10);
-
+async function createUser(params: {
+  email: string;
+  name: string;
+  role: UserRole;
+  password: string;
+  bio?: string;
+  skills?: string[];
+  rate?: number;
+}) {
+  const hashed = await bcrypt.hash(params.password, 10);
   return prisma.user.upsert({
-    where: { email },
-    update: {},
+    where: { email: params.email },
+    update: {
+      name: params.name,
+      role: params.role,
+      bio: params.bio,
+      skills: params.skills,
+      rate: params.rate ? new Prisma.Decimal(params.rate) : undefined,
+      enabled: true,
+    },
     create: {
-      email,
-      name,
-      password,
-      role,
+      email: params.email,
+      name: params.name,
+      role: params.role,
+      password: hashed,
+      bio: params.bio,
+      skills: params.skills,
+      rate: params.rate ? new Prisma.Decimal(params.rate) : undefined,
     },
   });
 }
 
-async function main() {
-  console.log('🌱 Seeding demo data...');
+async function resetTables() {
+  await prisma.jobHistory.deleteMany();
+  await prisma.chatMessage.deleteMany();
+  await prisma.notification.deleteMany();
+  await prisma.review.deleteMany();
+  await prisma.job.deleteMany();
+  await prisma.service.deleteMany();
+  await prisma.user.deleteMany();
+}
 
-  const [client, freelancer, admin] = await Promise.all([
-    createUser('client@test.com', 'Demo Client', UserRole.CLIENT),
-    createUser('freelancer@test.com', 'Demo Freelancer', UserRole.FREELANCER),
-    createUser('admin@test.com', 'Demo Admin', UserRole.ADMIN),
-  ]);
-
-  console.log('✅ Demo users ready:', {
-    client: client.email,
-    freelancer: freelancer.email,
-    admin: admin.email,
-  });
-
-  const logoDesign = await prisma.service.create({
-    data: {
-      title: 'Logo Design Pro',
-      description: 'Reka bentuk logo moden dan minimalis untuk bisnes anda.',
-      price: 250,
+async function seedServices(freelancerId: number) {
+  const servicesData = [
+    {
+      title: 'Logo Identity Essentials',
+      description: 'Reka bentuk logo moden dengan 2 pusingan revisi.',
+      price: new Prisma.Decimal(220),
       category: 'Design',
       deliveryDays: 3,
-      freelancerId: freelancer.id,
     },
-  });
-
-  const landingPage = await prisma.service.create({
-    data: {
+    {
       title: 'Landing Page Next.js',
-      description: 'Bina landing page pantas dengan SEO mesra.',
-      price: 480,
-      category: 'Web Development',
+      description: 'Laman pendaratan pantas lengkap dengan analitik asas.',
+      price: new Prisma.Decimal(420),
+      category: 'Development',
       deliveryDays: 5,
-      freelancerId: freelancer.id,
     },
-  });
-
-  const socialKit = await prisma.service.create({
-    data: {
-      title: 'Social Media Kit',
-      description: '10 visual media sosial beserta templat boleh sunting.',
-      price: 180,
+    {
+      title: 'Pakej Sosial Media 10 Pos',
+      description: 'Kandungan kapsyen & visual ringan untuk kempen mingguan.',
+      price: new Prisma.Decimal(180),
       category: 'Marketing',
       deliveryDays: 4,
-      freelancerId: freelancer.id,
     },
-  });
+  ];
 
-  console.log('✅ Demo services created');
+  const services: Array<{ id: number; title: string; freelancerId: number; price: number }> = [];
+  for (const data of servicesData) {
+    // eslint-disable-next-line no-await-in-loop
+    const service = await prisma.service.upsert({
+      where: { title: data.title },
+      update: { ...data, freelancerId },
+      create: { ...data, freelancerId },
+    });
+    services.push({
+      id: service.id,
+      title: service.title,
+      freelancerId: service.freelancerId,
+      price: Number(service.price),
+    });
+  }
+  return services;
+}
 
-  const jobPending = await prisma.job.create({
-    data: {
-      title: 'Tempah Logo Baharu',
-      description: 'Mahukan logo ringkas dengan warna biru.',
-      amount: 250,
-      status: JobStatus.PENDING,
-      serviceId: logoDesign.id,
-      clientId: client.id,
-      freelancerId: freelancer.id,
-      histories: {
-        create: [
-          {
-            actorId: client.id,
-            action: 'CREATED',
-            message: 'Client membuat tempahan logo baharu.',
-          },
-        ],
+async function seedJobs(params: {
+  services: Array<{ id: number; title: string; freelancerId: number; price: number }>;
+  clientId: number;
+}) {
+  const [logo, landing, social] = params.services;
+
+  const jobs = await Promise.all([
+    prisma.job.create({
+      data: {
+        title: 'Logo untuk aplikasi kewangan',
+        description: 'Logo minimal dengan warna hijau neon.',
+        amount: new Prisma.Decimal(logo.price),
+        status: JobStatus.PENDING,
+        serviceId: logo.id,
+        clientId: params.clientId,
+        freelancerId: logo.freelancerId,
       },
-    },
-    include: { histories: true },
-  });
-
-  const jobInProgress = await prisma.job.create({
-    data: {
-      title: 'Sediakan Landing Page',
-      description: 'Landing page produk SaaS ringkas.',
-      amount: 480,
-      status: JobStatus.IN_PROGRESS,
-      serviceId: landingPage.id,
-      clientId: client.id,
-      freelancerId: freelancer.id,
-      histories: {
-        create: [
-          {
-            actorId: client.id,
-            action: 'CREATED',
-            message: 'Job diminta oleh client.',
-          },
-          {
-            actorId: client.id,
-            action: 'ACCEPTED',
-            message: 'Client menerima tawaran freelancer.',
-          },
-          {
-            actorId: freelancer.id,
-            action: 'STARTED',
-            message: 'Freelancer memulakan kerja.',
-          },
-        ],
+    }),
+    prisma.job.create({
+      data: {
+        title: 'Sediakan landing page MVP',
+        description: 'Keutamaan pada borang lead dan kelajuan.',
+        amount: new Prisma.Decimal(landing.price),
+        status: JobStatus.ACCEPTED,
+        serviceId: landing.id,
+        clientId: params.clientId,
+        freelancerId: landing.freelancerId,
       },
-    },
-    include: { histories: true },
-  });
-
-  const jobCompleted = await prisma.job.create({
-    data: {
-      title: 'Pakej Visual Media Sosial',
-      description: 'Set visual lengkap untuk kempen minggu hadapan.',
-      amount: 180,
-      status: JobStatus.COMPLETED,
-      serviceId: socialKit.id,
-      clientId: client.id,
-      freelancerId: freelancer.id,
-      histories: {
-        create: [
-          {
-            actorId: client.id,
-            action: 'CREATED',
-            message: 'Job dimulakan oleh client.',
-          },
-          {
-            actorId: client.id,
-            action: 'ACCEPTED',
-            message: 'Client mengesahkan untuk diteruskan.',
-          },
-          {
-            actorId: freelancer.id,
-            action: 'STARTED',
-            message: 'Freelancer mula menyiapkan bahan.',
-          },
-          {
-            actorId: freelancer.id,
-            action: 'DELIVERED',
-            message: 'Draf awal dihantar kepada client.',
-          },
-          {
-            actorId: client.id,
-            action: 'COMPLETED',
-            message: 'Client menandakan job sebagai selesai.',
-          },
-        ],
+    }),
+    prisma.job.create({
+      data: {
+        title: 'Kempen media sosial 10 hari',
+        description: '10 kapsyen dan visual ringkas untuk promosi.',
+        amount: new Prisma.Decimal(social.price),
+        status: JobStatus.IN_PROGRESS,
+        serviceId: social.id,
+        clientId: params.clientId,
+        freelancerId: social.freelancerId,
       },
-    },
-    include: { histories: true },
+    }),
+    prisma.job.create({
+      data: {
+        title: 'Logo pasukan e-sukan',
+        description: 'Gaya maskot berani dengan warna ungu.',
+        amount: new Prisma.Decimal(260),
+        status: JobStatus.COMPLETED,
+        serviceId: logo.id,
+        clientId: params.clientId,
+        freelancerId: logo.freelancerId,
+      },
+    }),
+    prisma.job.create({
+      data: {
+        title: 'Semakan semula visual kempen',
+        description: 'Dispute kerana visual tidak ikut moodboard.',
+        amount: new Prisma.Decimal(social.price),
+        status: JobStatus.DISPUTED,
+        disputeReason: 'Warna dan susun atur tidak mengikut contoh rujukan.',
+        serviceId: social.id,
+        clientId: params.clientId,
+        freelancerId: social.freelancerId,
+      },
+    }),
+  ]);
+
+  await prisma.jobHistory.createMany({
+    data: [
+      { jobId: jobs[0].id, actorId: params.clientId, action: 'JOB_CREATED' },
+      { jobId: jobs[1].id, actorId: params.clientId, action: 'JOB_CREATED' },
+      { jobId: jobs[1].id, actorId: params.clientId, action: 'JOB_ACCEPTED' },
+      { jobId: jobs[2].id, actorId: params.clientId, action: 'JOB_CREATED' },
+      { jobId: jobs[2].id, actorId: jobs[2].freelancerId, action: 'JOB_ACCEPTED' },
+      { jobId: jobs[2].id, actorId: jobs[2].freelancerId, action: 'JOB_STARTED' },
+      { jobId: jobs[3].id, actorId: params.clientId, action: 'JOB_CREATED' },
+      { jobId: jobs[3].id, actorId: jobs[3].freelancerId, action: 'JOB_ACCEPTED' },
+      { jobId: jobs[3].id, actorId: jobs[3].freelancerId, action: 'JOB_STARTED' },
+      { jobId: jobs[3].id, actorId: jobs[3].freelancerId, action: 'JOB_COMPLETED' },
+      { jobId: jobs[4].id, actorId: params.clientId, action: 'JOB_CREATED' },
+      {
+        jobId: jobs[4].id,
+        actorId: params.clientId,
+        action: 'JOB_DISPUTED',
+        message: 'Visual tidak selaras.',
+      },
+    ],
   });
 
   await prisma.chatMessage.createMany({
     data: [
       {
-        jobId: jobInProgress.id,
-        senderId: client.id,
-        content: 'Hai, boleh kongsi wireframe awal?',
+        content: 'Hai, saya akan hantar konsep logo pertama petang ini.',
+        jobId: jobs[0].id,
+        senderId: jobs[0].freelancerId,
       },
       {
-        jobId: jobInProgress.id,
-        senderId: freelancer.id,
-        content: 'Baik, saya akan hantar draft hari ini.',
+        content: 'Boleh guna tona neon hijau untuk versi pertama.',
+        jobId: jobs[0].id,
+        senderId: params.clientId,
       },
       {
-        jobId: jobInProgress.id,
-        senderId: client.id,
-        content: 'Terima kasih! Saya tunggu.',
+        content: 'Wireframe siap, saya mulakan pembangunan hari ini.',
+        jobId: jobs[1].id,
+        senderId: jobs[1].freelancerId,
       },
     ],
   });
@@ -187,36 +198,80 @@ async function main() {
   await prisma.notification.createMany({
     data: [
       {
-        userId: freelancer.id,
-        type: 'job',
-        title: 'Job baharu menunggu tindakan',
-        body: `Job #${jobPending.id} menunggu respon anda.`,
+        userId: jobs[0].freelancerId,
+        type: 'JOB_CREATED',
+        title: 'Job baharu ditempah',
+        body: 'Client menempah Logo Identity Essentials.',
+        metadata: { jobId: jobs[0].id, serviceId: logo.id },
       },
       {
-        userId: client.id,
-        type: 'chat',
-        title: 'Pesanan baharu',
-        body: 'Freelancer telah membalas chat anda.',
-        metadata: { jobId: jobInProgress.id },
+        userId: params.clientId,
+        type: 'JOB_STATUS_UPDATED',
+        title: 'Job diterima',
+        body: 'Freelancer bersedia untuk job Landing Page Next.js.',
+        metadata: { jobId: jobs[1].id, status: JobStatus.ACCEPTED },
       },
       {
-        userId: client.id,
-        type: 'job',
-        title: 'Job siap',
-        body: `Job #${jobCompleted.id} ditandakan lengkap.`,
-        isRead: true,
+        userId: params.clientId,
+        type: 'JOB_STATUS_UPDATED',
+        title: 'Status job berubah',
+        body: 'Kempen media sosial kini In Progress.',
+        metadata: { jobId: jobs[2].id, status: JobStatus.IN_PROGRESS },
       },
     ],
   });
 
-  console.log('✨ Seeding siap. Akaun demo tersedia.');
+  return jobs;
 }
 
-main()
-  .catch((error) => {
-    console.error('Seed gagal:', error);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
+export async function runSeed() {
+  console.log('🌱 Resetting and seeding demo data...');
+  await resetTables();
+
+  const admin = await createUser({
+    email: 'admin@demo.com',
+    name: 'Demo Admin',
+    role: UserRole.ADMIN,
+    password: 'Admin123!',
   });
+
+  const client = await createUser({
+    email: 'client@demo.com',
+    name: 'Demo Client',
+    role: UserRole.CLIENT,
+    password: 'Client123!',
+  });
+
+  const freelancer = await createUser({
+    email: 'freelancer@demo.com',
+    name: 'Demo Freelancer',
+    role: UserRole.FREELANCER,
+    password: 'Freelancer123!',
+    bio: 'Pereka dan pembangun bebas untuk MVP dan bahan pemasaran.',
+    skills: ['Design', 'Next.js', 'Copywriting'],
+    rate: 120,
+  });
+
+  const services = await seedServices(freelancer.id);
+  const jobs = await seedJobs({ services, clientId: client.id });
+
+  console.log('✅ Demo users:', {
+    admin: admin.email,
+    client: client.email,
+    freelancer: freelancer.email,
+  });
+  console.log('✅ Services:', services.map((service) => service.title).join(', '));
+  console.log('✅ Jobs:', jobs.map((job) => `#${job.id} ${job.status}`).join(', '));
+  console.log('✨ Seeding complete.');
+}
+
+if (require.main === module) {
+  runSeed()
+    .catch((error) => {
+      console.error('Seed failed:', error);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}

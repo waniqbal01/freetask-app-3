@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -120,8 +121,8 @@ export class JobsService {
 
   async rejectJob(id: number, userId: number) {
     const job = await this.ensureJobForFreelancer(id, userId);
-    this.ensureValidTransition(job.status, JobStatus.CANCELLED);
-    return this.applyStatusUpdate(id, JobStatus.CANCELLED, userId, 'JOB_REJECTED');
+    this.ensureValidTransition(job.status, JobStatus.REJECTED);
+    return this.applyStatusUpdate(id, JobStatus.REJECTED, userId, 'JOB_REJECTED');
   }
 
   async completeJob(id: number, userId: number) {
@@ -159,12 +160,12 @@ export class JobsService {
 
   private ensureValidTransition(current: JobStatus, next: JobStatus) {
     const transitions: Record<JobStatus, JobStatus[]> = {
-      [JobStatus.PENDING]: [
-        JobStatus.ACCEPTED,
+      [JobStatus.PENDING]: [JobStatus.ACCEPTED, JobStatus.REJECTED],
+      [JobStatus.ACCEPTED]: [
         JobStatus.IN_PROGRESS,
         JobStatus.CANCELLED,
+        JobStatus.DISPUTED,
       ],
-      [JobStatus.ACCEPTED]: [JobStatus.IN_PROGRESS, JobStatus.CANCELLED],
       [JobStatus.IN_PROGRESS]: [
         JobStatus.COMPLETED,
         JobStatus.CANCELLED,
@@ -172,13 +173,13 @@ export class JobsService {
       ],
       [JobStatus.COMPLETED]: [JobStatus.DISPUTED],
       [JobStatus.CANCELLED]: [],
-      [JobStatus.REJECTED]: [JobStatus.CANCELLED],
+      [JobStatus.REJECTED]: [],
       [JobStatus.DISPUTED]: [],
     };
 
     const allowedNextStates = transitions[current] ?? [];
     if (!allowedNextStates.includes(next)) {
-      throw new ForbiddenException(
+      throw new ConflictException(
         `Cannot change job status from ${current} to ${next}`,
       );
     }

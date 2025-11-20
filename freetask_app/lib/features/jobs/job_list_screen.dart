@@ -134,7 +134,7 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
   }
 
   Future<void> _handleAction(
-    Future<bool> Function() action,
+    Future<Job> Function() action,
     String successMessage,
   ) async {
     if (_isProcessing) return;
@@ -143,7 +143,7 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
     });
 
     try {
-      final success = await action();
+      final Job? result = await action();
 
       if (!mounted) return;
 
@@ -151,7 +151,7 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
         _isProcessing = false;
       });
 
-      if (success) {
+      if (result != null) {
         await _loadJobs();
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -252,6 +252,61 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
         'job': job,
         'isClientView': isClientView,
       },
+    );
+  }
+
+  Future<void> _promptDispute(Job job) async {
+    final controller = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Buka Dispute'),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: controller,
+              maxLength: 280,
+              decoration: const InputDecoration(
+                labelText: 'Sebab',
+                hintText: 'Terangkan isu yang dialami...',
+              ),
+              validator: (String? value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Sila masukkan sebab.';
+                }
+                return null;
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (formKey.currentState?.validate() != true) {
+                  return;
+                }
+                Navigator.of(context).pop(true);
+              },
+              child: const Text('Hantar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    await _handleAction(
+      () => jobsRepository.setDispute(job.id, controller.text.trim()),
+      'Dispute dibuka untuk job ini.',
     );
   }
 
@@ -399,17 +454,15 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
     required bool isClientView,
     required bool alreadyReviewed,
   }) {
-    if (isClientView && job.status == JobStatus.inProgress) {
+    if (isClientView && job.status == JobStatus.pending) {
       return Align(
         alignment: Alignment.centerRight,
         child: FTButton(
-          label: 'Mark as Completed',
+          label: 'Accept Job',
           isLoading: _isProcessing,
           onPressed: () => _handleAction(
-            () async {
-              return jobsRepository.markCompleted(job.id);
-            },
-            'Job ditandakan selesai. Status kini Completed.',
+            () => jobsRepository.acceptJob(job.id),
+            'Job diterima. Freelancer boleh mula bekerja.',
           ),
           expanded: false,
         ),
@@ -417,28 +470,57 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
     }
 
     if (!isClientView && job.status == JobStatus.pending) {
+      return Align(
+        alignment: Alignment.centerRight,
+        child: FTButton(
+          label: 'Reject Job',
+          isLoading: _isProcessing,
+          onPressed: () => _handleAction(
+            () => jobsRepository.rejectJob(job.id),
+            'Job telah ditolak dan dikemas kini.',
+          ),
+          expanded: false,
+          size: FTButtonSize.small,
+        ),
+      );
+    }
+
+    if (!isClientView && job.status == JobStatus.accepted) {
+      return Align(
+        alignment: Alignment.centerRight,
+        child: FTButton(
+          label: 'Start Job',
+          isLoading: _isProcessing,
+          onPressed: () => _handleAction(
+            () => jobsRepository.startJob(job.id),
+            'Job dimulakan! Status kini In Progress.',
+          ),
+          expanded: false,
+          size: FTButtonSize.small,
+        ),
+      );
+    }
+
+    if (job.status == JobStatus.inProgress) {
       return Row(
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
           FTButton(
-            label: 'Reject',
+            label: 'Raise Dispute',
             isLoading: _isProcessing,
-            onPressed: () => _handleAction(
-              () async {
-                final success = await jobsRepository.rejectJob(job.id);
-                return success;
-              },
-              'Job telah ditolak dan dikemas kini.',
-            ),
+            onPressed: () => _promptDispute(job),
             expanded: false,
             size: FTButtonSize.small,
           ),
           const SizedBox(width: 8),
           FTButton(
-            label: 'Start Job',
+            label: 'Mark as Completed',
             isLoading: _isProcessing,
             onPressed: () => _handleAction(
-              () => jobsRepository.startJob(job.id),
-              'Job dimulakan! Status kini In Progress.',
+              () async {
+                return jobsRepository.markCompleted(job.id);
+              },
+              'Job ditandakan selesai. Status kini Completed.',
             ),
             expanded: false,
             size: FTButtonSize.small,

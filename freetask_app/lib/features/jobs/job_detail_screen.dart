@@ -28,8 +28,8 @@ class JobDetailScreen extends StatefulWidget {
 
 class _JobDetailScreenState extends State<JobDetailScreen> {
   Job? _job;
-  bool _isAccepting = false;
   bool _isLoading = false;
+  bool _isProcessingAction = false;
   String? _errorMessage;
   int _historyReloadKey = 0;
 
@@ -94,38 +94,177 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return DateFormat('dd MMM yyyy, h:mm a').format(date.toLocal());
   }
 
-  Future<void> _handleAccept(BuildContext context) async {
-    final job = _job;
-    if (_isAccepting || job == null || job.status != JobStatus.pending) {
-      return;
+  List<Widget> _buildActionButtons(Job job, bool isClientView) {
+    final List<Widget> actions = <Widget>[];
+
+    if (isClientView && job.status == JobStatus.pending) {
+      actions.add(
+        FTButton(
+          label: 'Accept Job',
+          isLoading: _isProcessingAction,
+          onPressed: () => _performJobUpdate(
+            () => jobsRepository.acceptJob(job.id),
+            'Job diterima. Freelancer boleh mula bekerja.',
+          ),
+          expanded: true,
+        ),
+      );
     }
+
+    if (!isClientView && job.status == JobStatus.pending) {
+      actions.add(
+        FTButton(
+          label: 'Reject Job',
+          isLoading: _isProcessingAction,
+          onPressed: () => _performJobUpdate(
+            () => jobsRepository.rejectJob(job.id),
+            'Job telah ditolak.',
+          ),
+          expanded: true,
+          type: FTButtonType.secondary,
+        ),
+      );
+    }
+
+    if (!isClientView && job.status == JobStatus.accepted) {
+      actions.add(
+        FTButton(
+          label: 'Start Job',
+          isLoading: _isProcessingAction,
+          onPressed: () => _performJobUpdate(
+            () => jobsRepository.startJob(job.id),
+            'Job dimulakan! Status kini In Progress.',
+          ),
+          expanded: true,
+        ),
+      );
+    }
+
+    if (job.status == JobStatus.inProgress) {
+      actions.add(
+        Row(
+          children: [
+            Expanded(
+              child: FTButton(
+                label: 'Raise Dispute',
+                isLoading: _isProcessingAction,
+                onPressed: _promptDispute,
+                type: FTButtonType.secondary,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.s12),
+            Expanded(
+              child: FTButton(
+                label: 'Mark as Completed',
+                isLoading: _isProcessingAction,
+                onPressed: () => _performJobUpdate(
+                  () => jobsRepository.markCompleted(job.id),
+                  'Job ditandakan selesai.',
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (actions.isEmpty) {
+      return const <Widget>[];
+    }
+
+    return <Widget>[
+      const SizedBox(height: AppSpacing.s16),
+      ...actions.expand<Widget>((Widget button) => <Widget>[button, const SizedBox(height: AppSpacing.s12)]),
+    ];
+  }
+
+  Future<void> _performJobUpdate(
+    Future<Job> Function() action,
+    String successMessage,
+  ) async {
+    if (_isProcessingAction) return;
     setState(() {
-      _isAccepting = true;
+      _isProcessingAction = true;
     });
 
     try {
-      final updatedJob = await jobsRepository.acceptJob(job.id);
+      final updatedJob = await action();
       if (!mounted) return;
       setState(() {
         _job = updatedJob;
-        _isAccepting = false;
         _historyReloadKey++;
+        _isProcessingAction = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Job accepted successfully.')),
+        SnackBar(content: Text(successMessage)),
       );
     } on AppException catch (error) {
       if (!mounted) return;
       setState(() {
-        _isAccepting = false;
+        _isProcessingAction = false;
       });
       showErrorSnackBar(context, error.message);
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _isAccepting = false;
+        _isProcessingAction = false;
       });
-      showErrorSnackBar(context, 'Gagal menerima job. Cuba lagi.');
+      showErrorSnackBar(context, 'Tindakan tidak berjaya. Cuba lagi.');
+    }
+  }
+
+  Future<void> _promptDispute() async {
+    final job = _job;
+    if (job == null) return;
+    final controller = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Buka Dispute'),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Sebab',
+                hintText: 'Terangkan isu yang dialami...',
+              ),
+              maxLength: 280,
+              validator: (String? value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Sila masukkan sebab.';
+                }
+                return null;
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (formKey.currentState?.validate() != true) {
+                  return;
+                }
+                Navigator.of(context).pop(true);
+              },
+              child: const Text('Hantar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await _performJobUpdate(
+        () => jobsRepository.setDispute(job.id, controller.text.trim()),
+        'Dispute dibuka untuk job ini.',
+      );
     }
   }
 
@@ -334,16 +473,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           ),
                         ),
                       ],
-                      const SizedBox(height: AppSpacing.s16),
-                      if (isClientView && job.status == JobStatus.pending) ...[
-                        FTButton(
-                          label: 'Accept Job',
-                          onPressed: () => _handleAccept(context),
-                          isLoading: _isAccepting,
-                          expanded: true,
-                        ),
-                        const SizedBox(height: AppSpacing.s16),
-                      ],
+                      ..._buildActionButtons(job, isClientView),
                       const Divider(),
                       const SizedBox(height: AppSpacing.s12),
                       Text(

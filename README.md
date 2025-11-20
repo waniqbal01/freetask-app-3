@@ -31,8 +31,7 @@ A services marketplace connecting **clients** with **freelancers**. This monorep
 cd freetask-api
 npm install
 cp .env.example .env
-npm run prisma:migrate   # applies migrations
-npm run prisma:seed      # optional seed data
+npm run db:setup         # migrate + seed demo data
 npm run start:dev
 ```
 Swagger UI: http://localhost:4000/api/docs
@@ -57,8 +56,9 @@ flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:4000
 ## Useful Scripts
 **Backend**
 - `npm run start:dev` – Start API in watch mode
-- `npm run prisma:migrate` – Run Prisma migrations
+- `npm run prisma:migrate` – Run Prisma migrations (dev)
 - `npm run prisma:seed` – Seed sample data
+- `npm run db:setup` – Migrate + seed demo accounts/services/jobs
 - `npm test` – Execute Jest test suite
 
 **Flutter**
@@ -67,9 +67,13 @@ flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:4000
 - `dart format .` / `flutter analyze` – Format and analyze code
 
 ## Dev Notes – Phase 1
-- Backend: copy `.env.example` to `.env`, update credentials, then `npm run prisma:migrate` and `npm run prisma:seed` before `npm run start:dev`.
+- Backend: copy `.env.example` to `.env`, update credentials, then `npm run db:setup` before `npm run start:dev`.
 - Flutter: run with `--dart-define=API_BASE_URL=http://10.0.2.2:4000` on Android emulators or `http://localhost:4000` on web/desktop.
 - CORS: `ALLOWED_ORIGINS` in the backend `.env` accepts comma-separated origins; defaults already include common local hosts and `10.0.2.2` for Android.
+
+## Testing Setup
+- See [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) for one-page setup + demo accounts.
+- Contract references live in [docs/API_CONTRACT_MATRIX.md](docs/API_CONTRACT_MATRIX.md).
 
 ## Architecture & Docs
 - [Backend architecture](freetask-api/docs/backend-architecture.md)
