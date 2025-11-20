@@ -9,28 +9,40 @@ class ServiceListFilters {
   const ServiceListFilters({
     this.searchQuery = '',
     this.category = 'Semua',
-    this.priceTier = PriceTier.all,
-    this.minRating = 0,
+    this.minPrice,
+    this.maxPrice,
+    this.minRating,
+    this.maxDeliveryDays,
   });
 
   final String searchQuery;
   final String category;
-  final PriceTier priceTier;
-  final double minRating;
+  final double? minPrice;
+  final double? maxPrice;
+  final double? minRating;
+  final int? maxDeliveryDays;
 
   ServiceListFilters copyWith({
     String? searchQuery,
     String? category,
-    PriceTier? priceTier,
+    double? minPrice,
+    double? maxPrice,
     double? minRating,
+    int? maxDeliveryDays,
   }) {
     return ServiceListFilters(
       searchQuery: searchQuery ?? this.searchQuery,
       category: category ?? this.category,
-      priceTier: priceTier ?? this.priceTier,
+      minPrice: minPrice ?? this.minPrice,
+      maxPrice: maxPrice ?? this.maxPrice,
       minRating: minRating ?? this.minRating,
+      maxDeliveryDays: maxDeliveryDays ?? this.maxDeliveryDays,
     );
   }
+
+  bool get hasActiveFilters =>
+      (minPrice != null || maxPrice != null || minRating != null || maxDeliveryDays != null) &&
+      (minPrice != 0 || maxPrice != 0 || minRating != 0 || maxDeliveryDays != 0);
 }
 
 class ServiceListState {
@@ -62,7 +74,6 @@ class ServiceListController extends StateNotifier<ServiceListState> {
 
   final ServicesRepository repository;
   bool _bootstrapped = false;
-  List<Service> _allServices = const <Service>[];
 
   Future<void> bootstrap({String? initialCategory, String? initialQuery}) async {
     if (_bootstrapped) return;
@@ -90,9 +101,18 @@ class ServiceListController extends StateNotifier<ServiceListState> {
       final services = await repository.getServices(
         q: filters.searchQuery,
         category: filters.category,
+        minPrice: filters.minPrice,
+        maxPrice: filters.maxPrice,
+        minRating: filters.minRating,
+        maxDeliveryDays: filters.maxDeliveryDays,
       );
-      _allServices = services;
-      _publishFilteredResults(filters);
+      if (services.isEmpty) {
+        state = state.copyWith(
+          services: AsyncState.empty(message: 'Tiada servis menepati penapis ini.'),
+        );
+      } else {
+        state = state.copyWith(services: AsyncState.data(services));
+      }
     } on AppException catch (error) {
       state = state.copyWith(
         services: AsyncState.error(error: error, message: error.message),
@@ -133,50 +153,9 @@ class ServiceListController extends StateNotifier<ServiceListState> {
     return refresh();
   }
 
-  void updatePriceTier(PriceTier tier) {
-    if (tier == state.filters.priceTier) {
-      return;
-    }
-    final filters = state.filters.copyWith(priceTier: tier);
-    state = state.copyWith(
-      filters: filters,
-      services: _buildFilteredState(filters),
-    );
-  }
-
-  void updateRating(double rating) {
-    if (rating == state.filters.minRating) {
-      return;
-    }
-    final filters = state.filters.copyWith(minRating: rating);
-    state = state.copyWith(
-      filters: filters,
-      services: _buildFilteredState(filters),
-    );
-  }
-
-  AsyncState<List<Service>> _buildFilteredState(ServiceListFilters filters) {
-    final filtered = _applyLocalFilters(_allServices, filters);
-    if (filtered.isEmpty) {
-      return AsyncState.empty(message: 'Tiada servis menepati penapis ini.');
-    }
-    return AsyncState.data(filtered);
-  }
-
-  void _publishFilteredResults(ServiceListFilters filters) {
-    state = state.copyWith(services: _buildFilteredState(filters));
-  }
-
-  List<Service> _applyLocalFilters(
-    List<Service> services,
-    ServiceListFilters filters,
-  ) {
-    return services.where((service) {
-      final matchesPrice = filters.priceTier.matches(service.price);
-      final rating = service.averageRating ?? 0;
-      final matchesRating = rating >= filters.minRating;
-      return matchesPrice && matchesRating;
-    }).toList(growable: false);
+  Future<void> applyFilters(ServiceListFilters filters) {
+    state = state.copyWith(filters: filters);
+    return refresh();
   }
 }
 
@@ -184,36 +163,6 @@ final serviceListControllerProvider =
     StateNotifierProvider.autoDispose<ServiceListController, ServiceListState>((ref) {
   return ServiceListController(repository: servicesRepository);
 });
-
-enum PriceTier { all, low, medium, high }
-
-extension PriceTierLabel on PriceTier {
-  String get label {
-    switch (this) {
-      case PriceTier.all:
-        return 'Semua harga';
-      case PriceTier.low:
-        return 'Bawah RM100';
-      case PriceTier.medium:
-        return 'RM100 - RM500';
-      case PriceTier.high:
-        return 'RM500 ke atas';
-    }
-  }
-
-  bool matches(double price) {
-    switch (this) {
-      case PriceTier.all:
-        return true;
-      case PriceTier.low:
-        return price < 100;
-      case PriceTier.medium:
-        return price >= 100 && price <= 500;
-      case PriceTier.high:
-        return price > 500;
-    }
-  }
-}
 
 String _normalizeCategory(String? value) {
   if (value == null || value.isEmpty) {

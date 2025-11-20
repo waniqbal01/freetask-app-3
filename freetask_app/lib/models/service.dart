@@ -13,6 +13,8 @@ class Service {
     this.completedJobs,
     this.thumbnailUrl,
     this.freelancerAvatarUrl,
+    this.deliveryDays,
+    this.active,
   });
 
   factory Service.fromJson(Map<String, dynamic> json) {
@@ -35,6 +37,8 @@ class Service {
       thumbnailUrl: json['thumbnailUrl']?.toString() ?? json['thumbnail_url']?.toString(),
       freelancerAvatarUrl: freelancer?['avatarUrl']?.toString() ??
           json['freelancerAvatar']?.toString(),
+      deliveryDays: _parseInt(json['deliveryDays'] ?? json['delivery_days']),
+      active: json['active'] as bool?,
     );
   }
 
@@ -51,6 +55,8 @@ class Service {
   final int? completedJobs;
   final String? thumbnailUrl;
   final String? freelancerAvatarUrl;
+  final int? deliveryDays;
+  final bool? active;
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
@@ -67,6 +73,8 @@ class Service {
       if (completedJobs != null) 'completedJobs': completedJobs,
       if (thumbnailUrl != null) 'thumbnailUrl': thumbnailUrl,
       if (freelancerAvatarUrl != null) 'freelancerAvatar': freelancerAvatarUrl,
+      if (deliveryDays != null) 'deliveryDays': deliveryDays,
+      if (active != null) 'active': active,
     };
   }
 

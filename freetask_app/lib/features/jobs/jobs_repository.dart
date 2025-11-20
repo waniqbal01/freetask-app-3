@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import '../../core/notifications/notification_service.dart';
 import '../../core/utils/error_utils.dart';
 import '../../models/job.dart';
+import '../../models/job_history.dart';
 import '../../services/http_client.dart';
 import '../../services/token_storage.dart';
 import '../auth/auth_repository.dart';
@@ -164,6 +165,20 @@ class JobsRepository {
       return data
           .whereType<Map<String, dynamic>>()
           .map(Job.fromJson)
+          .toList(growable: false);
+    });
+  }
+
+  Future<List<JobHistory>> getJobHistory(String jobId) {
+    return _guardRequest(() async {
+      final response = await _dio.get<List<dynamic>>(
+        '/jobs/$jobId/history',
+        options: await _authorizedOptions(),
+      );
+      final data = response.data ?? <dynamic>[];
+      return data
+          .whereType<Map<String, dynamic>>()
+          .map(JobHistory.fromJson)
           .toList(growable: false);
     });
   }

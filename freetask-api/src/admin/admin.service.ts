@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { JobStatus, Prisma, UserRole } from '@prisma/client';
+import { JobStatus, Prisma, ReportStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -106,12 +106,104 @@ export class AdminService {
       throw new BadRequestException('Job ini bukan dalam status dispute');
     }
 
-    return this.prisma.job.update({
+    const updated = await this.prisma.job.update({
       where: { id: jobId },
       data: {
         status,
         disputeReason: null,
       },
     });
+
+    await this.prisma.jobHistory.create({
+      data: {
+        jobId: jobId,
+        action: 'JOB_RESOLVED_ADMIN',
+        message: `Status ditetapkan kepada ${status}`,
+      },
+    });
+
+    return updated;
+  }
+
+  deactivateService(serviceId: number) {
+    return this.prisma.service.update({
+      where: { id: serviceId },
+      data: { active: false },
+      select: { id: true, title: true, active: true },
+    });
+  }
+
+  disableUser(userId: number) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { enabled: false },
+      select: { id: true, email: true, enabled: true },
+    });
+  }
+
+  async getOpenReports() {
+    return this.prisma.report.findMany({
+      where: { status: ReportStatus.OPEN },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        reporter: { select: { id: true, name: true, email: true } },
+        reportedUser: { select: { id: true, name: true, email: true } },
+        reportedService: { select: { id: true, title: true, category: true } },
+      },
+    });
+  }
+
+  updateReportStatus(id: number, status: ReportStatus) {
+    if (!Object.values(ReportStatus).includes(status)) {
+      throw new BadRequestException('Status report tidak sah');
+    }
+
+    return this.prisma.report.update({
+      where: { id },
+      data: { status },
+    });
+  }
+
+  async get7DayMetrics() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const days = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(today);
+      date.setDate(today.getDate() - (6 - index));
+      return date;
+    });
+
+    const metrics = await Promise.all(
+      days.map(async (day) => {
+        const nextDay = new Date(day);
+        nextDay.setDate(day.getDate() + 1);
+
+        const [jobs, services, users] = await Promise.all([
+          this.prisma.job.count({
+            where: { createdAt: { gte: day, lt: nextDay } },
+          }),
+          this.prisma.service.count({
+            where: { createdAt: { gte: day, lt: nextDay } },
+          }),
+          this.prisma.user.count({
+            where: { createdAt: { gte: day, lt: nextDay } },
+          }),
+        ]);
+
+        return {
+          date: day.toISOString().split('T')[0],
+          jobs,
+          services,
+          users,
+        };
+      }),
+    );
+
+    return {
+      jobsPerDay: metrics.map((item) => ({ date: item.date, count: item.jobs })),
+      servicesPerDay: metrics.map((item) => ({ date: item.date, count: item.services })),
+      usersPerDay: metrics.map((item) => ({ date: item.date, count: item.users })),
+    };
   }
 }

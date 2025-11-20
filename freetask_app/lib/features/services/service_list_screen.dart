@@ -73,6 +73,162 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
     });
   }
 
+  Future<void> _openFilterSheet(
+    ServiceListFilters currentFilters,
+    List<String> categories,
+  ) async {
+    final minPriceController =
+        TextEditingController(text: currentFilters.minPrice?.toString() ?? '');
+    final maxPriceController =
+        TextEditingController(text: currentFilters.maxPrice?.toString() ?? '');
+    final maxDeliveryController =
+        TextEditingController(text: currentFilters.maxDeliveryDays?.toString() ?? '');
+    double? minRating = currentFilters.minRating;
+    String selectedCategory = currentFilters.category;
+
+    final ServiceListFilters? result = await showModalBottomSheet<ServiceListFilters>(
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+        return Padding(
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Penapis lanjutan',
+                      style: AppTextStyles.headlineSmall,
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.s8),
+                DropdownButtonFormField<String>(
+                  value: selectedCategory.isNotEmpty ? selectedCategory : 'Semua',
+                  decoration: const InputDecoration(labelText: 'Kategori'),
+                  items: <String>{'Semua', ...categories}
+                      .map(
+                        (String value) => DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (String? value) {
+                    if (value == null) return;
+                    selectedCategory = value;
+                  },
+                ),
+                const SizedBox(height: AppSpacing.s16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: minPriceController,
+                        decoration: const InputDecoration(
+                          labelText: 'Harga minima (RM)',
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.s12),
+                    Expanded(
+                      child: TextField(
+                        controller: maxPriceController,
+                        decoration: const InputDecoration(
+                          labelText: 'Harga maksima (RM)',
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.s16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<double>(
+                        value: minRating ?? 0,
+                        decoration: const InputDecoration(labelText: 'Rating minimum'),
+                        items: _ratingOptions
+                            .map(
+                              (double value) => DropdownMenuItem<double>(
+                                value: value,
+                                child: Text(_ratingLabel(value)),
+                              ),
+                            )
+                            .toList(growable: false),
+                        onChanged: (double? value) {
+                          minRating = value;
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.s12),
+                    Expanded(
+                      child: TextField(
+                        controller: maxDeliveryController,
+                        decoration: const InputDecoration(
+                          labelText: 'Maks. hari penghantaran',
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.s16),
+                Row(
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        minPriceController.clear();
+                        maxPriceController.clear();
+                        maxDeliveryController.clear();
+                        minRating = null;
+                        selectedCategory = 'Semua';
+                      },
+                      child: const Text('Set semula'),
+                    ),
+                    const Spacer(),
+                    FilledButton(
+                      onPressed: () {
+                        Navigator.of(context).pop(
+                          currentFilters.copyWith(
+                            category: selectedCategory,
+                            minPrice: double.tryParse(minPriceController.text),
+                            maxPrice: double.tryParse(maxPriceController.text),
+                            minRating: minRating,
+                            maxDeliveryDays: int.tryParse(maxDeliveryController.text),
+                          ),
+                        );
+                      },
+                      child: const Text('Guna penapis'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (!mounted || result == null) {
+      return;
+    }
+
+    await ref.read(serviceListControllerProvider.notifier).applyFilters(result);
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(serviceListControllerProvider);
@@ -122,14 +278,9 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                       SliverToBoxAdapter(
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                          child: _FilterToolbar(
+                          child: _FilterBar(
                             filters: filters,
-                            onPriceSelected: (PriceTier tier) => ref
-                                .read(serviceListControllerProvider.notifier)
-                                .updatePriceTier(tier),
-                            onRatingSelected: (double rating) => ref
-                                .read(serviceListControllerProvider.notifier)
-                                .updateRating(rating),
+                            onOpenFilters: () => _openFilterSheet(filters, state.categories),
                           ),
                         ),
                       ),
@@ -348,99 +499,92 @@ class _MarketplaceHero extends StatelessWidget {
   }
 }
 
-class _FilterToolbar extends StatelessWidget {
-  const _FilterToolbar({
-    required this.filters,
-    required this.onPriceSelected,
-    required this.onRatingSelected,
-  });
+class _FilterBar extends StatelessWidget {
+  const _FilterBar({required this.filters, required this.onOpenFilters});
 
   final ServiceListFilters filters;
-  final ValueChanged<PriceTier> onPriceSelected;
-  final ValueChanged<double> onRatingSelected;
+  final VoidCallback onOpenFilters;
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      children: [
-        _FilterDropdown<PriceTier>(
-          label: 'Harga',
-          value: filters.priceTier,
-          options: PriceTier.values,
-          displayLabel: (PriceTier tier) => tier.label,
-          onChanged: onPriceSelected,
-        ),
-        _FilterDropdown<double>(
-          label: 'Rating',
-          value: filters.minRating,
-          options: _ratingOptions,
-          displayLabel: (double rating) => _ratingLabel(rating),
-          onChanged: onRatingSelected,
-        ),
-      ],
+    final activeBadges = _buildBadges(filters);
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: AppRadius.largeRadius,
+        boxShadow: AppShadows.card,
+      ),
+      padding: const EdgeInsets.all(AppSpacing.s12),
+      child: Row(
+        children: [
+          FilledButton.icon(
+            onPressed: onOpenFilters,
+            icon: const Icon(Icons.filter_list_rounded),
+            label: const Text('Penapis'),
+          ),
+          const SizedBox(width: AppSpacing.s12),
+          Expanded(
+            child: activeBadges.isEmpty
+                ? Text(
+                    'Tiada penapis tambahan',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.neutral500,
+                        ),
+                  )
+                : Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: activeBadges
+                        .map((label) => _FilterBadge(label: label))
+                        .toList(growable: false),
+                  ),
+          ),
+        ],
+      ),
     );
+  }
+
+  List<String> _buildBadges(ServiceListFilters filters) {
+    final badges = <String>[];
+    if (filters.minPrice != null) {
+      badges.add('Min RM${filters.minPrice!.toStringAsFixed(0)}');
+    }
+    if (filters.maxPrice != null) {
+      badges.add('Maks RM${filters.maxPrice!.toStringAsFixed(0)}');
+    }
+    if (filters.minRating != null && filters.minRating! > 0) {
+      badges.add(_ratingLabel(filters.minRating!));
+    }
+    if (filters.maxDeliveryDays != null) {
+      badges.add('≤ ${filters.maxDeliveryDays} hari');
+    }
+    if (filters.category != 'Semua') {
+      badges.add(filters.category);
+    }
+    return badges;
   }
 }
 
-class _FilterDropdown<T> extends StatelessWidget {
-  const _FilterDropdown({
-    required this.label,
-    required this.value,
-    required this.options,
-    required this.displayLabel,
-    required this.onChanged,
-  });
+class _FilterBadge extends StatelessWidget {
+  const _FilterBadge({required this.label});
 
   final String label;
-  final T value;
-  final List<T> options;
-  final String Function(T value) displayLabel;
-  final ValueChanged<T> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label,
-          style: textTheme.labelSmall?.copyWith(color: AppColors.neutral500),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: AppColors.neutral100),
-            color: Colors.white,
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<T>(
-              value: value,
-              icon: const Icon(Icons.keyboard_arrow_down_rounded),
-              style: textTheme.labelLarge,
-              onChanged: (T? newValue) {
-                if (newValue == null) {
-                  return;
-                }
-                onChanged(newValue);
-              },
-              items: options
-                  .map(
-                    (T option) => DropdownMenuItem<T>(
-                      value: option,
-                      child: Text(displayLabel(option)),
-                    ),
-                  )
-                  .toList(growable: false),
-            ),
-          ),
-        ),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context)
+            .textTheme
+            .labelMedium
+            ?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
+      ),
     );
   }
 }

@@ -54,6 +54,16 @@ export class JobsController {
     return this.jobsService.findOneForUser(id, userId);
   }
 
+  @ApiOperation({ summary: 'Get job activity history' })
+  @Get(':id/history')
+  getHistory(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('userId') userId: number,
+    @GetUser('role') role: UserRole,
+  ) {
+    return this.jobsService.getJobHistory(id, userId, role);
+  }
+
   @ApiOperation({ summary: 'Update job status explicitly' })
   @Patch(':id/status')
   updateStatus(

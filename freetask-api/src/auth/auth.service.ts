@@ -52,6 +52,10 @@ export class AuthService {
       throw new UnauthorizedException('Email atau password salah');
     }
 
+    if (!user.enabled) {
+      throw new UnauthorizedException('Akaun anda telah dinyahaktifkan.');
+    }
+
     const valid = await bcrypt.compare(dto.password, user.password);
     if (!valid) {
       throw new UnauthorizedException('Email atau password salah');
@@ -66,6 +70,9 @@ export class AuthService {
     });
     if (!user) {
       throw new UnauthorizedException();
+    }
+    if (!user.enabled) {
+      throw new UnauthorizedException('Akaun anda telah dinyahaktifkan.');
     }
     return toAppUser(user);
   }

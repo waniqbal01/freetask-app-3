@@ -49,4 +49,12 @@ export class UsersService {
 
     return toAppUser(user);
   }
+
+  updateDeviceToken(userId: number, deviceToken: string | null) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { deviceToken },
+      select: { id: true, deviceToken: true },
+    });
+  }
 }
