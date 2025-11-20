@@ -129,16 +129,16 @@ final appRouter = GoRouter(
         final extras = state.extra as Map<String, dynamic>?;
         final job = extras?['job'] as Job?;
         final isClientView = extras?['isClientView'] as bool? ?? true;
+        final jobId = state.pathParameters['id'] ??
+            extras?['jobId']?.toString() ??
+            state.uri.queryParameters['jobId'] ??
+            '';
 
-        if (job == null) {
-          return const Scaffold(
-            body: Center(
-              child: Text('Maklumat job tidak tersedia.'),
-            ),
-          );
-        }
-
-        return JobDetailScreen(job: job, isClientView: isClientView);
+        return JobDetailScreen(
+          jobId: jobId,
+          job: job,
+          isClientView: isClientView,
+        );
       },
     ),
     GoRoute(

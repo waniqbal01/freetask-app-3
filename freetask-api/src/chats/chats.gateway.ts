@@ -28,6 +28,8 @@ interface SendMessagePayload extends JoinJobRoomPayload {
   namespace: '/chats',
   cors: { origin: '*', credentials: true },
 })
+// NOTE: HTTP endpoints remain the primary source of truth for chats.
+// This gateway is a best-effort enhancement for realtime updates during MVP.
 export class ChatsGateway
   implements OnGatewayConnection, OnGatewayDisconnect
 {

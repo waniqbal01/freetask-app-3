@@ -38,6 +38,8 @@ final chatSocketServiceProvider = Provider<ChatSocketService>((Ref ref) {
   return service;
 });
 
+// Socket is best-effort only. HTTP remains the source of truth; UI must
+// stay usable even if realtime connection fails.
 class ChatSocketService {
   ChatSocketService({TokenStorage? tokenStorage, String? baseUrl})
       : _tokenStorage = tokenStorage ?? createTokenStorage(),

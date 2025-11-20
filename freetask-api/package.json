@@ -13,7 +13,10 @@
     "test": "jest",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
-    "prisma:seed": "ts-node src/seed.ts"
+    "prisma:seed": "ts-node -r tsconfig-paths/register prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "ts-node -r tsconfig-paths/register prisma/seed.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

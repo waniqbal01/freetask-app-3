@@ -25,7 +25,15 @@ class ChatListScreen extends ConsumerWidget {
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: const <Widget>[
                   SizedBox(height: 120),
-                  Center(child: Text('Tiada data')),
+                  Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 24),
+                      child: Text(
+                        'Tiada chat lagi. Chat akan muncul selepas anda membuat job dan mula berbual dengan freelancer/klien.',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -76,7 +84,13 @@ class ChatListScreen extends ConsumerWidget {
               children: const <Widget>[
                 SizedBox(height: 120),
                 Center(
-                  child: Text('Chat akan datang (Coming Soon). Sila cuba lagi nanti.'),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      'Tidak dapat memuatkan chat sekarang. Sila cuba tarik untuk segar semula atau pastikan token log masuk masih sah.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 ),
               ],
             ),
