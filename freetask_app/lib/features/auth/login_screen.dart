@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/app_info.dart';
+import '../../core/demo_credentials.dart';
 import '../../core/utils/error_utils.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/section_card.dart';
@@ -222,7 +223,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             if (AppInfo.isDev) ...[
                               const Divider(height: AppSpacing.s32),
                               Text(
-                                'Log masuk pantas (demo)',
+                                'Log masuk pantas (akaun seed demo)',
                                 style: Theme.of(context).textTheme.titleMedium,
                               ),
                               const SizedBox(height: AppSpacing.s12),
@@ -234,8 +235,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     onPressed: _isSubmitting
                                         ? null
                                         : () => _loginAsDemo(
-                                              'admin@freetask.local',
-                                              'password123',
+                                              DemoCredentials.adminEmail,
+                                              DemoCredentials.adminPassword,
                                             ),
                                     child: const Text('Login Admin Demo'),
                                   ),
@@ -243,8 +244,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     onPressed: _isSubmitting
                                         ? null
                                         : () => _loginAsDemo(
-                                              'aisyah.client@freetask.local',
-                                              'password123',
+                                              DemoCredentials.clientEmail,
+                                              DemoCredentials.clientPassword,
                                             ),
                                     child: const Text('Login Client Demo'),
                                   ),
@@ -252,8 +253,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     onPressed: _isSubmitting
                                         ? null
                                         : () => _loginAsDemo(
-                                              'amira.freelancer@freetask.local',
-                                              'password123',
+                                              DemoCredentials.freelancerEmail,
+                                              DemoCredentials.freelancerPassword,
                                             ),
                                     child: const Text('Login Freelancer Demo'),
                                   ),

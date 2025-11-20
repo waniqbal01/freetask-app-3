@@ -619,6 +619,14 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
                 onPressed: onRefresh,
                 expanded: false,
               ),
+              const SizedBox(height: 8),
+              FTButton(
+                label: isClientView ? 'Cari Servis' : 'Urus Servis Anda',
+                onPressed: () =>
+                    context.push(isClientView ? '/services' : '/freelancer/services'),
+                expanded: false,
+                variant: FTButtonVariant.ghost,
+              ),
             ],
           ),
         ),
