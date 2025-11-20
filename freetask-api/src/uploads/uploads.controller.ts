@@ -7,17 +7,22 @@ import {
   UseInterceptors,
   Req,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { Request } from 'express';
 import { UploadsService } from './uploads.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
+@ApiTags('Uploads')
+@ApiBearerAuth()
 @Controller('uploads')
 @UseGuards(JwtAuthGuard)
 export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) {}
 
+  @ApiOperation({ summary: 'Upload a file (images or PDF)' })
+  @ApiConsumes('multipart/form-data')
   @Post()
   @UseInterceptors(
     FileInterceptor('file', {

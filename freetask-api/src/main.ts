@@ -1,5 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { join } from 'path';
 
@@ -54,6 +55,21 @@ async function bootstrap() {
         transformOptions: { enableImplicitConversion: true },
       }),
     );
+
+    // ------------------------------
+    // Swagger / OpenAPI
+    // ------------------------------
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Freetask API')
+      .setDescription(
+        'REST API powering the Freetask marketplace for clients and freelancers.',
+      )
+      .setVersion('1.0.0')
+      .addBearerAuth()
+      .build();
+
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('api/docs', app, document);
 
     // ------------------------------
     // Static File Serving (uploads)
