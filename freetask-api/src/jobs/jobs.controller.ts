@@ -8,6 +8,7 @@ import {
   Post,
   UseGuards,
   Query,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JobsService } from './jobs.service';
@@ -37,9 +38,13 @@ export class JobsController {
   @ApiOperation({ summary: 'List jobs related to the current user' })
   @Get()
   findAll(
-    @GetUser('id') userId: number,
+    @GetUser('userId') userId: number,
     @Query('filter') filter?: 'client' | 'freelancer' | 'all',
   ) {
+    if (userId === null || userId === undefined) {
+      throw new UnauthorizedException('User context is missing');
+    }
+
     return this.jobsService.findAllForUser(userId, filter);
   }
 
