@@ -35,6 +35,7 @@ npm run db:setup         # migrate + seed demo data
 npm run start:dev
 ```
 Swagger UI: http://localhost:4000/api/docs
+Health check: http://localhost:4000/health (returns API + DB status)
 
 ### Flutter App
 ```bash
@@ -65,6 +66,13 @@ flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:4000
 - `flutter run --dart-define=API_BASE_URL=...` – Run app against an API instance
 - `flutter test` – Run widget/provider tests
 - `dart format .` / `flutter analyze` – Format and analyze code
+
+## MVP Guidance for Testers
+- Demo accounts: admin@demo.com / Admin123!, client@demo.com / Client123!, freelancer@demo.com / Freelancer123!
+- Payment is **mock/coming soon** only; no real gateway integration.
+- Reviews & Reports are basic/optional for MVP and may not be surfaced fully in the app UI.
+- Chat uses REST as the primary path; realtime socket updates are best-effort.
+- CORS: defaults cover localhost/10.0.2.2/5173; add extra origins via `ALLOWED_ORIGINS` in `.env` (comma-separated).
 
 ## Dev Notes – Phase 1
 - Backend: copy `.env.example` to `.env`, update credentials, then `npm run db:setup` before `npm run start:dev`.

@@ -45,12 +45,14 @@ flutter pub get
 - **Admin:** Log masuk → semak endpoint admin/health jika diperlukan.
 
 ## 6) Status Job & Peraturan Endpoint
+- Status rasmi: PENDING, ACCEPTED, IN_PROGRESS, COMPLETED, CANCELLED, REJECTED, DISPUTED.
 - PENDING → ACCEPTED (client)
 - PENDING → REJECTED (freelancer)
 - ACCEPTED → IN_PROGRESS (freelancer)
+- ACCEPTED/IN_PROGRESS → CANCELLED (rujuk API untuk kegunaan pentadbir)
 - IN_PROGRESS → COMPLETED (client/freelancer)
 - ACCEPTED/IN_PROGRESS/COMPLETED → DISPUTED (mana-mana peserta)
-- Endpoint rujukan: `PATCH /jobs/:id/accept|reject|start|complete|dispute`, `GET /jobs/:id/history`.
+- Endpoint rujukan: `PATCH /jobs/:id/accept|reject|start|complete|dispute`, `GET /jobs/:id/history`, `GET /jobs/meta/statuses/flow` untuk carta aliran ringkas.
 
 ## 7) Chat & Realtime
 - REST: `GET /chats`, `GET /chats/:jobId/messages`, `POST /chats/:jobId/messages` adalah sumber utama.

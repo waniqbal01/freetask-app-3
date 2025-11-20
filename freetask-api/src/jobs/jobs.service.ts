@@ -11,6 +11,7 @@ import { DisputeJobDto } from './dto/dispute-job.dto';
 import { UpdateJobStatusDto } from './dto/update-job-status.dto';
 import { ChatsGateway } from '../chats/chats.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
+import { JOB_STATUS_FLOW } from './job-status.constants';
 
 type JobWithRelations = Prisma.JobGetPayload<{
   include: {
@@ -159,28 +160,10 @@ export class JobsService {
   }
 
   private ensureValidTransition(current: JobStatus, next: JobStatus) {
-    const transitions: Record<JobStatus, JobStatus[]> = {
-      [JobStatus.PENDING]: [JobStatus.ACCEPTED, JobStatus.REJECTED],
-      [JobStatus.ACCEPTED]: [
-        JobStatus.IN_PROGRESS,
-        JobStatus.CANCELLED,
-        JobStatus.DISPUTED,
-      ],
-      [JobStatus.IN_PROGRESS]: [
-        JobStatus.COMPLETED,
-        JobStatus.CANCELLED,
-        JobStatus.DISPUTED,
-      ],
-      [JobStatus.COMPLETED]: [JobStatus.DISPUTED],
-      [JobStatus.CANCELLED]: [],
-      [JobStatus.REJECTED]: [],
-      [JobStatus.DISPUTED]: [],
-    };
-
-    const allowedNextStates = transitions[current] ?? [];
+    const allowedNextStates = JOB_STATUS_FLOW[current] ?? [];
     if (!allowedNextStates.includes(next)) {
       throw new ConflictException(
-        `Cannot change job status from ${current} to ${next}`,
+        `Status tidak sah: ${current} tidak boleh tukar terus ke ${next}. Rujuk aliran status pada /api/docs untuk kombinasi dibenarkan.`,
       );
     }
   }
