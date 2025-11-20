@@ -23,15 +23,25 @@ class ChatListScreen extends ConsumerWidget {
               onRefresh: refresh,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                children: const <Widget>[
-                  SizedBox(height: 120),
-                  Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 24),
-                      child: Text(
-                        'Tiada chat lagi. Chat akan muncul selepas anda membuat job dan mula berbual dengan freelancer/klien.',
-                        textAlign: TextAlign.center,
-                      ),
+                children: <Widget>[
+                  const SizedBox(height: 120),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.chat_bubble_outline, size: 48, color: Colors.grey),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Tiada chat lagi. Cipta job daripada senarai servis untuk memulakan perbualan.',
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
+                        FilledButton.icon(
+                          onPressed: () => context.push('/services'),
+                          icon: const Icon(Icons.storefront_outlined),
+                          label: const Text('Buka Marketplace Servis'),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -81,15 +91,24 @@ class ChatListScreen extends ConsumerWidget {
             onRefresh: refresh,
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              children: const <Widget>[
-                SizedBox(height: 120),
-                Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24),
-                    child: Text(
-                      'Tidak dapat memuatkan chat sekarang. Sila cuba tarik untuk segar semula atau pastikan token log masuk masih sah.',
-                      textAlign: TextAlign.center,
-                    ),
+              children: <Widget>[
+                const SizedBox(height: 120),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.wifi_tethering_error_rounded, size: 48, color: Colors.redAccent),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Tidak dapat memuatkan chat sekarang. Sila tarik untuk segar semula atau semak sambungan/token anda.',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      FilledButton(
+                        onPressed: refresh,
+                        child: const Text('Cuba lagi'),
+                      ),
+                    ],
                   ),
                 ),
               ],

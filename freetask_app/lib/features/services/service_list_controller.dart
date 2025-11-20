@@ -108,7 +108,9 @@ class ServiceListController extends StateNotifier<ServiceListState> {
       );
       if (services.isEmpty) {
         state = state.copyWith(
-          services: AsyncState.empty(message: 'Tiada servis menepati penapis ini.'),
+          services: AsyncState.empty(
+            message: 'Tiada servis menepati penapis ini. Cuba ubah kata kunci atau kosongkan penapis.',
+          ),
         );
       } else {
         state = state.copyWith(services: AsyncState.data(services));

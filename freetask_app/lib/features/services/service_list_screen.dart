@@ -320,10 +320,19 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                                 ),
                                 const SizedBox(height: 12),
                                 FTButton(
-                                  label: 'Cari Servis Lain',
+                                  label: 'Segar semula',
                                   expanded: false,
                                   onPressed: () =>
                                       ref.read(serviceListControllerProvider.notifier).refresh(),
+                                ),
+                                const SizedBox(height: 8),
+                                FTButton(
+                                  label: 'Kosongkan penapis',
+                                  expanded: false,
+                                  variant: FTButtonVariant.ghost,
+                                  onPressed: () => ref
+                                      .read(serviceListControllerProvider.notifier)
+                                      .applyFilters(const ServiceListFilters()),
                                 ),
                               ],
                             ),

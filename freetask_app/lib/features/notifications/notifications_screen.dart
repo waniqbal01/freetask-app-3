@@ -27,7 +27,29 @@ class NotificationsScreen extends ConsumerWidget {
       body: state.when(
         data: (List<AppNotification> notifications) {
           if (notifications.isEmpty) {
-            return const Center(child: Text('No notifications yet.'));
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.notifications_none_outlined, size: 48, color: Colors.grey),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Tiada notifikasi lagi. Aktiviti job, chat dan status akan muncul di sini.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    FTButton(
+                      label: 'Segar semula',
+                      onPressed: () =>
+                          ref.read(notificationsControllerProvider.notifier).refresh(),
+                      expanded: false,
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
           return RefreshIndicator(
             onRefresh: () => ref.read(notificationsControllerProvider.notifier).refresh(),

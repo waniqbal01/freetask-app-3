@@ -24,6 +24,7 @@
 - **Flutter:** `JobsRepository.getClientJobs()` / `getFreelancerJobs()` / `getAllJobs()` → **Backend:** `GET /jobs?filter=client|freelancer|all`.
 - **Flutter:** `JobsRepository.getJobById(id)` → **Backend:** `GET /jobs/:id`.
 - **Flutter:** `JobsRepository.getJobHistory(id)` → **Backend:** `GET /jobs/:id/history`.
+- **Reference:** `GET /jobs/meta/statuses/flow` mirrors status carta aliran yang digunakan UI.
 - **Status transitions (backend guarded & reflected in UI):**
   - `PENDING → ACCEPTED` (client) via `PATCH /jobs/:id/accept`.
   - `PENDING → REJECTED` (freelancer) via `PATCH /jobs/:id/reject`.
