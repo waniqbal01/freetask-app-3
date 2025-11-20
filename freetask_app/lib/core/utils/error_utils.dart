@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 enum AppErrorType {
   network,
   unauthorized,
+  conflict,
   validation,
   forbidden,
   notFound,
@@ -59,6 +60,13 @@ AppException mapDioError(
       return AppException(
         messageFromServer ?? 'Sesi tamat. Sila log masuk semula.',
         type: AppErrorType.unauthorized,
+        statusCode: statusCode,
+      );
+    case 409:
+      return AppException(
+        messageFromServer ??
+            'Tindakan ini tidak dibenarkan untuk status semasa. Sila segar semula.',
+        type: AppErrorType.conflict,
         statusCode: statusCode,
       );
     case 403:

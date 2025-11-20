@@ -454,7 +454,17 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
     required bool isClientView,
     required bool alreadyReviewed,
   }) {
-    if (isClientView && job.status == JobStatus.pending) {
+    final canAccept = isClientView && job.status == JobStatus.pending;
+    final canReject = !isClientView && job.status == JobStatus.pending;
+    final canStart = !isClientView && job.status == JobStatus.accepted;
+    final canComplete = job.status == JobStatus.inProgress;
+    final canDispute = <JobStatus>{
+      JobStatus.accepted,
+      JobStatus.inProgress,
+      JobStatus.completed,
+    }.contains(job.status);
+
+    if (canAccept) {
       return Align(
         alignment: Alignment.centerRight,
         child: FTButton(
@@ -469,7 +479,7 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
       );
     }
 
-    if (!isClientView && job.status == JobStatus.pending) {
+    if (canReject) {
       return Align(
         alignment: Alignment.centerRight,
         child: FTButton(
@@ -485,7 +495,7 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
       );
     }
 
-    if (!isClientView && job.status == JobStatus.accepted) {
+    if (canStart) {
       return Align(
         alignment: Alignment.centerRight,
         child: FTButton(
@@ -501,7 +511,7 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
       );
     }
 
-    if (job.status == JobStatus.inProgress) {
+    if (canComplete && canDispute) {
       return Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
@@ -529,23 +539,54 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
       );
     }
 
-    if (isClientView && job.status == JobStatus.completed) {
+    if (canDispute && !(isClientView && job.status == JobStatus.completed)) {
       return Align(
         alignment: Alignment.centerRight,
-        child: alreadyReviewed
-            ? const Chip(
-                avatar: Icon(
-                  Icons.check_circle,
-                  color: Colors.green,
-                ),
-                label: Text('Review dihantar'),
-              )
-            : FTButton(
-                label: 'Tulis review',
-                onPressed: () => _openReviewDialog(job),
+        child: FTButton(
+          label: 'Raise Dispute',
+          isLoading: _isProcessing,
+          onPressed: () => _promptDispute(job),
+          expanded: false,
+          size: FTButtonSize.small,
+          variant: FTButtonVariant.ghost,
+        ),
+      );
+    }
+
+    if (isClientView && job.status == JobStatus.completed) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          if (canDispute)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FTButton(
+                label: 'Raise Dispute',
+                isLoading: _isProcessing,
+                onPressed: () => _promptDispute(job),
                 expanded: false,
                 size: FTButtonSize.small,
+                variant: FTButtonVariant.ghost,
               ),
+            ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: alreadyReviewed
+                ? const Chip(
+                    avatar: Icon(
+                      Icons.check_circle,
+                      color: Colors.green,
+                    ),
+                    label: Text('Review dihantar'),
+                  )
+                : FTButton(
+                    label: 'Tulis review',
+                    onPressed: () => _openReviewDialog(job),
+                    expanded: false,
+                    size: FTButtonSize.small,
+                  ),
+          ),
+        ],
       );
     }
 

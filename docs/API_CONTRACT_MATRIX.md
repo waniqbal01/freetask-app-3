@@ -29,9 +29,9 @@
   - `PENDING → ACCEPTED` (client) via `PATCH /jobs/:id/accept`.
   - `PENDING → REJECTED` (freelancer) via `PATCH /jobs/:id/reject`.
   - `ACCEPTED → IN_PROGRESS` (freelancer) via `PATCH /jobs/:id/start`.
-  - `IN_PROGRESS → COMPLETED` (client or freelancer) via `PATCH /jobs/:id/complete`.
-  - `ACCEPTED/IN_PROGRESS/COMPLETED → DISPUTED` (participant) via `PATCH /jobs/:id/dispute { reason }`.
-- Invalid transitions return **409 Conflict** with a clear message.
+- `IN_PROGRESS → COMPLETED` (client or freelancer) via `PATCH /jobs/:id/complete`.
+- `ACCEPTED/IN_PROGRESS/COMPLETED → DISPUTED` (participant) via `PATCH /jobs/:id/dispute { reason }`.
+- Invalid transitions return **409 Conflict** with a clear message (surfaced in Flutter as a friendly snack bar).
 
 ## Chat
 - **Flutter:** `ChatRepository.fetchThreads()` → **Backend:** `GET /chats` (auth).

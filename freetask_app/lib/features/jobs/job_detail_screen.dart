@@ -96,8 +96,17 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   List<Widget> _buildActionButtons(Job job, bool isClientView) {
     final List<Widget> actions = <Widget>[];
+    final canAccept = isClientView && job.status == JobStatus.pending;
+    final canReject = !isClientView && job.status == JobStatus.pending;
+    final canStart = !isClientView && job.status == JobStatus.accepted;
+    final canComplete = job.status == JobStatus.inProgress;
+    final canDispute = <JobStatus>{
+      JobStatus.accepted,
+      JobStatus.inProgress,
+      JobStatus.completed,
+    }.contains(job.status);
 
-    if (isClientView && job.status == JobStatus.pending) {
+    if (canAccept) {
       actions.add(
         FTButton(
           label: 'Accept Job',
@@ -111,7 +120,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       );
     }
 
-    if (!isClientView && job.status == JobStatus.pending) {
+    if (canReject) {
       actions.add(
         FTButton(
           label: 'Reject Job',
@@ -126,7 +135,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       );
     }
 
-    if (!isClientView && job.status == JobStatus.accepted) {
+    if (canStart) {
       actions.add(
         FTButton(
           label: 'Start Job',
@@ -140,7 +149,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       );
     }
 
-    if (job.status == JobStatus.inProgress) {
+    if (canComplete && canDispute) {
       actions.add(
         Row(
           children: [
@@ -164,6 +173,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               ),
             ),
           ],
+        ),
+      );
+    } else if (canDispute) {
+      actions.add(
+        FTButton(
+          label: 'Raise Dispute',
+          isLoading: _isProcessingAction,
+          onPressed: _promptDispute,
+          expanded: true,
+          type: FTButtonType.secondary,
         ),
       );
     }

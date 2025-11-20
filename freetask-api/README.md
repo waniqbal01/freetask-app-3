@@ -51,6 +51,8 @@ Akaun di bawah dicipta oleh `npm run prisma:seed` untuk ujian pantas:
 - **Client** – Email: `client@demo.com`, Password: `Client123!`
 - **Freelancer** – Email: `freelancer@demo.com`, Password: `Freelancer123!`
 
+Status job disemai merangkumi `PENDING`, `ACCEPTED`, `IN_PROGRESS`, `COMPLETED`, dan `DISPUTED` supaya kedua-dua tab Client/Freelancer di aplikasi Flutter memaparkan contoh sebenar.
+
 ## 7. CORS & Host Tips
 - CORS lalai meliputi `localhost`, `10.0.2.2` (Android emulator) dan port 5173 untuk Flutter web.
 - Tambah origin lain melalui `ALLOWED_ORIGINS` dalam `.env` (pisahkan dengan koma).
@@ -61,6 +63,16 @@ Akaun di bawah dicipta oleh `npm run prisma:seed` untuk ujian pantas:
 - `npm run build && npm run start` – bina dan jalankan versi produksi.
 - `npm run prisma:generate` – jana Prisma client.
 - `npm test` – jalankan ujian Jest.
+
+### Ringkasan Kontrak API (jobs)
+- `POST /jobs` – client sahaja; `serviceId` wajib, `title/amount/description` pilihan (akan guna nilai servis jika tidak diberi).
+- `GET /jobs?filter=client|freelancer|all` – penapisan jobs berkaitan pengguna log masuk.
+- `PATCH /jobs/:id/accept` – client sahaja (PENDING → ACCEPTED).
+- `PATCH /jobs/:id/start` – freelancer sahaja (ACCEPTED → IN_PROGRESS).
+- `PATCH /jobs/:id/reject` – freelancer sahaja (PENDING → REJECTED).
+- `PATCH /jobs/:id/complete` – client atau freelancer (IN_PROGRESS → COMPLETED).
+- `PATCH /jobs/:id/dispute` – peserta (ACCEPTED/IN_PROGRESS/COMPLETED → DISPUTED) dengan medan `reason`.
+- Percubaan status tidak sah akan memulangkan `409 Conflict` dengan mesej pandu arah.
 
 ## 9. Nota Penyelesaian Masalah
 - Jika sambungan DB gagal, semak `DATABASE_URL` dan pastikan PostgreSQL menerima sambungan pada host/port tersebut.

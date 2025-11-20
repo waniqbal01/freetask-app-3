@@ -22,7 +22,10 @@ import '../models/job.dart';
 import '../models/service.dart';
 import '../features/notifications/notifications_screen.dart';
 
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final appRouter = GoRouter(
+  navigatorKey: rootNavigatorKey,
   initialLocation: '/startup',
   routes: <RouteBase>[
     GoRoute(

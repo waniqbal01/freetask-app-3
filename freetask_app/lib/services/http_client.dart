@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 
 import '../core/env.dart';
 import '../core/router.dart';
@@ -32,13 +33,30 @@ class HttpClient {
           final isPublicServicesGet = error.requestOptions.method.toUpperCase() == 'GET' &&
               error.requestOptions.path.startsWith('/services');
           if (error.response?.statusCode == 401 && !isPublicServicesGet) {
-            await _clearStoredTokens();
-            appRouter.go('/login');
+            await _handleUnauthorized();
           }
           handler.next(error);
         },
       ),
     );
+  }
+
+  static bool _handlingUnauthorized = false;
+
+  Future<void> _handleUnauthorized() async {
+    if (_handlingUnauthorized) {
+      return;
+    }
+    _handlingUnauthorized = true;
+    final context = rootNavigatorKey.currentContext;
+    if (context != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sesi anda telah tamat. Sila log masuk semula.')),
+      );
+    }
+    await _clearStoredTokens();
+    appRouter.go('/login');
+    _handlingUnauthorized = false;
   }
 
   Future<void> _clearStoredTokens() async {
