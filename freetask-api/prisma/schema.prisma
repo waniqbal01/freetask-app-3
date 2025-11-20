@@ -89,6 +89,7 @@ model ChatMessage {
 model Review {
   id            Int       @id @default(autoincrement())
   createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   rating        Int
   comment       String?
   job           Job       @relation(fields: [jobId], references: [id])
