@@ -51,84 +51,58 @@ class JobsRepository {
     });
   }
 
-  Future<bool> startJob(String jobId) async {
-    try {
-      await _guardRequest(() async {
-        final response = await _dio.patch<Map<String, dynamic>>(
-          '/jobs/$jobId/start',
-          options: await _authorizedOptions(),
-        );
-        final data = response.data;
-        if (data != null) {
-          final job = Job.fromJson(data);
-          notificationService.pushLocal(
-            'Job Dimulakan',
-            'Job ${job.serviceTitle} kini In Progress.',
-          );
-        }
-        return true;
-      });
-      return true;
-    } on AppException catch (error) {
-      if (error.statusCode == 409) {
-        return false;
-      }
-      rethrow;
-    }
-  }
-
-  Future<bool> rejectJob(String jobId) async {
-    try {
-      await _guardRequest(() async {
-        final response = await _dio.patch<Map<String, dynamic>>(
-          '/jobs/$jobId/reject',
-          options: await _authorizedOptions(),
-        );
-        final data = response.data;
-        if (data != null) {
-          final job = Job.fromJson(data);
-          notificationService.pushLocal(
-            'Job Ditolak',
-            'Job ${job.serviceTitle} telah ditolak oleh freelancer.',
-          );
-        }
-        return true;
-      });
-      return true;
-    } on AppException catch (error) {
-      if (error.statusCode == 409) {
-        return false;
-      }
-      rethrow;
-    }
-  }
-
-  Future<bool> markCompleted(String jobId) async {
-    try {
-      await _guardRequest(() async {
-        await _dio.patch<void>(
-          '/jobs/$jobId/complete',
-          options: await _authorizedOptions(),
-        );
-        return true;
-      });
-      return true;
-    } on AppException catch (error) {
-      if (error.statusCode == 409) {
-        return false;
-      }
-      rethrow;
-    }
-  }
-
-  Future<bool> setDispute(String jobId, String reason) {
+  Future<Job> startJob(String jobId) {
     return _guardRequest(() async {
-      await _dio.patch<void>(
+      final response = await _dio.patch<Map<String, dynamic>>(
+        '/jobs/$jobId/start',
+        options: await _authorizedOptions(),
+      );
+      final data = response.data ?? <String, dynamic>{};
+      final job = Job.fromJson(data);
+      notificationService.pushLocal(
+        'Job Dimulakan',
+        'Job ${job.serviceTitle} kini In Progress.',
+      );
+      return job;
+    });
+  }
+
+  Future<Job> rejectJob(String jobId) {
+    return _guardRequest(() async {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        '/jobs/$jobId/reject',
+        options: await _authorizedOptions(),
+      );
+      final data = response.data ?? <String, dynamic>{};
+      final job = Job.fromJson(data);
+      notificationService.pushLocal(
+        'Job Ditolak',
+        'Job ${job.serviceTitle} telah ditolak oleh freelancer.',
+      );
+      return job;
+    });
+  }
+
+  Future<Job> markCompleted(String jobId) {
+    return _guardRequest(() async {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        '/jobs/$jobId/complete',
+        options: await _authorizedOptions(),
+      );
+      final data = response.data ?? <String, dynamic>{};
+      return Job.fromJson(data);
+    });
+  }
+
+  Future<Job> setDispute(String jobId, String reason) {
+    return _guardRequest(() async {
+      final response = await _dio.patch<Map<String, dynamic>>(
         '/jobs/$jobId/dispute',
         data: <String, dynamic>{'reason': reason},
         options: await _authorizedOptions(),
       );
-      return true;
+      final data = response.data ?? <String, dynamic>{};
+      return Job.fromJson(data);
     });
   }
 

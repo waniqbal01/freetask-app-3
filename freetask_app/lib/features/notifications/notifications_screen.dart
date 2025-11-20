@@ -27,7 +27,7 @@ class NotificationsScreen extends ConsumerWidget {
       body: state.when(
         data: (List<AppNotification> notifications) {
           if (notifications.isEmpty) {
-            return const Center(child: Text('Tiada notifikasi buat masa ini.'));
+            return const Center(child: Text('No notifications yet.'));
           }
           return RefreshIndicator(
             onRefresh: () => ref.read(notificationsControllerProvider.notifier).refresh(),
