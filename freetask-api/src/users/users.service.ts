@@ -51,9 +51,10 @@ export class UsersService {
   }
 
   updateDeviceToken(userId: number, deviceToken: string | null) {
+    const sanitized = deviceToken?.trim();
     return this.prisma.user.update({
       where: { id: userId },
-      data: { deviceToken },
+      data: { deviceToken: sanitized?.length ? sanitized : null },
       select: { id: true, deviceToken: true },
     });
   }

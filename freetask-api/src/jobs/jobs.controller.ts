@@ -77,8 +77,12 @@ export class JobsController {
 
   @ApiOperation({ summary: 'Client accepts a proposal' })
   @Patch(':id/accept')
-  accept(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
-    return this.jobsService.acceptJob(id, userId);
+  accept(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('userId') userId: number,
+    @GetUser('role') role: UserRole,
+  ) {
+    return this.jobsService.acceptJob(id, userId, role);
   }
 
   @ApiOperation({ summary: 'Freelancer starts work' })

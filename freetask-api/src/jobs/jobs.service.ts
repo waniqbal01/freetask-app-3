@@ -102,8 +102,12 @@ export class JobsService {
     return job;
   }
 
-  async acceptJob(id: number, userId: number) {
-    const job = await this.ensureJobForFreelancer(id, userId);
+  async acceptJob(id: number, userId: number, role: UserRole) {
+    if (role !== UserRole.CLIENT) {
+      throw new ForbiddenException('Only clients can accept jobs');
+    }
+
+    const job = await this.ensureJobForClient(id, userId);
     this.ensureValidTransition(job.status, JobStatus.ACCEPTED);
     return this.applyStatusUpdate(id, JobStatus.ACCEPTED, userId, 'JOB_ACCEPTED');
   }
@@ -272,6 +276,17 @@ export class JobsService {
         message,
       },
     });
+  }
+
+  private async ensureJobForClient(id: number, userId: number) {
+    const job = await this.prisma.job.findUnique({ where: { id } });
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+    if (job.clientId !== userId) {
+      throw new ForbiddenException('Only job owner can perform this action');
+    }
+    return job;
   }
 
   private async ensureJobForFreelancer(id: number, userId: number) {

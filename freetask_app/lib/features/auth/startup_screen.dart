@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import 'auth_redirect.dart';
 import 'auth_repository.dart';
+import '../notifications/device_token_service.dart';
 
 class StartupScreen extends StatefulWidget {
   const StartupScreen({super.key});
@@ -35,6 +36,7 @@ class _StartupScreenState extends State<StartupScreen> {
         return;
       }
       if (user != null) {
+        await deviceTokenService.syncDeviceToken();
         goToRoleHome(context, user.role);
       } else {
         context.go('/login');

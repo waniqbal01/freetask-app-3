@@ -38,8 +38,7 @@ class AuthRepository {
       if (userJson is Map<String, dynamic>) {
         _cachedUser = AppUser.fromJson(userJson);
       }
-      await deviceTokenService
-          .registerDeviceToken('TODO_REPLACE_WITH_REAL_DEVICE_TOKEN_AFTER_FCM');
+      await deviceTokenService.syncDeviceToken();
       return true;
     }, clearOn401: false);
   }
@@ -61,8 +60,7 @@ class AuthRepository {
       } else {
         _cachedUser = null;
       }
-      await deviceTokenService
-          .registerDeviceToken('TODO_REPLACE_WITH_REAL_DEVICE_TOKEN_AFTER_FCM');
+      await deviceTokenService.syncDeviceToken();
       return true;
     }, clearOn401: false);
   }

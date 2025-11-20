@@ -66,6 +66,10 @@ class ChatRepository {
     });
   }
 
+  Future<List<ChatMessage>> refreshMessages(String chatId) {
+    return _loadMessages(chatId);
+  }
+
   Stream<List<ChatMessage>> streamMessages(String chatId) {
     final controller = _controllers.putIfAbsent(
       chatId,
@@ -124,14 +128,15 @@ class ChatRepository {
     }
   }
 
-  Future<void> _loadMessages(String chatId) async {
+  Future<List<ChatMessage>> _loadMessages(String chatId) async {
+    List<ChatMessage> messages = <ChatMessage>[];
     await _guardRequest(() async {
       final response = await _dio.get<List<dynamic>>(
         '/chats/$chatId/messages',
         options: await _authorizedOptions(),
       );
       final data = response.data ?? <dynamic>[];
-      final messages = data
+      messages = data
           .whereType<Map<String, dynamic>>()
           .map(ChatMessage.fromJson)
           .toList(growable: false)
@@ -148,6 +153,7 @@ class ChatRepository {
         debugPrint('Join room failed: $error');
       }),
     );
+    return List<ChatMessage>.unmodifiable(messages);
   }
 
   Future<void> _sendMessageHttp(String chatId, String content) async {
