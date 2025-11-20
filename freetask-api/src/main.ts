@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { join } from 'path';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
 // ---------------------------------------------------
 // Build Allowed CORS Origins (default + .env variable)
@@ -55,6 +56,11 @@ async function bootstrap() {
         transformOptions: { enableImplicitConversion: true },
       }),
     );
+
+    // ------------------------------
+    // Request Logging
+    // ------------------------------
+    app.useGlobalInterceptors(new LoggingInterceptor());
 
     // ------------------------------
     // Swagger / OpenAPI

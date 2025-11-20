@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/app_info.dart';
 import '../../core/utils/error_utils.dart';
 import '../../core/widgets/ft_button.dart';
 import '../../models/service.dart';
@@ -46,6 +47,17 @@ class HomeScreen extends ConsumerWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.s20),
                   child: _HomeHero(user: state.user),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.s20,
+                    0,
+                    AppSpacing.s20,
+                    AppSpacing.s12,
+                  ),
+                  child: const _EnvironmentInfo(),
                 ),
               ),
               if (categories.isNotEmpty)
@@ -150,6 +162,35 @@ class HomeScreen extends ConsumerWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EnvironmentInfo extends StatelessWidget {
+  const _EnvironmentInfo();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.s16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Maklumat persekitaran',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: AppSpacing.s8),
+            Text('Environment: ${AppInfo.environmentLabel}'),
+            Text('API Base URL: ${AppInfo.apiBaseUrl}'),
+            Text('App Version: ${AppInfo.version}'),
+          ],
         ),
       ),
     );
