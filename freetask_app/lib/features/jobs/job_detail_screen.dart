@@ -11,9 +11,15 @@ import 'jobs_repository.dart';
 import 'widgets/job_status_badge.dart';
 
 class JobDetailScreen extends StatefulWidget {
-  const JobDetailScreen({super.key, required this.job, required this.isClientView});
+  const JobDetailScreen({
+    super.key,
+    required this.jobId,
+    required this.isClientView,
+    this.job,
+  });
 
-  final Job job;
+  final String jobId;
+  final Job? job;
   final bool isClientView;
 
   @override
@@ -21,17 +27,64 @@ class JobDetailScreen extends StatefulWidget {
 }
 
 class _JobDetailScreenState extends State<JobDetailScreen> {
-  late Job _job;
+  Job? _job;
   bool _isAccepting = false;
+  bool _isLoading = false;
+  String? _errorMessage;
   int _historyReloadKey = 0;
 
   @override
   void initState() {
     super.initState();
     _job = widget.job;
+    if (_job == null && widget.jobId.isNotEmpty) {
+      _loadJob();
+    } else if (_job == null && widget.jobId.isEmpty) {
+      _errorMessage = 'Maklumat job tidak tersedia. Sila kembali ke senarai job.';
+    }
   }
 
-  JobStatusVisual get _statusVisual => mapJobStatusVisual(_job.status);
+  JobStatusVisual get _statusVisual =>
+      mapJobStatusVisual(_job?.status ?? JobStatus.pending);
+
+  Future<void> _loadJob() async {
+    if (widget.jobId.isEmpty) {
+      setState(() {
+        _errorMessage = 'Maklumat job tidak tersedia. Sila kembali ke senarai job.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final fetched = await jobsRepository.getJobById(widget.jobId);
+      if (!mounted) return;
+      setState(() {
+        _job = fetched;
+        _isLoading = false;
+        _historyReloadKey++;
+        _errorMessage = fetched == null
+            ? 'Job tidak ditemui. Sila buka semula daripada senarai job.'
+            : null;
+      });
+    } on AppException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = error.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Gagal memuatkan job. Cuba lagi.';
+      });
+    }
+  }
 
   String _formatDate(DateTime? date) {
     if (date == null) {
@@ -42,7 +95,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   }
 
   Future<void> _handleAccept(BuildContext context) async {
-    if (_isAccepting || _job.status != JobStatus.pending) {
+    final job = _job;
+    if (_isAccepting || job == null || job.status != JobStatus.pending) {
       return;
     }
     setState(() {
@@ -50,7 +104,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     });
 
     try {
-      final updatedJob = await jobsRepository.acceptJob(_job.id);
+      final updatedJob = await jobsRepository.acceptJob(job.id);
       if (!mounted) return;
       setState(() {
         _job = updatedJob;
@@ -81,6 +135,55 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final textTheme = theme.textTheme;
     final statusVisual = _statusVisual;
     final isClientView = widget.isClientView;
+
+    final job = _job;
+    if (job == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Maklumat Job'),
+          leading: IconButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.s24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_isLoading) ...[
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: AppSpacing.s12),
+                  const Text('Memuatkan maklumat job...'),
+                ] else ...[
+                  const Icon(Icons.info_outline, size: 48, color: Colors.grey),
+                  const SizedBox(height: AppSpacing.s12),
+                  Text(
+                    _errorMessage ??
+                        'Maklumat job tidak tersedia. Sila buka job melalui senarai Job.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.s12),
+                  if (widget.jobId.isNotEmpty)
+                    FTButton(
+                      label: 'Cuba Semula',
+                      onPressed: _loadJob,
+                      expanded: false,
+                    ),
+                  if (widget.jobId.isEmpty)
+                    FTButton(
+                      label: 'Kembali ke Senarai Job',
+                      onPressed: () => Navigator.of(context).maybePop(),
+                      expanded: false,
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       body: Container(
@@ -136,7 +239,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  _job.serviceTitle,
+                                job.serviceTitle,
                                   style: textTheme.titleLarge?.copyWith(
                                     fontWeight: FontWeight.w700,
                                     color: AppColors.neutral900,
@@ -155,53 +258,53 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       _DetailRow(
                         icon: Icons.calendar_today_outlined,
                         label: 'Tarikh / Masa',
-                        value: _formatDate(_job.createdAt),
+                        value: _formatDate(job.createdAt),
                       ),
                       const SizedBox(height: 12),
                       _DetailRow(
                         icon: Icons.title_outlined,
                         label: 'Tajuk Job',
-                        value: _job.title,
+                        value: job.title,
                       ),
                       const SizedBox(height: 12),
                       _DetailRow(
                         icon: Icons.notes_outlined,
                         label: 'Deskripsi',
-                        value: _job.description.isNotEmpty
-                            ? _job.description
+                        value: job.description.isNotEmpty
+                            ? job.description
                             : 'Tiada deskripsi',
                       ),
                       const SizedBox(height: 12),
                       _DetailRow(
                         icon: Icons.receipt_long_outlined,
                         label: 'Service ID',
-                        value: _job.serviceId,
+                        value: job.serviceId,
                       ),
                       const SizedBox(height: 12),
                       _DetailRow(
                         icon: Icons.payments_outlined,
                         label: 'Jumlah',
-                        value: 'RM${_job.amount.toStringAsFixed(2)}',
+                        value: 'RM${job.amount.toStringAsFixed(2)}',
                       ),
                       const SizedBox(height: 12),
                       _DetailRow(
                         icon: Icons.person_outline,
                         label: isClientView ? 'Freelancer' : 'Client',
                         value: isClientView
-                            ? (_job.freelancerName.isNotEmpty
-                                ? '${_job.freelancerName} (ID: ${_job.freelancerId})'
-                                : _job.freelancerId)
-                            : (_job.clientName.isNotEmpty
-                                ? '${_job.clientName} (ID: ${_job.clientId})'
-                                : _job.clientId),
+                            ? (job.freelancerName.isNotEmpty
+                                ? '${job.freelancerName} (ID: ${job.freelancerId})'
+                                : job.freelancerId)
+                            : (job.clientName.isNotEmpty
+                                ? '${job.clientName} (ID: ${job.clientId})'
+                                : job.clientId),
                       ),
                       const SizedBox(height: 12),
                       _DetailRow(
                         icon: Icons.confirmation_number_outlined,
                         label: 'Job ID',
-                        value: _job.id,
+                        value: job.id,
                       ),
-                      if (_job.isDisputed) ...[
+                      if (job.isDisputed) ...[
                         const SizedBox(height: 16),
                         Container(
                           width: double.infinity,
@@ -222,7 +325,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                _job.disputeReason ?? 'Tiada maklumat tambahan.',
+                                job.disputeReason ?? 'Tiada maklumat tambahan.',
                                 style: textTheme.bodyMedium?.copyWith(
                                   color: Colors.orange.shade700,
                                 ),
@@ -232,7 +335,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         ),
                       ],
                       const SizedBox(height: AppSpacing.s16),
-                      if (isClientView && _job.status == JobStatus.pending) ...[
+                      if (isClientView && job.status == JobStatus.pending) ...[
                         FTButton(
                           label: 'Accept Job',
                           onPressed: () => _handleAccept(context),
@@ -250,7 +353,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       const SizedBox(height: AppSpacing.s12),
                       _JobHistoryTimeline(
                         key: ValueKey(_historyReloadKey),
-                        jobId: _job.id,
+                        jobId: job.id,
                       ),
                     ],
                   ),

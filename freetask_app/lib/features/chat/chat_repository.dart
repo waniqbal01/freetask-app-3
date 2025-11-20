@@ -41,6 +41,8 @@ class ChatRepository {
     _subscribeToSocket();
   }
 
+  // HTTP is the primary source of truth for chat; socket is best-effort only
+  // to deliver realtime updates without blocking UI flows.
   final TokenStorage _tokenStorage;
   final Dio _dio;
   final ChatSocketService _socketService;
@@ -100,22 +102,24 @@ class ChatRepository {
     required String chatId,
     required String text,
   }) async {
-    try {
-      await _socketService.sendMessage(chatId, text);
-    } catch (_) {
-      await _sendMessageHttp(chatId, text);
-    }
+    await _sendMessageHttp(chatId, text);
+    unawaited(
+      _socketService.sendMessage(chatId, text).catchError((Object error) {
+        debugPrint('Socket send failed, HTTP already sent: $error');
+      }),
+    );
   }
 
   Future<void> sendImage({
     required String chatId,
     required String imageUrl,
   }) async {
-    try {
-      await _socketService.sendMessage(chatId, imageUrl);
-    } catch (_) {
-      await _sendMessageHttp(chatId, imageUrl);
-    }
+    await _sendMessageHttp(chatId, imageUrl);
+    unawaited(
+      _socketService.sendMessage(chatId, imageUrl).catchError((Object error) {
+        debugPrint('Socket send failed, HTTP already sent: $error');
+      }),
+    );
   }
 
   void dispose() {

@@ -517,14 +517,28 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
     }
 
     if (jobs.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.assignment_outlined, size: 48, color: Colors.grey),
-            SizedBox(height: 12),
-            Text('Tiada job ditemui'),
-          ],
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.assignment_outlined, size: 48, color: Colors.grey),
+              const SizedBox(height: 12),
+              Text(
+                isClientView
+                    ? 'Tiada job lagi. Tempah servis untuk memulakan job pertama anda.'
+                    : 'Tiada job untuk anda buat masa ini. Terima atau mulakan job selepas client menempah servis anda.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              FTButton(
+                label: 'Segar semula',
+                onPressed: onRefresh,
+                expanded: false,
+              ),
+            ],
+          ),
         ),
       );
     }

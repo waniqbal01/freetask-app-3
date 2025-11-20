@@ -26,6 +26,7 @@ export class JobsController {
   constructor(private readonly jobsService: JobsService) {}
 
   @ApiOperation({ summary: 'Create a new job from a service' })
+  // CLIENT ONLY: Client creates a job/order from a selected service.
   @Post()
   create(
     @GetUser('userId') userId: number,
@@ -76,6 +77,7 @@ export class JobsController {
   }
 
   @ApiOperation({ summary: 'Client accepts a proposal' })
+  // CLIENT ONLY: Confirm freelancer to proceed (PENDING -> ACCEPTED).
   @Patch(':id/accept')
   accept(
     @Param('id', ParseIntPipe) id: number,
@@ -86,24 +88,28 @@ export class JobsController {
   }
 
   @ApiOperation({ summary: 'Freelancer starts work' })
+  // FREELANCER ONLY: Start working on accepted job (ACCEPTED -> IN_PROGRESS).
   @Patch(':id/start')
   start(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
     return this.jobsService.startJob(id, userId);
   }
 
   @ApiOperation({ summary: 'Reject a job' })
+  // FREELANCER ONLY: Reject a pending job (PENDING -> REJECTED).
   @Patch(':id/reject')
   reject(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
     return this.jobsService.rejectJob(id, userId);
   }
 
   @ApiOperation({ summary: 'Mark job completed by freelancer' })
+  // CLIENT or FREELANCER: Mark as completed after work delivery (IN_PROGRESS -> COMPLETED).
   @Patch(':id/complete')
   complete(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
     return this.jobsService.completeJob(id, userId);
   }
 
   @ApiOperation({ summary: 'Raise a dispute with a reason' })
+  // CLIENT or FREELANCER: Raise dispute with a reason (any active status -> DISPUTED).
   @Patch(':id/dispute')
   dispute(
     @Param('id', ParseIntPipe) id: number,
