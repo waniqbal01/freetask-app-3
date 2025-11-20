@@ -18,15 +18,19 @@ import { UpdateJobStatusDto } from './dto/update-job-status.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { GetUser } from '../auth/get-user.decorator';
 import { UserRole } from '@prisma/client';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { JOB_STATUS_FLOW } from './job-status.constants';
 
 @ApiTags('Jobs')
 @Controller('jobs')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class JobsController {
   constructor(private readonly jobsService: JobsService) {}
 
   @ApiOperation({ summary: 'Create a new job from a service' })
   // CLIENT ONLY: Client creates a job/order from a selected service.
+  @Roles(UserRole.CLIENT)
   @Post()
   create(
     @GetUser('userId') userId: number,
@@ -49,6 +53,16 @@ export class JobsController {
     return this.jobsService.findAllForUser(userId, filter);
   }
 
+  @ApiOperation({
+    summary: 'Reference job status flow used by Flutter & Swagger',
+    description:
+      'Helper endpoint for testers to confirm allowed transitions without reading the code.',
+  })
+  @Get('meta/statuses/flow')
+  getStatusFlow() {
+    return JOB_STATUS_FLOW;
+  }
+
   @ApiOperation({ summary: 'Get a job by ID if current user is involved' })
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
@@ -66,6 +80,7 @@ export class JobsController {
   }
 
   @ApiOperation({ summary: 'Update job status explicitly' })
+  @Roles(UserRole.FREELANCER)
   @Patch(':id/status')
   updateStatus(
     @Param('id', ParseIntPipe) id: number,
@@ -78,6 +93,7 @@ export class JobsController {
 
   @ApiOperation({ summary: 'Client accepts a proposal' })
   // CLIENT ONLY: Confirm freelancer to proceed (PENDING -> ACCEPTED).
+  @Roles(UserRole.CLIENT)
   @Patch(':id/accept')
   accept(
     @Param('id', ParseIntPipe) id: number,
@@ -89,6 +105,7 @@ export class JobsController {
 
   @ApiOperation({ summary: 'Freelancer starts work' })
   // FREELANCER ONLY: Start working on accepted job (ACCEPTED -> IN_PROGRESS).
+  @Roles(UserRole.FREELANCER)
   @Patch(':id/start')
   start(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
     return this.jobsService.startJob(id, userId);
@@ -96,6 +113,7 @@ export class JobsController {
 
   @ApiOperation({ summary: 'Reject a job' })
   // FREELANCER ONLY: Reject a pending job (PENDING -> REJECTED).
+  @Roles(UserRole.FREELANCER)
   @Patch(':id/reject')
   reject(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
     return this.jobsService.rejectJob(id, userId);
@@ -103,6 +121,7 @@ export class JobsController {
 
   @ApiOperation({ summary: 'Mark job completed by freelancer' })
   // CLIENT or FREELANCER: Mark as completed after work delivery (IN_PROGRESS -> COMPLETED).
+  @Roles(UserRole.CLIENT, UserRole.FREELANCER)
   @Patch(':id/complete')
   complete(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
     return this.jobsService.completeJob(id, userId);
@@ -110,6 +129,7 @@ export class JobsController {
 
   @ApiOperation({ summary: 'Raise a dispute with a reason' })
   // CLIENT or FREELANCER: Raise dispute with a reason (any active status -> DISPUTED).
+  @Roles(UserRole.CLIENT, UserRole.FREELANCER)
   @Patch(':id/dispute')
   dispute(
     @Param('id', ParseIntPipe) id: number,
@@ -118,4 +138,5 @@ export class JobsController {
   ) {
     return this.jobsService.disputeJob(id, userId, dto);
   }
+
 }

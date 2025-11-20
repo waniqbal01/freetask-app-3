@@ -37,6 +37,7 @@ async function bootstrap() {
     // ------------------------------
     // CORS Configuration
     // ------------------------------
+    // Add extra origins by setting ALLOWED_ORIGINS="http://localhost:3001,http://mydemo" in .env.
     const allowedOrigins = buildAllowedOrigins();
 
     app.enableCors({
