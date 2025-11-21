@@ -168,15 +168,26 @@ class _SkeletonLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return FractionallySizedBox(
-      widthFactor: widthFactor,
-      child: Container(
-        height: height,
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
+        final safeWidth =
+            maxWidth.isFinite ? maxWidth : MediaQuery.of(context).size.width;
+
+        return SizedBox(
+          width: safeWidth,
+          child: FractionallySizedBox(
+            widthFactor: widthFactor,
+            child: Container(
+              height: height,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
