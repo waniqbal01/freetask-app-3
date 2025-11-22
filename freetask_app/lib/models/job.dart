@@ -1,4 +1,12 @@
-enum JobStatus { pending, inProgress, completed, rejected, disputed }
+enum JobStatus {
+  pending,
+  accepted,
+  inProgress,
+  completed,
+  cancelled,
+  rejected,
+  disputed
+}
 
 class Job {
   Job({
@@ -31,9 +39,10 @@ class Job {
           'Servis ${json['service_id']?.toString() ?? json['serviceId']?.toString() ?? ''}',
       amount: _parseAmount(json['amount']),
       status: _parseStatus(json['status']),
-      isDisputed: json['is_disputed'] as bool? ??
-          json['isDisputed'] as bool? ??
-          false,
+      isDisputed: _calculateDisputed(
+        json['status'],
+        json['dispute_reason'] ?? json['disputeReason'],
+      ),
       disputeReason: json['dispute_reason']?.toString() ??
           json['disputeReason']?.toString(),
       createdAt: _parseDateTime(json['created_at'] ?? json['createdAt']),
@@ -79,12 +88,16 @@ class Job {
     switch (normalized) {
       case 'PENDING':
         return JobStatus.pending;
+      case 'ACCEPTED':
+        return JobStatus.accepted;
       case 'IN_PROGRESS':
       case 'IN-PROGRESS':
       case 'INPROGRESS':
         return JobStatus.inProgress;
       case 'COMPLETED':
         return JobStatus.completed;
+      case 'CANCELLED':
+        return JobStatus.cancelled;
       case 'REJECTED':
         return JobStatus.rejected;
       case 'DISPUTED':
@@ -113,5 +126,11 @@ class Job {
       return DateTime.tryParse(value);
     }
     return null;
+  }
+
+  static bool _calculateDisputed(dynamic statusValue, dynamic disputeReason) {
+    final status = _parseStatus(statusValue);
+    final hasReason = (disputeReason?.toString().isNotEmpty ?? false);
+    return status == JobStatus.disputed || hasReason;
   }
 }

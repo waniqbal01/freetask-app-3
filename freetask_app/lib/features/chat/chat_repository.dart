@@ -20,9 +20,9 @@ final chatThreadsProvider = FutureProvider<List<ChatThread>>((Ref ref) async {
 });
 
 final chatMessagesProvider = StreamProvider.family<List<ChatMessage>, String>(
-    (Ref ref, String chatId) {
+    (Ref ref, String jobId) {
   final repository = ref.watch(chatRepositoryProvider);
-  return repository.streamMessages(chatId);
+  return repository.streamMessages(jobId);
 });
 
 class ChatRepository {
@@ -55,54 +55,36 @@ class ChatRepository {
     }
   }
 
-  Stream<List<ChatMessage>> streamMessages(String chatId) {
+  Stream<List<ChatMessage>> streamMessages(String jobId) {
     final controller = _controllers.putIfAbsent(
-      chatId,
+      jobId,
       () => StreamController<List<ChatMessage>>.broadcast(),
     );
     unawaited(
-      _loadMessages(chatId).catchError(
+      _loadMessages(jobId).catchError(
         (Object error, StackTrace stackTrace) {
           controller.addError(error, stackTrace);
         },
       ),
     );
-    controller.add(List<ChatMessage>.unmodifiable(_messages[chatId] ?? <ChatMessage>[]));
+    controller
+        .add(List<ChatMessage>.unmodifiable(_messages[jobId] ?? <ChatMessage>[]));
     return controller.stream;
   }
 
   Future<void> sendText({
-    required String chatId,
+    required String jobId,
     required String text,
   }) async {
     try {
       await _dio.post<void>(
-        '/chats/$chatId/messages',
+        '/chats/$jobId/messages',
         data: <String, dynamic>{
           'content': text,
         },
         options: await _authorizedOptions(),
       );
-      await _loadMessages(chatId);
-    } on DioException catch (error) {
-      await _handleError(error);
-      rethrow;
-    }
-  }
-
-  Future<void> sendImage({
-    required String chatId,
-    required String imageUrl,
-  }) async {
-    try {
-      await _dio.post<void>(
-        '/chats/$chatId/messages',
-        data: <String, dynamic>{
-          'content': imageUrl,
-        },
-        options: await _authorizedOptions(),
-      );
-      await _loadMessages(chatId);
+      await _loadMessages(jobId);
     } on DioException catch (error) {
       await _handleError(error);
       rethrow;
@@ -115,10 +97,10 @@ class ChatRepository {
     }
   }
 
-  Future<void> _loadMessages(String chatId) async {
+  Future<void> _loadMessages(String jobId) async {
     try {
       final response = await _dio.get<List<dynamic>>(
-        '/chats/$chatId/messages',
+        '/chats/$jobId/messages',
         options: await _authorizedOptions(),
       );
       final data = response.data ?? <dynamic>[];
@@ -127,9 +109,9 @@ class ChatRepository {
           .map(ChatMessage.fromJson)
           .toList(growable: false)
         ..sort((ChatMessage a, ChatMessage b) => a.timestamp.compareTo(b.timestamp));
-      _messages[chatId] = messages;
+      _messages[jobId] = messages;
       final controller = _controllers.putIfAbsent(
-        chatId,
+        jobId,
         () => StreamController<List<ChatMessage>>.broadcast(),
       );
       controller.add(List<ChatMessage>.unmodifiable(messages));

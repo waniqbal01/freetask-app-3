@@ -7,6 +7,8 @@ import { JobsModule } from './jobs/jobs.module';
 import { ChatsModule } from './chats/chats.module';
 import { UsersModule } from './users/users.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { HealthController } from './health.controller';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { UploadsModule } from './uploads/uploads.module';
     JobsModule,
     ChatsModule,
     UploadsModule,
+    ReviewsModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}

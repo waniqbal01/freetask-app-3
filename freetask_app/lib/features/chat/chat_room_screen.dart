@@ -1,10 +1,8 @@
 import 'package:dio/dio.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/utils/error_utils.dart';
-import '../../services/upload_service.dart';
 import 'chat_models.dart';
 import 'chat_repository.dart';
 
@@ -84,61 +82,30 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                   itemCount: messages.length,
                   itemBuilder: (BuildContext context, int index) {
                     final message = messages[index];
-                    final isMe = message.sender == 'me';
-                    final bubbleColor = isMe
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.grey.shade300;
-                    final textColor = isMe ? Colors.white : Colors.grey.shade800;
                     return Align(
-                      alignment:
-                          isMe ? Alignment.centerRight : Alignment.centerLeft,
+                      alignment: Alignment.centerLeft,
                       child: Container(
                         margin: const EdgeInsets.symmetric(vertical: 6),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: bubbleColor,
+                          color: Colors.grey.shade200,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            if (message.hasImage) ...<Widget>[
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  message.imageUrl!,
-                                  width: 160,
-                                  height: 160,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (
-                                    BuildContext context,
-                                    Object error,
-                                    StackTrace? stackTrace,
-                                  ) {
-                                    return Container(
-                                      width: 160,
-                                      height: 160,
-                                      color: Colors.black12,
-                                      alignment: Alignment.center,
-                                      child: Text(
-                                        'Gagal memuat gambar',
-                                        style: TextStyle(
-                                          color: textColor,
-                                          fontSize: 12,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    );
-                                  },
-                                ),
+                            Text(
+                              message.text,
+                              style: const TextStyle(color: Colors.black87),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${message.senderName} • ${_formatTimestamp(message.timestamp)}',
+                              style: const TextStyle(
+                                color: Colors.black54,
+                                fontSize: 12,
                               ),
-                              const SizedBox(height: 8),
-                            ],
-                            if (message.text != null)
-                              Text(
-                                message.text!,
-                                style: TextStyle(color: textColor),
-                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -165,7 +132,6 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
           _MessageComposer(
             controller: _controller,
             onSendText: _handleSendText,
-            onSendImage: _handleSendImage,
             enabled: !hasMessageError,
           ),
         ],
@@ -180,7 +146,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     final trimmed = text.trim();
     try {
       await ref.read(chatRepositoryProvider).sendText(
-            chatId: widget.chatId,
+            jobId: widget.chatId,
             text: trimmed,
           );
       _controller.clear();
@@ -197,32 +163,6 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     }
   }
 
-  Future<void> _handleSendImage() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.image);
-    final path = result?.files.single.path;
-    if (path == null) {
-      return;
-    }
-    try {
-      final imageUrl = await uploadService.uploadFile(path);
-      await ref.read(chatRepositoryProvider).sendImage(
-            chatId: widget.chatId,
-            imageUrl: imageUrl,
-          );
-    } on DioException catch (error) {
-      if (!mounted) {
-        return;
-      }
-      _showSnackBar(resolveDioErrorMessage(error));
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-      final message = error is StateError ? error.message : error.toString();
-      _showSnackBar(message);
-    }
-  }
-
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
@@ -234,13 +174,11 @@ class _MessageComposer extends StatelessWidget {
   const _MessageComposer({
     required this.controller,
     required this.onSendText,
-    required this.onSendImage,
     this.enabled = true,
   });
 
   final TextEditingController controller;
   final ValueChanged<String> onSendText;
-  final VoidCallback onSendImage;
   final bool enabled;
 
   @override
@@ -257,10 +195,6 @@ class _MessageComposer extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
-            IconButton(
-              icon: const Icon(Icons.photo),
-              onPressed: enabled ? onSendImage : null,
-            ),
             Expanded(
               child: TextField(
                 controller: controller,

@@ -33,7 +33,7 @@ export class JobsController {
 
   @Get()
   findAll(
-    @GetUser('id') userId: number,
+    @GetUser('userId') userId: number,
     @Query('filter') filter?: 'client' | 'freelancer' | 'all',
   ) {
     return this.jobsService.findAllForUser(userId, filter);
@@ -67,6 +67,14 @@ export class JobsController {
   @Patch(':id/reject')
   reject(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
     return this.jobsService.rejectJob(id, userId);
+  }
+
+  @Patch(':id/cancel')
+  cancel(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('userId') userId: number,
+  ) {
+    return this.jobsService.cancelJob(id, userId);
   }
 
   @Patch(':id/complete')

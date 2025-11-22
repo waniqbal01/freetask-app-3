@@ -27,6 +27,13 @@ JobStatusVisual mapJobStatusVisual(JobStatus status) {
         color: Colors.amber.shade700,
         icon: Icons.schedule_outlined,
       );
+    case JobStatus.accepted:
+      return JobStatusVisual(
+        label: 'Accepted',
+        badgeText: 'ACCEPTED',
+        color: Colors.blue.shade700,
+        icon: Icons.check_circle_outline,
+      );
     case JobStatus.inProgress:
       return const JobStatusVisual(
         label: 'In Progress',
@@ -41,18 +48,25 @@ JobStatusVisual mapJobStatusVisual(JobStatus status) {
         color: Colors.green.shade700,
         icon: Icons.verified_outlined,
       );
-    case JobStatus.rejected:
+    case JobStatus.cancelled:
       return JobStatusVisual(
         label: 'Cancelled',
         badgeText: 'CANCELLED',
         color: Colors.red.shade700,
         icon: Icons.cancel_outlined,
       );
+    case JobStatus.rejected:
+      return JobStatusVisual(
+        label: 'Rejected',
+        badgeText: 'REJECTED',
+        color: Colors.red.shade700,
+        icon: Icons.block,
+      );
     case JobStatus.disputed:
       return JobStatusVisual(
         label: 'Disputed',
-        badgeText: 'CANCELLED',
-        color: Colors.red.shade700,
+        badgeText: 'DISPUTED',
+        color: Colors.deepOrange.shade700,
         icon: Icons.gavel_outlined,
       );
   }

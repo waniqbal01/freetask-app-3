@@ -87,6 +87,12 @@ export class JobsService {
 
   async rejectJob(id: number, userId: number) {
     const job = await this.ensureJobForFreelancer(id, userId);
+    this.ensureValidTransition(job.status, JobStatus.REJECTED);
+    return this.applyStatusUpdate(id, JobStatus.REJECTED);
+  }
+
+  async cancelJob(id: number, userId: number) {
+    const job = await this.ensureJobForClient(id, userId);
     this.ensureValidTransition(job.status, JobStatus.CANCELLED);
     return this.applyStatusUpdate(id, JobStatus.CANCELLED);
   }
@@ -120,11 +126,7 @@ export class JobsService {
 
   private ensureValidTransition(current: JobStatus, next: JobStatus) {
     const transitions: Record<JobStatus, JobStatus[]> = {
-      [JobStatus.PENDING]: [
-        JobStatus.ACCEPTED,
-        JobStatus.IN_PROGRESS,
-        JobStatus.CANCELLED,
-      ],
+      [JobStatus.PENDING]: [JobStatus.ACCEPTED, JobStatus.REJECTED, JobStatus.CANCELLED],
       [JobStatus.ACCEPTED]: [JobStatus.IN_PROGRESS, JobStatus.CANCELLED],
       [JobStatus.IN_PROGRESS]: [
         JobStatus.COMPLETED,
@@ -163,6 +165,17 @@ export class JobsService {
     }
     if (job.freelancerId !== userId) {
       throw new ForbiddenException('Only assigned freelancer can perform this action');
+    }
+    return job;
+  }
+
+  private async ensureJobForClient(id: number, userId: number) {
+    const job = await this.prisma.job.findUnique({ where: { id } });
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+    if (job.clientId !== userId) {
+      throw new ForbiddenException('Only the client can perform this action');
     }
     return job;
   }
