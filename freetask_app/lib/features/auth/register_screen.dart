@@ -10,6 +10,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/section_card.dart';
 import 'auth_redirect.dart';
 import 'auth_repository.dart';
+import '../users/users_repository.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key, this.role});
@@ -36,6 +37,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isSubmitting = false;
   bool _isUploadingAvatar = false;
   String? _errorMessage;
+  String? _selectedAvatarPath;
 
   @override
   void initState() {
@@ -69,8 +71,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     final email = _emailController.text.trim().toLowerCase();
     final password = _passwordController.text;
-    final avatar = _avatarController.text.trim();
-
     final apiRole = _selectedRole.toUpperCase();
     final isFreelancerRole = apiRole == 'FREELANCER';
 
@@ -80,10 +80,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       'email': email,
       'password': password,
     };
-
-    if (avatar.isNotEmpty) {
-      payload['avatar'] = avatar;
-    }
 
     if (isFreelancerRole) {
       final bio = _bioController.text.trim();
@@ -116,6 +112,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       final success = await authRepository.register(payload);
       if (success && mounted) {
+        await _uploadAvatarAfterAuth();
+
         final user = authRepository.currentUser;
         if (user != null) {
           goToRoleHome(context, user.role);
@@ -170,22 +168,48 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     setState(() {
+      _selectedAvatarPath = path;
+      _avatarController.text = path.split(RegExp(r'[\\/]')).last;
+    });
+
+    if (mounted) {
+      showErrorSnackBar(
+        context,
+        'Avatar akan dimuat naik selepas pendaftaran.',
+      );
+    }
+  }
+
+  Future<void> _uploadAvatarAfterAuth() async {
+    final path = _selectedAvatarPath;
+    if (path == null) {
+      return;
+    }
+
+    setState(() {
       _isUploadingAvatar = true;
     });
 
     try {
       final url = await uploadService.uploadFile(path);
-      _avatarController.text = url;
+      await usersRepository.updateProfile(avatarUrl: url);
       if (mounted) {
-        showErrorSnackBar(context, 'Avatar berjaya dimuat naik.');
+        showErrorSnackBar(
+          context,
+          'Avatar berjaya dimuat naik dan dikemaskini.',
+        );
       }
     } on DioException catch (error) {
       if (mounted) {
-        showErrorSnackBar(context, resolveDioErrorMessage(error));
+        showErrorSnackBar(
+          context,
+          '${resolveDioErrorMessage(error)}. Avatar upload failed, you can upload later.',
+        );
       }
     } catch (error) {
       if (mounted) {
-        final message = error is StateError ? error.message : error.toString();
+        final message =
+            error is StateError ? error.message : 'Avatar upload failed, you can upload later.';
         showErrorSnackBar(context, message);
       }
     } finally {

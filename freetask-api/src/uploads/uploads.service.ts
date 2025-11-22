@@ -18,11 +18,11 @@ export class UploadsService {
   }
 
   buildFileName(originalName: string) {
-    const fileExt = extname(originalName);
-    const nameWithoutExt = basename(originalName, fileExt).replace(/\s+/g, '-');
+    const sanitizedName = UploadsService.sanitizeBaseName(originalName);
+    const fileExt = UploadsService.sanitizeExtension(extname(originalName));
     const timestamp = Date.now();
 
-    return `${nameWithoutExt}-${timestamp}${fileExt}`;
+    return `${sanitizedName}-${timestamp}${fileExt}`;
   }
 
   buildFileUrl(request: Request, filename: string) {
@@ -30,5 +30,37 @@ export class UploadsService {
     const protocol = request.protocol;
 
     return `${protocol}://${host}/uploads/${filename}`;
+  }
+
+  static isAllowedMimeType(mimeType?: string | null) {
+    if (!mimeType) {
+      return false;
+    }
+
+    const allowed = [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
+
+    return allowed.includes(mimeType.toLowerCase());
+  }
+
+  static sanitizeBaseName(originalName: string) {
+    const normalized = basename(originalName).replace(/[/\\]+/g, '');
+    const base = normalized.replace(extname(normalized), '').replace(/\s+/g, '-');
+    const safe = base.replace(/[^a-zA-Z0-9-_]/g, '');
+    return safe.length === 0 ? 'file' : safe;
+  }
+
+  static sanitizeExtension(extension: string) {
+    const normalized = extension.replace(/[^a-zA-Z0-9.]/g, '');
+    if (!normalized.startsWith('.')) {
+      return normalized ? `.${normalized}` : '';
+    }
+    return normalized;
   }
 }

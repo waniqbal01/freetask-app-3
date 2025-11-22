@@ -20,14 +20,23 @@ class JobsRepository {
     String serviceId,
     double amount,
     String description,
+    {String? serviceTitle},
   ) async {
     try {
+      final parsedServiceId = int.tryParse(serviceId.toString());
+      if (parsedServiceId == null) {
+        throw StateError('ID servis tidak sah.');
+      }
+
       final response = await _dio.post<Map<String, dynamic>>(
         '/jobs',
         data: <String, dynamic>{
-          'serviceId': serviceId,
+          'serviceId': parsedServiceId,
           'amount': amount,
           'description': description,
+          'title': (serviceTitle == null || serviceTitle.isEmpty)
+              ? null
+              : serviceTitle,
         },
         options: await _authorizedOptions(),
       );
@@ -36,6 +45,22 @@ class JobsRepository {
       return job;
     } on DioException catch (error) {
       await _handleDioError(error);
+      rethrow;
+    }
+  }
+
+  Future<bool> acceptJob(String jobId) async {
+    try {
+      await _dio.patch<Map<String, dynamic>>(
+        '/jobs/$jobId/accept',
+        options: await _authorizedOptions(),
+      );
+      return true;
+    } on DioException catch (error) {
+      await _handleDioError(error);
+      if (error.response?.statusCode == 409) {
+        return false;
+      }
       rethrow;
     }
   }
@@ -60,6 +85,36 @@ class JobsRepository {
       if (error.response?.statusCode == 409) {
         return false;
       }
+      rethrow;
+    }
+  }
+
+  Future<bool> cancelJob(String jobId) async {
+    try {
+      await _dio.patch<Map<String, dynamic>>(
+        '/jobs/$jobId/cancel',
+        options: await _authorizedOptions(),
+      );
+      return true;
+    } on DioException catch (error) {
+      await _handleDioError(error);
+      if (error.response?.statusCode == 409) {
+        return false;
+      }
+      rethrow;
+    }
+  }
+
+  Future<bool> disputeJob(String jobId, String reason) async {
+    try {
+      await _dio.patch<void>(
+        '/jobs/$jobId/dispute',
+        data: <String, dynamic>{'reason': reason},
+        options: await _authorizedOptions(),
+      );
+      return true;
+    } on DioException catch (error) {
+      await _handleDioError(error);
       rethrow;
     }
   }
@@ -100,20 +155,6 @@ class JobsRepository {
       if (error.response?.statusCode == 409) {
         return false;
       }
-      rethrow;
-    }
-  }
-
-  Future<bool> setDispute(String jobId, String reason) async {
-    try {
-      await _dio.patch<void>(
-        '/jobs/$jobId/dispute',
-        data: <String, dynamic>{'reason': reason},
-        options: await _authorizedOptions(),
-      );
-      return true;
-    } on DioException catch (error) {
-      await _handleDioError(error);
       rethrow;
     }
   }

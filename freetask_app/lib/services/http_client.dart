@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../core/env.dart';
 import '../core/router.dart';
+import '../core/notifications/notification_service.dart';
 
 class HttpClient {
   HttpClient({FlutterSecureStorage? secureStorage})
@@ -31,7 +32,15 @@ class HttpClient {
         onError: (DioException error, ErrorInterceptorHandler handler) async {
           final isPublicServicesGet = error.requestOptions.method.toUpperCase() == 'GET' &&
               error.requestOptions.path.startsWith('/services');
-          if (error.response?.statusCode == 401 && !isPublicServicesGet) {
+          final hadAuthHeader =
+              error.requestOptions.headers['Authorization']?.toString().isNotEmpty ?? false;
+          if (error.response?.statusCode == 401 && !isPublicServicesGet && hadAuthHeader) {
+            notificationService.messengerKey.currentState?.showSnackBar(
+              const SnackBar(
+                content: Text('Session expired, please login again.'),
+                duration: Duration(seconds: 3),
+              ),
+            );
             await _clearStoredTokens();
             appRouter.go('/login');
           }

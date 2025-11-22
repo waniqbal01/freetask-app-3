@@ -19,7 +19,21 @@ class ChatListScreen extends ConsumerWidget {
         if (threads.isEmpty) {
           return Scaffold(
             appBar: AppBar(title: const Text('Chat')),
-            body: const Center(child: Text('Tiada data')),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.chat_bubble_outline, size: 48, color: Colors.grey),
+                  const SizedBox(height: 12),
+                  const Text('Tiada perbualan lagi.'),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: () => ref.refresh(chatThreadsProvider),
+                    child: const Text('Muat Semula'),
+                  ),
+                ],
+              ),
+            ),
           );
         }
 
@@ -47,20 +61,41 @@ class ChatListScreen extends ConsumerWidget {
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (Object error, StackTrace stackTrace) {
+        final message = error is DioException
+            ? resolveDioErrorMessage(error)
+            : 'Chat akan datang (Coming Soon). Sila cuba lagi nanti.';
         if (error is DioException) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             final messenger = ScaffoldMessenger.maybeOf(context);
             if (messenger != null) {
               messenger.showSnackBar(
-                SnackBar(content: Text(resolveDioErrorMessage(error))),
+                SnackBar(content: Text(message)),
               );
             }
           });
         }
         return Scaffold(
           appBar: AppBar(title: const Text('Chat')),
-          body: const Center(
-            child: Text('Chat akan datang (Coming Soon). Sila cuba lagi nanti.'),
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 42, color: Colors.redAccent),
+                  const SizedBox(height: 12),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: () => ref.refresh(chatThreadsProvider),
+                    child: const Text('Cuba Lagi'),
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       },
