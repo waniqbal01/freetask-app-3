@@ -1,69 +1,106 @@
-import 'dart:async';
+import 'package:dio/dio.dart';
 
-import '../jobs/jobs_repository.dart';
+import '../../services/http_client.dart';
 
-/// In-memory review storage used only as a temporary mock until the reviews
-/// API is ready. Do not replace backend data with seeded values here.
 class Review {
   Review({
+    required this.id,
     required this.jobId,
-    required this.serviceId,
     required this.rating,
-    required this.comment,
+    this.comment,
     required this.createdAt,
+    this.reviewerId,
   });
 
-  final String jobId;
-  final String serviceId;
+  factory Review.fromJson(Map<String, dynamic> json) {
+    return Review(
+      id: json['id'] is int ? json['id'] as int : int.tryParse('${json['id']}') ?? 0,
+      jobId: json['jobId'] is int
+          ? json['jobId'] as int
+          : int.tryParse('${json['job_id'] ?? json['jobId']}') ?? 0,
+      rating: json['rating'] is int
+          ? json['rating'] as int
+          : int.tryParse('${json['rating']}') ?? 0,
+      comment: json['comment']?.toString(),
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? json['createdAt']?.toString() ?? '') ??
+          DateTime.now(),
+      reviewerId: json['reviewerId'] is int
+          ? json['reviewerId'] as int
+          : int.tryParse('${json['reviewer_id'] ?? json['reviewerId']}'),
+    );
+  }
+
+  final int id;
+  final int jobId;
   final int rating;
-  final String comment;
+  final String? comment;
   final DateTime createdAt;
+  final int? reviewerId;
 }
 
 class ReviewsRepository {
-  ReviewsRepository();
+  ReviewsRepository({Dio? dio}) : _dio = dio ?? HttpClient().dio;
 
-  final Map<String, List<Review>> _reviewsByServiceId =
-      <String, List<Review>>{};
-  final Set<String> _submittedJobIds = <String>{};
+  final Dio _dio;
+  final Set<int> _submittedJobIds = <int>{};
 
-  Future<bool> submit(String jobId, int rating, String comment) async {
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-    final job = await jobsRepository.getJobById(jobId);
-    if (job == null) {
+  bool hasSubmittedReview(String jobId) {
+    final parsed = int.tryParse(jobId);
+    if (parsed == null) {
       return false;
     }
+    return _submittedJobIds.contains(parsed);
+  }
 
-    final normalizedRating = rating.clamp(1, 5);
-    final sanitizedComment = comment.trim();
-
-    final review = Review(
-      jobId: jobId,
-      serviceId: job.serviceId,
-      rating: normalizedRating,
-      comment: sanitizedComment,
-      createdAt: DateTime.now(),
+  Future<Review> createReview({
+    required int jobId,
+    required int rating,
+    String? comment,
+  }) async {
+    final sanitizedComment = (comment?.trim().isEmpty ?? true) ? null : comment!.trim();
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/reviews',
+      data: <String, dynamic>{
+        'jobId': jobId,
+        'rating': rating,
+        if (sanitizedComment != null) 'comment': sanitizedComment,
+      },
     );
-
-    final reviews =
-        _reviewsByServiceId.putIfAbsent(job.serviceId, () => <Review>[]);
-    reviews.removeWhere((Review existing) => existing.jobId == jobId);
-    reviews.add(review);
-    _submittedJobIds.add(jobId);
-    return true;
+    final review = Review.fromJson(response.data ?? <String, dynamic>{});
+    _submittedJobIds.add(review.jobId);
+    return review;
   }
 
-  List<Review> getReviewsForService(String serviceId) {
-    final reviews = _reviewsByServiceId[serviceId];
-    if (reviews == null) {
-      return const <Review>[];
+  Future<List<Review>> getReviewsForJob(int jobId) async {
+    final response = await _dio.get<List<dynamic>>(
+      '/reviews',
+      queryParameters: <String, dynamic>{'jobId': jobId},
+    );
+    final data = response.data ?? <dynamic>[];
+    final reviews = data
+        .whereType<Map<String, dynamic>>()
+        .map(Review.fromJson)
+        .toList(growable: false);
+    _syncSubmittedJobs(reviews);
+    return reviews;
+  }
+
+  Future<List<Review>> getMyReviews() async {
+    final response = await _dio.get<List<dynamic>>('/reviews/mine');
+    final data = response.data ?? <dynamic>[];
+    final reviews = data
+        .whereType<Map<String, dynamic>>()
+        .map(Review.fromJson)
+        .toList(growable: false);
+    _syncSubmittedJobs(reviews);
+    return reviews;
+  }
+
+  void _syncSubmittedJobs(Iterable<Review> reviews) {
+    for (final review in reviews) {
+      _submittedJobIds.add(review.jobId);
     }
-    final sorted = List<Review>.from(reviews)
-      ..sort((Review a, Review b) => b.createdAt.compareTo(a.createdAt));
-    return List<Review>.unmodifiable(sorted);
   }
-
-  bool hasSubmittedReview(String jobId) => _submittedJobIds.contains(jobId);
 }
 
 final reviewsRepository = ReviewsRepository();

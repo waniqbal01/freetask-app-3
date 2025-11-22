@@ -9,10 +9,17 @@ import { UsersModule } from './users/users.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { HealthController } from './health.controller';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60,
+        limit: 10,
+      },
+    ]),
     PrismaModule,
     UsersModule,
     AuthModule,

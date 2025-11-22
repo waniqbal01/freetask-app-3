@@ -25,6 +25,14 @@ npm run start:dev
 
 Swagger is available at `http://localhost:4000/api` when running.
 
+## Platform base URLs & CORS
+
+- **Android emulator:** `http://10.0.2.2:4000`
+- **iOS simulator:** `http://localhost:4000`
+- **Web/Desktop:** `http://localhost:4000`
+
+Ensure these origins (or your chosen ones) appear in `ALLOWED_ORIGINS` inside `.env`.
+
 ### Troubleshooting
 - Ensure `DATABASE_URL` points to a running Postgres instance.
 - Set `JWT_SECRET` to a non-empty value; the app will refuse to start otherwise.

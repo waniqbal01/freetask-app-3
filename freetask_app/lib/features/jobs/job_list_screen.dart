@@ -33,11 +33,20 @@ class _JobListScreenState extends State<JobListScreen> {
   @override
   void initState() {
     super.initState();
+    _primeReviews();
     _loadJobs();
   }
 
   Future<void> _loadJobs() async {
     await Future.wait([_fetchClientJobs(), _fetchFreelancerJobs()]);
+  }
+
+  Future<void> _primeReviews() async {
+    try {
+      await reviewsRepository.getMyReviews();
+    } catch (_) {
+      // Ignore cache warm failures; UI will surface errors on demand.
+    }
   }
 
   Future<void> _refreshClientJobs() async {
@@ -181,11 +190,50 @@ class _JobListScreenState extends State<JobListScreen> {
       ),
     );
     if (submitted == true && mounted) {
-      setState(() {});
+      final jobId = int.tryParse(job.id);
+      if (jobId != null) {
+        await reviewsRepository.getReviewsForJob(jobId);
+      }
+      await _loadJobs();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Terima kasih atas review anda!')),
       );
     }
+  }
+
+  Future<String?> _promptDisputeReason() async {
+    final controller = TextEditingController();
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Nyatakan sebab dispute'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              hintText: 'Contoh: Kerja tidak memenuhi skop.',
+            ),
+            maxLines: 3,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+              child: const Text('Hantar'),
+            ),
+          ],
+        );
+      },
+    );
+    controller.dispose();
+    if (reason == null || reason.isEmpty) {
+      return null;
+    }
+    return reason;
   }
 
   JobStatusVisual _statusVisual(JobStatus status) {
@@ -354,19 +402,39 @@ class _JobListScreenState extends State<JobListScreen> {
     required bool isClientView,
     required bool alreadyReviewed,
   }) {
-    if (isClientView && job.status == JobStatus.inProgress) {
+    if (isClientView && job.status == JobStatus.pending) {
       return Align(
         alignment: Alignment.centerRight,
         child: FTButton(
-          label: 'Mark as Completed',
+          label: 'Batalkan',
           isLoading: _isProcessing,
           onPressed: () => _handleAction(
-            () async {
-              return jobsRepository.markCompleted(job.id);
-            },
-            'Job ditandakan selesai. Status kini Completed.',
+            () => jobsRepository.cancelJob(job.id),
+            'Job dibatalkan.',
           ),
           expanded: false,
+          size: FTButtonSize.small,
+        ),
+      );
+    }
+
+    if (isClientView &&
+        (job.status == JobStatus.accepted || job.status == JobStatus.inProgress)) {
+      return Align(
+        alignment: Alignment.centerRight,
+        child: FTButton(
+          label: 'Dispute',
+          isLoading: _isProcessing,
+          onPressed: () async {
+            final reason = await _promptDisputeReason();
+            if (reason == null) return;
+            await _handleAction(
+              () => jobsRepository.disputeJob(job.id, reason),
+              'Dispute dihantar.',
+            );
+          },
+          expanded: false,
+          size: FTButtonSize.small,
         ),
       );
     }
@@ -378,10 +446,7 @@ class _JobListScreenState extends State<JobListScreen> {
             label: 'Reject',
             isLoading: _isProcessing,
             onPressed: () => _handleAction(
-              () async {
-                final success = await jobsRepository.rejectJob(job.id);
-                return success;
-              },
+              () => jobsRepository.rejectJob(job.id),
               'Job telah ditolak dan dikemas kini.',
             ),
             expanded: false,
@@ -389,14 +454,63 @@ class _JobListScreenState extends State<JobListScreen> {
           ),
           const SizedBox(width: 8),
           FTButton(
-            label: 'Start Job',
+            label: 'Accept',
             isLoading: _isProcessing,
             onPressed: () => _handleAction(
-              () => jobsRepository.startJob(job.id),
-              'Job dimulakan! Status kini In Progress.',
+              () => jobsRepository.acceptJob(job.id),
+              'Job diterima. Anda boleh mulakan apabila bersedia.',
             ),
             expanded: false,
             size: FTButtonSize.small,
+          ),
+        ],
+      );
+    }
+
+    if (!isClientView && job.status == JobStatus.accepted) {
+      return Align(
+        alignment: Alignment.centerRight,
+        child: FTButton(
+          label: 'Start',
+          isLoading: _isProcessing,
+          onPressed: () => _handleAction(
+            () => jobsRepository.startJob(job.id),
+            'Job dimulakan! Status kini In Progress.',
+          ),
+          expanded: false,
+          size: FTButtonSize.small,
+        ),
+      );
+    }
+
+    if (!isClientView && job.status == JobStatus.inProgress) {
+      return Row(
+        children: [
+          FTButton(
+            label: 'Complete',
+            isLoading: _isProcessing,
+            onPressed: () => _handleAction(
+              () => jobsRepository.markCompleted(job.id),
+              'Job ditandakan selesai. Status kini Completed.',
+            ),
+            expanded: false,
+            size: FTButtonSize.small,
+          ),
+          const SizedBox(width: 8),
+          FTButton(
+            label: 'Dispute',
+            isLoading: _isProcessing,
+            onPressed: () async {
+              final reason = await _promptDisputeReason();
+              if (reason == null) return;
+              await _handleAction(
+                () => jobsRepository.disputeJob(job.id, reason),
+                'Dispute dihantar.',
+              );
+            },
+            expanded: false,
+            size: FTButtonSize.small,
+            type: FTButtonType.secondary,
           ),
         ],
       );

@@ -29,6 +29,8 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
 
   String get _description => _summary['description']?.toString() ?? '';
 
+  String get _title => _summary['title']?.toString() ?? '';
+
   double? get _amount {
     final value = _summary['price'];
     if (value is num) {
@@ -57,8 +59,12 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
     });
 
     try {
-      final job =
-          await jobsRepository.createOrder(serviceId, amount, description);
+      final job = await jobsRepository.createOrder(
+        serviceId,
+        amount,
+        description,
+        serviceTitle: _title.isEmpty ? _summary['serviceTitle']?.toString() : _title,
+      );
       await escrowService.hold(job.id, job.amount);
 
       if (!mounted) {

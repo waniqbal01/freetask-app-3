@@ -1,5 +1,7 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/utils/error_utils.dart';
 import 'reviews_repository.dart';
 
 class ReviewDialog extends StatefulWidget {
@@ -109,20 +111,50 @@ class _ReviewDialogState extends State<ReviewDialog> {
       _isSubmitting = true;
     });
 
-    final success = await reviewsRepository.submit(
-      widget.jobId,
-      _rating,
-      _commentController.text,
-    );
-
-    if (!mounted) {
+    final parsedJobId = int.tryParse(widget.jobId);
+    if (parsedJobId == null) {
+      setState(() => _isSubmitting = false);
+      if (mounted) {
+        Navigator.of(context).pop(false);
+      }
       return;
     }
 
-    setState(() {
-      _isSubmitting = false;
-    });
+    try {
+      await reviewsRepository.createReview(
+        jobId: parsedJobId,
+        rating: _rating,
+        comment: _commentController.text,
+      );
 
-    Navigator.of(context).pop(success);
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSubmitting = false;
+      });
+
+      Navigator.of(context).pop(true);
+    } on DioException catch (error) {
+      final message = resolveDioErrorMessage(error);
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal menghantar review: $error')),
+        );
+      }
+    }
   }
 }

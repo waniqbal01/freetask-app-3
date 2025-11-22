@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Post,
   UploadedFile,
@@ -20,6 +21,23 @@ export class UploadsController {
   @Post()
   @UseInterceptors(
     FileInterceptor('file', {
+      limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        if (!file) {
+          return cb(new BadRequestException('Tiada fail dihantar'), false);
+        }
+
+        if (!UploadsService.isAllowedMimeType(file.mimetype)) {
+          return cb(
+            new BadRequestException(
+              'Fail tidak disokong. Hanya imej dan dokumen PDF/DOC dibenarkan.',
+            ),
+            false,
+          );
+        }
+
+        cb(null, true);
+      },
       storage: diskStorage({
         destination: (_req, _file, cb) => {
           this.uploadsService.ensureUploadsDir();

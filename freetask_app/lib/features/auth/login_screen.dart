@@ -221,12 +221,55 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: AppSpacing.s16),
+                    SectionCard(
+                      title: 'Demo Accounts',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text('Gunakan akaun sedia ada untuk ujian cepat:'),
+                          SizedBox(height: AppSpacing.s12),
+                          _DemoCredentialRow(role: 'Client', email: 'client1@example.com'),
+                          _DemoCredentialRow(role: 'Client', email: 'client2@example.com'),
+                          _DemoCredentialRow(role: 'Freelancer', email: 'freelancer1@example.com'),
+                          _DemoCredentialRow(role: 'Freelancer', email: 'freelancer2@example.com'),
+                          SizedBox(height: AppSpacing.s8),
+                          Text(
+                            'Kata laluan untuk semua akaun demo: password123',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _DemoCredentialRow extends StatelessWidget {
+  const _DemoCredentialRow({required this.role, required this.email});
+
+  final String role;
+  final String email;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          const Icon(Icons.person_outline, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text('$role · $email'),
+          ),
+        ],
       ),
     );
   }
