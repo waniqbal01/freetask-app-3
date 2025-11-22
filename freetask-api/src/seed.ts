@@ -89,29 +89,90 @@ async function main() {
     }),
   ]);
 
-  await prisma.job.create({
+  const jobs = await Promise.all([
+    prisma.job.create({
+      data: {
+        title: 'Logo Design for Startup',
+        description: 'Need a modern logo for a tech startup.',
+        status: JobStatus.PENDING,
+        serviceId: services[0].id,
+        clientId: clients[0].id,
+        freelancerId: freelancers[0].id,
+      },
+    }),
+    prisma.job.create({
+      data: {
+        title: 'Landing Page Build',
+        description: 'Simple responsive landing page.',
+        status: JobStatus.ACCEPTED,
+        serviceId: services[1].id,
+        clientId: clients[1].id,
+        freelancerId: freelancers[0].id,
+      },
+    }),
+    prisma.job.create({
+      data: {
+        title: 'SEO for E-commerce',
+        description: 'Optimize SEO for online shop.',
+        status: JobStatus.IN_PROGRESS,
+        serviceId: services[2].id,
+        clientId: clients[1].id,
+        freelancerId: freelancers[1].id,
+      },
+    }),
+    prisma.job.create({
+      data: {
+        title: 'Social Campaign',
+        description: 'Two-week campaign management.',
+        status: JobStatus.CANCELLED,
+        serviceId: services[3].id,
+        clientId: clients[0].id,
+        freelancerId: freelancers[1].id,
+      },
+    }),
+    prisma.job.create({
+      data: {
+        title: 'Storefront redesign',
+        description: 'Completed storefront redesign.',
+        status: JobStatus.COMPLETED,
+        serviceId: services[1].id,
+        clientId: clients[0].id,
+        freelancerId: freelancers[0].id,
+      },
+    }),
+  ]);
+
+  await prisma.review.create({
     data: {
-      title: 'Logo Design for Startup',
-      description: 'Need a modern logo for a tech startup.',
-      status: JobStatus.IN_PROGRESS,
-      serviceId: services[0].id,
-      clientId: clients[0].id,
-      freelancerId: freelancers[0].id,
+      jobId: jobs[4].id,
+      rating: 5,
+      comment: 'Great work delivered on time!',
+      reviewerId: clients[0].id,
+      revieweeId: freelancers[0].id,
     },
   });
 
-  await prisma.job.create({
-    data: {
-      title: 'SEO for E-commerce',
-      description: 'Optimize SEO for online shop.',
-      status: JobStatus.PENDING,
-      serviceId: services[2].id,
-      clientId: clients[1].id,
-      freelancerId: freelancers[1].id,
-    },
+  await prisma.chatMessage.createMany({
+    data: [
+      {
+        jobId: jobs[2].id,
+        senderId: clients[1].id,
+        content: 'Can you share progress screenshots?',
+      },
+      {
+        jobId: jobs[2].id,
+        senderId: freelancers[1].id,
+        content: 'Sure, uploading them later today.',
+      },
+    ],
   });
 
   console.log('Seed data created successfully');
+  console.log('Demo users:');
+  console.log('Client One / client1@example.com / password123');
+  console.log('Client Two / client2@example.com / password123');
+  console.log('Freelancer One / freelancer1@example.com / password123');
+  console.log('Freelancer Two / freelancer2@example.com / password123');
 }
 
 main()

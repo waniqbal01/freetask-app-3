@@ -25,30 +25,31 @@ class ChatThread {
 class ChatMessage {
   const ChatMessage({
     required this.id,
-    required this.sender,
-    this.text,
-    this.imageUrl,
+    required this.jobId,
+    required this.senderId,
+    required this.senderName,
+    required this.text,
     required this.timestamp,
-  }) : assert(text != null || imageUrl != null, 'Message must have text or image.');
+  });
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
     return ChatMessage(
       id: json['id']?.toString() ?? '',
-      sender: json['sender']?.toString() ?? '',
-      text: json['text']?.toString(),
-      imageUrl: json['image_url']?.toString() ??
-          json['image_path']?.toString() ??
-          json['imagePath']?.toString(),
-      timestamp: DateTime.tryParse(json['timestamp']?.toString() ?? '') ??
+      jobId: json['jobId']?.toString() ?? json['job_id']?.toString() ?? '',
+      senderId: json['senderId']?.toString() ?? json['sender_id']?.toString() ?? '',
+      senderName: json['senderName']?.toString() ?? json['sender_name']?.toString() ?? '',
+      text: json['content']?.toString() ?? json['text']?.toString() ?? '',
+      timestamp: DateTime.tryParse(
+            json['createdAt']?.toString() ?? json['timestamp']?.toString() ?? '',
+          ) ??
           DateTime.now(),
     );
   }
 
   final String id;
-  final String sender;
-  final String? text;
-  final String? imageUrl;
+  final String jobId;
+  final String senderId;
+  final String senderName;
+  final String text;
   final DateTime timestamp;
-
-  bool get hasImage => imageUrl != null && imageUrl!.isNotEmpty;
 }

@@ -51,9 +51,11 @@ export class ChatsService {
       (message) =>
         ({
           id: message.id,
-          sender: message.sender.name,
-          text: message.content,
-          timestamp: message.createdAt,
+          jobId: message.jobId,
+          senderId: message.sender.id,
+          senderName: message.sender.name,
+          content: message.content,
+          createdAt: message.createdAt,
         }) satisfies ChatMessageDto,
     );
   }
@@ -75,9 +77,11 @@ export class ChatsService {
 
     return {
       id: message.id,
-      sender: message.sender.name,
-      text: message.content,
-      timestamp: message.createdAt,
+      jobId: message.jobId,
+      senderId: message.sender.id,
+      senderName: message.sender.name,
+      content: message.content,
+      createdAt: message.createdAt,
     } satisfies ChatMessageDto;
   }
 

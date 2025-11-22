@@ -8,10 +8,15 @@ import { JwtStrategy } from './jwt.strategy';
 @Module({
   imports: [
     JwtModule.registerAsync({
-      useFactory: () => ({
-        secret: process.env.JWT_SECRET || 'super-secret-key',
-        signOptions: { expiresIn: process.env.JWT_EXPIRES_IN || '7d' },
-      }),
+      useFactory: () => {
+        if (!process.env.JWT_SECRET) {
+          throw new Error('JWT_SECRET is required');
+        }
+        return {
+          secret: process.env.JWT_SECRET,
+          signOptions: { expiresIn: process.env.JWT_EXPIRES_IN || '7d' },
+        };
+      },
     }),
   ],
   providers: [AuthService, PrismaService, JwtStrategy],
