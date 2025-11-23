@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { User } from '@prisma/client';
@@ -17,6 +22,11 @@ export class AuthService {
 
   async register(dto: RegisterDto): Promise<{ accessToken: string; user: AuthUser }> {
     const email = dto.email.toLowerCase();
+    const roleRaw = dto.role?.toString().toUpperCase();
+    if (!['CLIENT', 'FREELANCER', 'ADMIN'].includes(roleRaw)) {
+      throw new BadRequestException('Invalid role');
+    }
+    dto.role = roleRaw as any;
     const existing = await this.prisma.user.findUnique({
       where: { email },
     });

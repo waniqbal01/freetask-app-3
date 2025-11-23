@@ -6,29 +6,23 @@
 
 ## Setup
 1. Copy `.env.example` to `.env`.
-2. Edit `.env` and set:
-   - `DATABASE_URL` to your Postgres connection string.
-   - `JWT_SECRET` to a long random string (min 32 chars).
-   - `JWT_EXPIRES_IN` (e.g. `7d`).
-   - `ALLOWED_ORIGINS` with the frontend origins (comma-separated, e.g. `http://localhost:4000,http://10.0.2.2:4000`).
-   - `UPLOAD_DIR` and `MAX_UPLOAD_MB` if you need custom upload paths/limits.
-3. Install dependencies:
+```bash
+cp .env.example .env
+```
+2. Install dependencies:
 ```bash
 npm install
 ```
-4. Generate the Prisma client:
-```bash
-npx prisma generate
-```
-5. Apply migrations:
+3. Update `.env` with your database connection and JWT secret if needed.
+4. Apply Prisma migrations:
 ```bash
 npx prisma migrate dev
 ```
-6. Seed demo data:
+5. Seed demo data:
 ```bash
 npm run seed
 ```
-7. Start development server:
+6. Start development server:
 ```bash
 npm run start:dev
 ```
@@ -40,6 +34,12 @@ Environment summary:
 - `JWT_EXPIRES_IN` – expiry duration (e.g. `7d`)
 - `ALLOWED_ORIGINS` – comma-separated list of allowed CORS origins
 - `PORT` – defaults to `4000`
+
+Demo credentials from the seed script:
+
+- Admin: `admin@example.com` / `Password123!`
+- Clients: `client1@example.com`, `client2@example.com` (password `Password123!`)
+- Freelancers: `freelancer1@example.com`, `freelancer2@example.com` (password `Password123!`)
 
 Swagger is available at `http://localhost:4000/api` when running.
 Ensure the `./uploads` folder is persisted or mounted in deployments so uploaded files remain available.
