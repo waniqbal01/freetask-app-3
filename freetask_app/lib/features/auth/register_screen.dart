@@ -229,6 +229,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'Avatar berjaya dimuat naik dan dikemaskini.',
         );
       }
+    } on UnauthenticatedUploadException catch (error) {
+      if (mounted) {
+        showErrorSnackBar(context, error.message);
+        context.go('/login');
+      }
     } on ValidationException catch (error) {
       if (mounted) {
         showErrorSnackBar(context, error.message);

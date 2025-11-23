@@ -36,21 +36,22 @@ export class UploadsService {
 
   buildFileUrl(request: Request, filename: string) {
     const configuredBase = process.env.PUBLIC_BASE_URL?.trim();
+    const trustProxy = process.env.TRUST_PROXY === 'true';
+    const strictBaseCheck = process.env.PUBLIC_BASE_URL_STRICT !== 'false';
+    const forwardedProto = request.get('x-forwarded-proto');
+    const forwardedHost = request.get('x-forwarded-host');
+    const host = trustProxy ? forwardedHost || request.get('host') : request.get('host');
+    const protocol = trustProxy ? forwardedProto || request.protocol : request.protocol;
+
     if (configuredBase) {
       const normalized = UploadsService.normalizeBaseUrl(configuredBase);
-      const requestHost = request.get('host');
-      if (requestHost && !UploadsService.hostMatches(normalized, requestHost)) {
+      if (strictBaseCheck && host && !UploadsService.hostMatches(normalized, host)) {
         throw new BadRequestException(
           'PUBLIC_BASE_URL is enforced and does not match the incoming host.',
         );
       }
       return `${normalized}/uploads/${filename}`;
     }
-
-    const forwardedProto = request.get('x-forwarded-proto');
-    const forwardedHost = request.get('x-forwarded-host');
-    const host = forwardedHost || request.get('host');
-    const protocol = forwardedProto || request.protocol;
 
     if (!host) {
       throw new InternalServerErrorException('Unable to determine request host for upload URL');

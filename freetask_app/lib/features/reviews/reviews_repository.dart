@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../features/auth/auth_repository.dart';
 import '../../services/http_client.dart';
 import '../../core/storage/storage.dart';
+import '../../core/utils/api_error_handler.dart';
 
 class Review {
   Review({
@@ -64,49 +65,64 @@ class ReviewsRepository {
   }) async {
     final token = await _requireAuthToken();
     final sanitizedComment = (comment?.trim().isEmpty ?? true) ? null : comment!.trim();
-    final response = await _dio.post<Map<String, dynamic>>(
-      '/reviews',
-      data: <String, dynamic>{
-        'jobId': jobId,
-        'rating': rating,
-        if (sanitizedComment != null) 'comment': sanitizedComment,
-      },
-      options: Options(headers: <String, String>{'Authorization': 'Bearer $token'}),
-    );
-    final review = Review.fromJson(response.data ?? <String, dynamic>{});
-    _submittedJobIds.add(review.jobId);
-    return review;
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/reviews',
+        data: <String, dynamic>{
+          'jobId': jobId,
+          'rating': rating,
+          if (sanitizedComment != null) 'comment': sanitizedComment,
+        },
+        options: Options(headers: <String, String>{'Authorization': 'Bearer $token'}),
+      );
+      final review = Review.fromJson(response.data ?? <String, dynamic>{});
+      _submittedJobIds.add(review.jobId);
+      return review;
+    } on DioException catch (error) {
+      await handleApiError(error);
+      rethrow;
+    }
   }
 
   Future<List<Review>> getReviewsForJob(int jobId) async {
     final token = await _requireAuthToken();
-    final response = await _dio.get<List<dynamic>>(
-      '/reviews',
-      queryParameters: <String, dynamic>{'jobId': jobId},
-      options: Options(headers: <String, String>{'Authorization': 'Bearer $token'}),
-    );
-    final data = response.data ?? <dynamic>[];
-    final reviews = data
-        .whereType<Map<String, dynamic>>()
-        .map(Review.fromJson)
-        .toList(growable: false);
-    _syncSubmittedJobs(reviews);
-    return reviews;
+    try {
+      final response = await _dio.get<List<dynamic>>(
+        '/reviews',
+        queryParameters: <String, dynamic>{'jobId': jobId},
+        options: Options(headers: <String, String>{'Authorization': 'Bearer $token'}),
+      );
+      final data = response.data ?? <dynamic>[];
+      final reviews = data
+          .whereType<Map<String, dynamic>>()
+          .map(Review.fromJson)
+          .toList(growable: false);
+      _syncSubmittedJobs(reviews);
+      return reviews;
+    } on DioException catch (error) {
+      await handleApiError(error);
+      rethrow;
+    }
   }
 
   Future<List<Review>> getMyReviews() async {
     final token = await _requireAuthToken();
-    final response = await _dio.get<List<dynamic>>(
-      '/reviews/mine',
-      options: Options(headers: <String, String>{'Authorization': 'Bearer $token'}),
-    );
-    final data = response.data ?? <dynamic>[];
-    final reviews = data
-        .whereType<Map<String, dynamic>>()
-        .map(Review.fromJson)
-        .toList(growable: false);
-    _syncSubmittedJobs(reviews);
-    return reviews;
+    try {
+      final response = await _dio.get<List<dynamic>>(
+        '/reviews/mine',
+        options: Options(headers: <String, String>{'Authorization': 'Bearer $token'}),
+      );
+      final data = response.data ?? <dynamic>[];
+      final reviews = data
+          .whereType<Map<String, dynamic>>()
+          .map(Review.fromJson)
+          .toList(growable: false);
+      _syncSubmittedJobs(reviews);
+      return reviews;
+    } on DioException catch (error) {
+      await handleApiError(error);
+      rethrow;
+    }
   }
 
   void _syncSubmittedJobs(Iterable<Review> reviews) {

@@ -6,6 +6,9 @@ import '../../models/service.dart';
 import '../../services/http_client.dart';
 import '../auth/auth_repository.dart';
 import '../../core/storage/storage.dart';
+import '../../core/notifications/notification_service.dart';
+import '../../core/router.dart';
+import '../../core/utils/api_error_handler.dart';
 
 class ServicesRepository {
   ServicesRepository({AppStorage? storage, Dio? dio})
@@ -78,6 +81,12 @@ class ServicesRepository {
     final token = await _storage.read(AuthRepository.tokenStorageKey);
     if (token == null || token.isEmpty) {
       if (requireAuth) {
+        notificationService.messengerKey.currentState?.showSnackBar(
+          const SnackBar(content: Text('Sesi tamat. Sila log masuk semula.')),
+        );
+        await authRepository.logout();
+        authRefreshNotifier.value = DateTime.now();
+        appRouter.go('/login');
         throw StateError('Token tidak ditemui. Sila log masuk semula.');
       }
       return Options();
@@ -86,9 +95,7 @@ class ServicesRepository {
   }
 
   Future<void> _handleDioError(DioException error) async {
-    if (error.response?.statusCode == 401) {
-      await authRepository.logout();
-    }
+    await handleApiError(error);
   }
 }
 

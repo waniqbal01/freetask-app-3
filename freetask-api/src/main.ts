@@ -1,14 +1,60 @@
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { join } from 'path';
 import { JwtExceptionFilter } from './common/filters/jwt-exception.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
+function normalizeOrigin(origin: string) {
+  return origin.trim().replace(/\/$/, '');
+}
+
+function getAllowedOrigins(logger: Logger, isProduction: boolean) {
+  const configuredOrigins = (process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .flatMap((o) => o.split(/\s+/))
+    .map(normalizeOrigin)
+    .filter(Boolean);
+
+  if (configuredOrigins.length > 0) {
+    return configuredOrigins;
+  }
+
+  const publicBase = process.env.PUBLIC_BASE_URL?.trim();
+  if (publicBase) {
+    const normalizedBase = normalizeOrigin(publicBase);
+    logger.warn(
+      `⚠️  ALLOWED_ORIGINS missing. Falling back to PUBLIC_BASE_URL (${normalizedBase}). Set ALLOWED_ORIGINS to lock this down.`,
+    );
+    return [normalizedBase];
+  }
+
+  if (isProduction) {
+    logger.error(
+      '🚧 ALLOWED_ORIGINS is empty in production. CORS will be blocked for external origins until configured.',
+    );
+    return [];
+  }
+
+  logger.warn(
+    '⚠️  ALLOWED_ORIGINS missing. Allowing common localhost origins for development only. Set ALLOWED_ORIGINS to secure.',
+  );
+
+  return [
+    'http://localhost:4000',
+    'http://127.0.0.1:4000',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://10.0.2.2:3000',
+    'http://10.0.2.2:4000',
+  ];
+}
+
 // ---------------------------------------------------
 // Bootstrap NestJS App (Dev mode = restricted CORS)
 // ---------------------------------------------------
 async function bootstrap() {
+  const logger = new Logger('Bootstrap');
   try {
     if (!process.env.JWT_SECRET || process.env.JWT_SECRET.trim().length === 0) {
       throw new Error('JWT_SECRET is required to start the API server');
@@ -18,20 +64,7 @@ async function bootstrap() {
       bufferLogs: true,
     });
     const isProduction = process.env.NODE_ENV === 'production';
-    const configuredOrigins = (process.env.ALLOWED_ORIGINS || '')
-      .split(',')
-      .flatMap((o) => o.split(/\s+/))
-      .map((o) => o.trim().replace(/\/$/, ''))
-      .filter(Boolean);
-
-    const devFallbackOrigins = [
-      'http://localhost:4000',
-      'http://127.0.0.1:4000',
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'http://10.0.2.2:3000',
-      'http://10.0.2.2:4000',
-    ];
+    const configuredOrigins = getAllowedOrigins(logger, isProduction);
 
     const devFallbackPatterns = [
       /^http:\/\/localhost(?::\d+)?$/,
@@ -40,24 +73,20 @@ async function bootstrap() {
       /^http:\/\/192\.168\.\d+\.\d+(?::\d+)?$/,
     ];
 
-    if (isProduction && configuredOrigins.length === 0) {
-      throw new Error('ALLOWED_ORIGINS must be configured in production');
-    }
-
-    const allowedOrigins = Array.from(
-      new Set(configuredOrigins.length > 0 ? configuredOrigins : devFallbackOrigins),
-    );
+    const allowAllDevFallbacks = configuredOrigins.length === 0 && !isProduction;
 
     app.enableCors({
       origin: (origin, cb) => {
         if (!origin) return cb(null, true);
-        const normalizedOrigin = origin.replace(/\/$/, '');
-        if (allowedOrigins.includes(normalizedOrigin)) return cb(null, true);
-        if (
-          configuredOrigins.length === 0 &&
-          devFallbackPatterns.some((pattern) => pattern.test(normalizedOrigin))
-        ) {
+        const normalizedOrigin = normalizeOrigin(origin);
+        if (configuredOrigins.includes(normalizedOrigin) || configuredOrigins.includes('*')) {
           return cb(null, true);
+        }
+        if (allowAllDevFallbacks && devFallbackPatterns.some((pattern) => pattern.test(normalizedOrigin))) {
+          return cb(null, true);
+        }
+        if (configuredOrigins.length === 0 && isProduction) {
+          return cb(new Error('CORS blocked: configure ALLOWED_ORIGINS or PUBLIC_BASE_URL'), false);
         }
         return cb(new Error(`CORS blocked origin: ${origin}`), false);
       },
@@ -107,7 +136,7 @@ async function bootstrap() {
     await app.listen(port);
 
     console.log(`🚀 Application running at: ${await app.getUrl()}`);
-    console.log('Allowed Origins:', allowedOrigins);
+    console.log('Allowed Origins:', configuredOrigins);
 
   } catch (error) {
     console.error('❌ Failed to bootstrap application.', error);

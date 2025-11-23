@@ -17,6 +17,7 @@ import '../features/services/service_detail_screen.dart';
 import '../features/services/service_list_screen.dart';
 import '../models/job.dart';
 import '../features/auth/auth_repository.dart';
+import 'notifications/notification_service.dart';
 import 'storage/storage.dart';
 
 final authRefreshNotifier = ValueNotifier<DateTime>(DateTime.now());
@@ -69,6 +70,22 @@ final appRouter = GoRouter(
         }
       } catch (_) {
         return '/login';
+      }
+    }
+
+    if (location.startsWith('/jobs')) {
+      final filter = state.uri.queryParameters['filter'];
+      if (filter == 'all') {
+        final user = await authRepository.getCurrentUser();
+        if (user == null) {
+          return '/login';
+        }
+        if (user.role.toUpperCase() != 'ADMIN') {
+          notificationService.messengerKey.currentState?.showSnackBar(
+            const SnackBar(content: Text('Access denied')),
+          );
+          return '/jobs';
+        }
       }
     }
 

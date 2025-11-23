@@ -116,7 +116,8 @@ class HttpClient {
     );
     await _clearStoredTokens();
     authRefreshNotifier.value = DateTime.now();
-    if (!kIsWeb || appRouter.canPop()) {
+    final currentLocation = appRouter.location;
+    if (currentLocation != '/login') {
       appRouter.go('/login');
     }
   }

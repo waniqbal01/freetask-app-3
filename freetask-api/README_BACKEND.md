@@ -42,7 +42,12 @@ Environment summary:
 - `PORT` – defaults to `4000`
 - `PUBLIC_BASE_URL` – required in production to build absolute upload URLs (set to
   your API origin, e.g. `https://api.example.com`)
+- `PUBLIC_BASE_URL_STRICT` – keep `true` to enforce host matching, set to `false` when
+  running behind reverse proxies/ingress that rewrite hosts
+- `TRUST_PROXY` – set to `true` to trust `X-Forwarded-*` headers for upload URL
+  generation when behind a proxy
 - `SEED_FORCE` – set to `true` to allow seeding (dev auto-seeds an empty DB once)
+- `SEED_RESET` – set to `false` to preserve data on reseed; defaults to destructive mode
 
 Demo credentials from the seed script:
 
@@ -66,10 +71,23 @@ to production (required envs, proxy headers, uploads volume, and seed guidance).
 Ensure these origins (or your chosen ones) appear in `ALLOWED_ORIGINS` inside `.env`.
 If `ALLOWED_ORIGINS` is empty during local development, the server will auto-allow
 `http://localhost:4000`, `http://127.0.0.1:4000`, `http://localhost:3000`,
-`http://localhost:5173`, and `http://10.0.2.2:4000` for quick testing.
+`http://localhost:5173`, and `http://10.0.2.2:4000` for quick testing. In production,
+the server will still boot when `ALLOWED_ORIGINS` is empty but will block unknown
+origins and warn loudly—set `ALLOWED_ORIGINS` (or `PUBLIC_BASE_URL`) to avoid this.
+
+When `PUBLIC_BASE_URL` is set, the upload URL host is enforced. Disable enforcement via
+`PUBLIC_BASE_URL_STRICT=false` or set `TRUST_PROXY=true` to respect `X-Forwarded-Host`
+and `X-Forwarded-Proto` headers if running behind ingress/reverse proxy.
 
 ### Troubleshooting
 - Ensure `DATABASE_URL` points to a running Postgres instance.
 - Set `JWT_SECRET` to a non-empty value; the app will refuse to start otherwise.
-- In production, `ALLOWED_ORIGINS` must be set explicitly; missing values will stop the app from booting.
+- In production, set `ALLOWED_ORIGINS` or `PUBLIC_BASE_URL` to avoid CORS being blocked
+  for all origins.
 - Uploads larger than 5MB or outside the allowed MIME list (jpeg/png/gif/pdf/doc/docx) are rejected.
+
+Seeding tips:
+- If the database already has data, rerun with `SEED_FORCE=true`. Add `SEED_RESET=false`
+  to keep existing rows while adding/updating seed records.
+- Default seeding is destructive when `SEED_RESET` is `true` (wipes reviews, chats,
+  jobs, services, users before recreating).
