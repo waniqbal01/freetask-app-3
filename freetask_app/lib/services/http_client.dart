@@ -34,11 +34,14 @@ class HttpClient {
               error.requestOptions.path.startsWith('/services');
           final hadAuthHeader =
               error.requestOptions.headers['Authorization']?.toString().isNotEmpty ?? false;
-          if (error.response?.statusCode == 401 && !isPublicServicesGet && hadAuthHeader) {
+          final status = error.response?.statusCode ?? 0;
+          if ((status == 401 || status == 403 || status == 419) && !isPublicServicesGet && hadAuthHeader) {
             notificationService.messengerKey.currentState?.showSnackBar(
-              const SnackBar(
-                content: Text('Session expired, please login again.'),
-                duration: Duration(seconds: 3),
+              SnackBar(
+                content: Text(status == 403
+                    ? 'Anda tidak dibenarkan untuk tindakan ini.'
+                    : 'Session expired, please login again.'),
+                duration: const Duration(seconds: 3),
               ),
             );
             await _clearStoredTokens();

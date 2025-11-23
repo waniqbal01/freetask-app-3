@@ -49,7 +49,7 @@ class ChatListScreen extends ConsumerWidget {
                 subtitle: Text('Pengguna: ${thread.participantName}'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
-                  context.push('/chat/${thread.id}');
+                  context.push('/chats/${thread.id}/messages');
                 },
               );
             },

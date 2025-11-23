@@ -10,6 +10,8 @@ import { UploadsModule } from './uploads/uploads.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { HealthController } from './health.controller';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -17,7 +19,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     ThrottlerModule.forRoot([
       {
         ttl: 60,
-        limit: 10,
+        limit: 30,
       },
     ]),
     PrismaModule,
@@ -30,5 +32,11 @@ import { ThrottlerModule } from '@nestjs/throttler';
     ReviewsModule,
   ],
   controllers: [HealthController],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

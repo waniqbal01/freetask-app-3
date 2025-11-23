@@ -9,6 +9,10 @@ import { JwtExceptionFilter } from './common/filters/jwt-exception.filter';
 // ---------------------------------------------------
 async function bootstrap() {
   try {
+    if (!process.env.JWT_SECRET || process.env.JWT_SECRET.trim().length === 0) {
+      throw new Error('JWT_SECRET is required to start the API server');
+    }
+
     const app = await NestFactory.create(AppModule, {
       bufferLogs: true,
     });
@@ -26,10 +30,11 @@ async function bootstrap() {
       'http://10.0.2.2:4000',
     ];
 
-    const allowedOrigins =
-      configuredOrigins.length > 0 || isProduction
-        ? configuredOrigins
-        : devFallbackOrigins;
+    if (isProduction && configuredOrigins.length === 0) {
+      throw new Error('ALLOWED_ORIGINS must be configured in production');
+    }
+
+    const allowedOrigins = configuredOrigins.length > 0 ? configuredOrigins : devFallbackOrigins;
 
     app.enableCors({
       origin: (origin, cb) => {

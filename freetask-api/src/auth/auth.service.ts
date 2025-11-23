@@ -23,8 +23,8 @@ export class AuthService {
   async register(dto: RegisterDto): Promise<{ accessToken: string; user: AuthUser }> {
     const email = dto.email.toLowerCase();
     const roleRaw = dto.role?.toString().toUpperCase();
-    if (!['CLIENT', 'FREELANCER', 'ADMIN'].includes(roleRaw)) {
-      throw new BadRequestException('Invalid role');
+    if (!['CLIENT', 'FREELANCER'].includes(roleRaw)) {
+      throw new BadRequestException('Role must be CLIENT or FREELANCER');
     }
     dto.role = roleRaw as any;
     const existing = await this.prisma.user.findUnique({

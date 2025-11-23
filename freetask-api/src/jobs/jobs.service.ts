@@ -26,8 +26,7 @@ export class JobsService {
       throw new NotFoundException('Service not found');
     }
 
-    const amount =
-      dto.amount !== undefined ? new Prisma.Decimal(dto.amount) : service.price;
+    const amount = new Prisma.Decimal(Number(dto.amount).toFixed(2));
 
     const job = await this.prisma.job.create({
       data: {
@@ -103,7 +102,7 @@ export class JobsService {
   }
 
   async completeJob(id: number, userId: number) {
-    const job = await this.ensureJobParticipant(id, userId);
+    const job = await this.ensureJobForFreelancer(id, userId);
     this.ensureValidTransition(job.status, JobStatus.COMPLETED);
     return this.applyStatusUpdate(id, JobStatus.COMPLETED);
   }
