@@ -43,8 +43,9 @@ Demo credentials from the seed script:
 - Clients: `client1@example.com`, `client2@example.com` (password `Password123!`)
 - Freelancers: `freelancer1@example.com`, `freelancer2@example.com` (password `Password123!`)
 
-Swagger is available at `http://localhost:4000/api` when running.
- Ensure the `./uploads` folder is persisted or mounted in deployments so uploaded files remain available.
+Swagger docs are served at `/api` (e.g. `http://localhost:4000/api` locally or
+`https://<your-domain>/api` in production). Ensure the `./uploads` folder is
+persisted or mounted in deployments so uploaded files remain available.
 
 ## Platform base URLs & CORS
 

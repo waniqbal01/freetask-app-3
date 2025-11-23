@@ -45,6 +45,7 @@ export class JobsService {
 
   async findAllForUser(
     userId: number,
+    role: UserRole,
     filter?: 'client' | 'freelancer' | 'all',
   ) {
     const where: Prisma.JobWhereInput =
@@ -52,6 +53,8 @@ export class JobsService {
         ? { clientId: userId }
         : filter === 'freelancer'
         ? { freelancerId: userId }
+        : role === UserRole.ADMIN && filter === 'all'
+        ? {}
         : { OR: [{ clientId: userId }, { freelancerId: userId }] };
 
     const jobs = await this.prisma.job.findMany({
