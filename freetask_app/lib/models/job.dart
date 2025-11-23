@@ -20,12 +20,14 @@ class Job {
     this.isDisputed = false,
     this.disputeReason,
     this.createdAt,
+    this.hasAmountIssue = false,
   });
 
   factory Job.fromJson(Map<String, dynamic> json) {
     final serviceObj = json['service'];
     final clientObj = json['client'];
     final freelancerObj = json['freelancer'];
+    final parsedAmount = _parseAmount(json['amount']);
 
     return Job(
       id: json['id']?.toString() ?? '',
@@ -45,7 +47,8 @@ class Job {
           json['service_title']?.toString() ??
           serviceObj?['title']?.toString() ??
           'Servis ${json['service_id']?.toString() ?? json['serviceId']?.toString() ?? ''}',
-      amount: _parseAmount(json['amount']),
+      amount: parsedAmount.value,
+      hasAmountIssue: parsedAmount.hadError,
       status: _parseStatus(json['status']),
       isDisputed: _calculateDisputed(
         json['status'],
@@ -70,6 +73,7 @@ class Job {
       serviceId: serviceId,
       serviceTitle: serviceTitle,
       amount: amount,
+      hasAmountIssue: hasAmountIssue,
       status: status ?? this.status,
       isDisputed: isDisputed ?? this.isDisputed,
       disputeReason: disputeReason ?? this.disputeReason,
@@ -83,6 +87,7 @@ class Job {
   final String serviceId;
   final String serviceTitle;
   final double amount;
+  final bool hasAmountIssue;
   final JobStatus status;
   final bool isDisputed;
   final String? disputeReason;
@@ -116,14 +121,18 @@ class Job {
     }
   }
 
-  static double _parseAmount(dynamic value) {
+  static ({double value, bool hadError}) _parseAmount(dynamic value) {
     if (value is num) {
-      return value.toDouble();
+      return (value: value.toDouble(), hadError: false);
     }
-    if (value is String) {
-      return double.tryParse(value) ?? 0;
+    if (value is String && value.isNotEmpty) {
+      final parsed = double.tryParse(value);
+      if (parsed != null) {
+        return (value: parsed, hadError: false);
+      }
     }
-    return 0;
+    print('Invalid job amount received: $value');
+    return (value: 0, hadError: true);
   }
 
   static DateTime? _parseDateTime(dynamic value) {

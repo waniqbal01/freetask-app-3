@@ -23,6 +23,10 @@ Override by passing `--dart-define=API_BASE_URL=<url>` to `flutter run` or
 `flutter build`. If the define is omitted, the defaults above are used per
 platform.
 
+When testing Flutter Web/Desktop locally, ensure the backend CORS origins include your
+browser origin (e.g. `http://localhost:3000` or `http://localhost:5173`). The API ships
+with sensible localhost defaults in `.env.example`.
+
 Protected endpoints (jobs, chats, reviews, uploads) require a Bearer token set
 via the app's authentication flow.
 
