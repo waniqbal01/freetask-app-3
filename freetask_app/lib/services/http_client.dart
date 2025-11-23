@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../core/env.dart';
 import '../core/router.dart';
 import '../core/notifications/notification_service.dart';
+import '../features/auth/auth_repository.dart';
 
 class HttpClient {
   HttpClient({FlutterSecureStorage? secureStorage})
@@ -20,8 +21,7 @@ class HttpClient {
         onRequest: (RequestOptions options, RequestInterceptorHandler handler) async {
           final isPublicServicesGet =
               options.method.toUpperCase() == 'GET' && options.path.startsWith('/services');
-          final token = await _storage.read(key: _authTokenKey) ??
-              await _storage.read(key: _legacyAccessTokenKey);
+          final token = await _readTokenWithMigration();
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           } else if (isPublicServicesGet) {
@@ -42,6 +42,7 @@ class HttpClient {
               ),
             );
             await _clearStoredTokens();
+            authRefreshNotifier.value = DateTime.now();
             appRouter.go('/login');
           }
           handler.next(error);
@@ -51,12 +52,25 @@ class HttpClient {
   }
 
   Future<void> _clearStoredTokens() async {
-    await _storage.delete(key: _authTokenKey);
-    await _storage.delete(key: _legacyAccessTokenKey);
+    await _storage.delete(key: AuthRepository.tokenStorageKey);
+    await _storage.delete(key: AuthRepository.legacyTokenStorageKey);
   }
 
-  static const String _authTokenKey = 'auth_token';
-  static const String _legacyAccessTokenKey = 'access_token';
+  Future<String?> _readTokenWithMigration() async {
+    final token = await _storage.read(key: AuthRepository.tokenStorageKey);
+    if (token != null && token.isNotEmpty) {
+      return token;
+    }
+
+    final legacy = await _storage.read(key: AuthRepository.legacyTokenStorageKey);
+    if (legacy != null && legacy.isNotEmpty) {
+      await _storage.write(key: AuthRepository.tokenStorageKey, value: legacy);
+      await _storage.delete(key: AuthRepository.legacyTokenStorageKey);
+      return legacy;
+    }
+
+    return token;
+  }
 
   final FlutterSecureStorage _storage;
   final Dio dio;

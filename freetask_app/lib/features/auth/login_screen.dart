@@ -30,6 +30,13 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  void _fillDemoCredentials(String email) {
+    setState(() {
+      _emailController.text = email;
+      _passwordController.text = 'Password123!';
+    });
+  }
+
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -226,16 +233,37 @@ class _LoginScreenState extends State<LoginScreen> {
                       title: 'Demo Accounts',
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text('Gunakan akaun sedia ada untuk ujian cepat:'),
-                          SizedBox(height: AppSpacing.s12),
-                          _DemoCredentialRow(role: 'Client', email: 'client1@example.com'),
-                          _DemoCredentialRow(role: 'Client', email: 'client2@example.com'),
-                          _DemoCredentialRow(role: 'Freelancer', email: 'freelancer1@example.com'),
-                          _DemoCredentialRow(role: 'Freelancer', email: 'freelancer2@example.com'),
-                          SizedBox(height: AppSpacing.s8),
-                          Text(
-                            'Kata laluan untuk semua akaun demo: password123',
+                        children: [
+                          const Text('Gunakan akaun sedia ada untuk ujian cepat:'),
+                          const SizedBox(height: AppSpacing.s12),
+                          _DemoCredentialRow(
+                            role: 'Admin',
+                            email: 'admin@example.com',
+                            onTap: _fillDemoCredentials,
+                          ),
+                          _DemoCredentialRow(
+                            role: 'Client',
+                            email: 'client1@example.com',
+                            onTap: _fillDemoCredentials,
+                          ),
+                          _DemoCredentialRow(
+                            role: 'Client',
+                            email: 'client2@example.com',
+                            onTap: _fillDemoCredentials,
+                          ),
+                          _DemoCredentialRow(
+                            role: 'Freelancer',
+                            email: 'freelancer1@example.com',
+                            onTap: _fillDemoCredentials,
+                          ),
+                          _DemoCredentialRow(
+                            role: 'Freelancer',
+                            email: 'freelancer2@example.com',
+                            onTap: _fillDemoCredentials,
+                          ),
+                          const SizedBox(height: AppSpacing.s12),
+                          const Text(
+                            'Kata laluan untuk semua akaun demo: Password123!',
                             style: TextStyle(fontWeight: FontWeight.w600),
                           ),
                         ],
@@ -253,23 +281,33 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 class _DemoCredentialRow extends StatelessWidget {
-  const _DemoCredentialRow({required this.role, required this.email});
+  const _DemoCredentialRow({
+    required this.role,
+    required this.email,
+    required this.onTap,
+  });
 
   final String role;
   final String email;
+  final void Function(String email) onTap;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          const Icon(Icons.person_outline, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text('$role · $email'),
-          ),
-        ],
+      child: InkWell(
+        onTap: () => onTap(email),
+        child: Row(
+          children: [
+            const Icon(Icons.person_outline, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text('$role · $email'),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.auto_fix_normal_outlined, size: 16),
+          ],
+        ),
       ),
     );
   }

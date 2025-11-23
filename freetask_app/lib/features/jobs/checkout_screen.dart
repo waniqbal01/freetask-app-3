@@ -53,6 +53,24 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       return;
     }
 
+    if (description.trim().length < 5) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Penerangan perlu sekurang-kurangnya 5 aksara.'),
+        ),
+      );
+      return;
+    }
+
+    if (amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Jumlah perlu lebih daripada 0.'),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isSubmitting = true;
       _errorMessage = null;

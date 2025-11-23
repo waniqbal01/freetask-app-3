@@ -49,20 +49,21 @@ class JobsRepository {
     }
   }
 
-  Future<bool> acceptJob(String jobId) async {
+  Future<Job?> acceptJob(String jobId) async {
     try {
-      await _dio.patch<Map<String, dynamic>>(
+      final response = await _dio.patch<Map<String, dynamic>>(
         '/jobs/$jobId/accept',
         options: await _authorizedOptions(),
       );
-      return true;
+      final data = response.data;
+      return data != null ? Job.fromJson(data) : null;
     } on DioException catch (error) {
       await _handleStatusError(error);
       rethrow;
     }
   }
 
-  Future<bool> startJob(String jobId) async {
+  Future<Job?> startJob(String jobId) async {
     try {
       final response = await _dio.patch<Map<String, dynamic>>(
         '/jobs/$jobId/start',
@@ -75,42 +76,43 @@ class JobsRepository {
           'Job Dimulakan',
           'Job ${job.serviceTitle} kini In Progress.',
         );
+        return job;
       }
-      return true;
+      return null;
     } on DioException catch (error) {
       await _handleStatusError(error);
       rethrow;
     }
   }
 
-  Future<bool> cancelJob(String jobId) async {
+  Future<Job?> cancelJob(String jobId) async {
     try {
-      await _dio.patch<Map<String, dynamic>>(
+      final response = await _dio.patch<Map<String, dynamic>>(
         '/jobs/$jobId/cancel',
         options: await _authorizedOptions(),
       );
-      return true;
+      return response.data != null ? Job.fromJson(response.data!) : null;
     } on DioException catch (error) {
       await _handleStatusError(error);
       rethrow;
     }
   }
 
-  Future<bool> disputeJob(String jobId, String reason) async {
+  Future<Job?> disputeJob(String jobId, String reason) async {
     try {
-      await _dio.patch<void>(
+      final response = await _dio.patch<Map<String, dynamic>>(
         '/jobs/$jobId/dispute',
         data: <String, dynamic>{'reason': reason},
         options: await _authorizedOptions(),
       );
-      return true;
+      return response.data != null ? Job.fromJson(response.data!) : null;
     } on DioException catch (error) {
       await _handleStatusError(error);
       rethrow;
     }
   }
 
-  Future<bool> rejectJob(String jobId) async {
+  Future<Job?> rejectJob(String jobId) async {
     try {
       final response = await _dio.patch<Map<String, dynamic>>(
         '/jobs/$jobId/reject',
@@ -123,21 +125,22 @@ class JobsRepository {
           'Job Ditolak',
           'Job ${job.serviceTitle} telah ditolak oleh freelancer.',
         );
+        return job;
       }
-      return true;
+      return null;
     } on DioException catch (error) {
       await _handleStatusError(error);
       rethrow;
     }
   }
 
-  Future<bool> markCompleted(String jobId) async {
+  Future<Job?> markCompleted(String jobId) async {
     try {
-      await _dio.patch<void>(
+      final response = await _dio.patch<Map<String, dynamic>>(
         '/jobs/$jobId/complete',
         options: await _authorizedOptions(),
       );
-      return true;
+      return response.data != null ? Job.fromJson(response.data!) : null;
     } on DioException catch (error) {
       await _handleStatusError(error);
       rethrow;
