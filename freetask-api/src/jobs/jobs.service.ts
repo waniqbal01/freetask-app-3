@@ -45,6 +45,8 @@ export class JobsService {
       include: this.jobInclude,
     });
 
+    await this.createEscrowRecord(job.id, amount);
+
     return this.withFlatFields(job);
   }
 
@@ -71,14 +73,17 @@ export class JobsService {
     return jobs.map((job) => this.withFlatFields(job));
   }
 
-  async findOneForUser(id: number, userId: number) {
-    const job = await this.prisma.job.findFirst({
-      where: {
-        id,
-        OR: [{ clientId: userId }, { freelancerId: userId }],
-      },
-      include: this.jobInclude,
-    });
+  async findOneForUser(id: number, userId: number, role: UserRole) {
+    const job =
+      role === UserRole.ADMIN
+        ? await this.prisma.job.findUnique({ where: { id }, include: this.jobInclude })
+        : await this.prisma.job.findFirst({
+            where: {
+              id,
+              OR: [{ clientId: userId }, { freelancerId: userId }],
+            },
+            include: this.jobInclude,
+          });
     if (!job) {
       throw new NotFoundException('Job not found');
     }
@@ -172,6 +177,14 @@ export class JobsService {
         include: this.jobInclude,
       })
       .then((job) => this.withFlatFields(job));
+  }
+
+  private async createEscrowRecord(jobId: number, amount?: Prisma.Decimal | null) {
+    await this.prisma.$executeRaw`
+      INSERT INTO "Escrow" ("jobId", status, amount, "createdAt", "updatedAt")
+      VALUES (${jobId}, 'PENDING', ${amount ?? null}, NOW(), NOW())
+      ON CONFLICT ("jobId") DO NOTHING
+    `;
   }
 
   private async ensureJobForFreelancer(id: number, userId: number) {

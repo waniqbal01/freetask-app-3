@@ -19,6 +19,11 @@ async function bootstrap() {
     const app = await NestFactory.create(AppModule, {
       bufferLogs: true,
     });
+
+    if (process.env.TRUST_PROXY === 'true') {
+      app.set('trust proxy', 1);
+      logger.log('Trust proxy enabled for forwarded headers');
+    }
     const isProduction = process.env.NODE_ENV === 'production';
     const configuredOrigins = getAllowedOrigins(logger, isProduction);
 
@@ -42,7 +47,8 @@ async function bootstrap() {
           return cb(null, true);
         }
         if (configuredOrigins.length === 0 && isProduction) {
-          return cb(new Error('CORS blocked: configure ALLOWED_ORIGINS or PUBLIC_BASE_URL'), false);
+          logger.warn(`CORS fallback: allowing ${normalizedOrigin} because ALLOWED_ORIGINS is not set.`);
+          return cb(null, true);
         }
         return cb(new Error(`CORS blocked origin: ${origin}`), false);
       },

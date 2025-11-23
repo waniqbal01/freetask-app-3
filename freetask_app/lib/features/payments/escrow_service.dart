@@ -1,114 +1,157 @@
-import 'dart:async';
+import 'package:dio/dio.dart';
 
 import '../../core/notifications/notification_service.dart';
+import '../../core/storage/storage.dart';
+import '../../services/http_client.dart';
+import '../auth/auth_repository.dart';
 
-/// Lightweight, in-memory mock for escrow state while backend endpoints are
-/// pending. This should not be treated as a persistent source of truth.
-enum EscrowStatus { held, released, refunded }
+enum EscrowStatus { pending, held, released, refunded }
 
-class EscrowRecordSummary {
-  const EscrowRecordSummary({
+class EscrowRecord {
+  EscrowRecord({
+    required this.id,
     required this.jobId,
-    required this.amount,
     required this.status,
-    required this.updatedAt,
+    required this.amount,
+    this.createdAt,
+    this.updatedAt,
   });
 
-  final String jobId;
-  final double amount;
-  final EscrowStatus status;
-  final DateTime updatedAt;
-}
-
-class _EscrowRecord {
-  _EscrowRecord({
-    required this.amount,
-    required this.status,
-    required this.updatedAt,
-  });
-
-  final double amount;
-  final EscrowStatus status;
-  final DateTime updatedAt;
-
-  _EscrowRecord copyWith({
-    double? amount,
-    EscrowStatus? status,
-    DateTime? updatedAt,
-  }) {
-    return _EscrowRecord(
-      amount: amount ?? this.amount,
-      status: status ?? this.status,
-      updatedAt: updatedAt ?? this.updatedAt,
+  factory EscrowRecord.fromJson(Map<String, dynamic> json) {
+    return EscrowRecord(
+      id: json['id']?.toString() ?? '',
+      jobId: json['jobId']?.toString() ?? json['job_id']?.toString() ?? '',
+      status: _parseStatus(json['status']),
+      amount: _parseAmount(json['amount']),
+      createdAt: _parseDate(json['createdAt'] ?? json['created_at']),
+      updatedAt: _parseDate(json['updatedAt'] ?? json['updated_at']),
     );
   }
+
+  final String id;
+  final String jobId;
+  final EscrowStatus status;
+  final double? amount;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  static EscrowStatus _parseStatus(dynamic status) {
+    final normalized = status?.toString().toUpperCase();
+    switch (normalized) {
+      case 'PENDING':
+        return EscrowStatus.pending;
+      case 'HELD':
+        return EscrowStatus.held;
+      case 'RELEASED':
+        return EscrowStatus.released;
+      case 'REFUNDED':
+        return EscrowStatus.refunded;
+      default:
+        return EscrowStatus.pending;
+    }
+  }
+
+  static double? _parseAmount(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    if (value is String && value.isNotEmpty) {
+      return double.tryParse(value);
+    }
+    return null;
+  }
+
+  static DateTime? _parseDate(dynamic value) {
+    if (value is DateTime) return value;
+    if (value is String && value.isNotEmpty) {
+      return DateTime.tryParse(value);
+    }
+    return null;
+  }
+}
+
+class EscrowUnavailable implements Exception {
+  EscrowUnavailable(this.message, {this.statusCode});
+  final String message;
+  final int? statusCode;
+
+  @override
+  String toString() => message;
 }
 
 class EscrowService {
-  EscrowService();
+  EscrowService({Dio? dio, AppStorage? storage})
+      : _dio = dio ?? HttpClient().dio,
+        _storage = storage ?? appStorage;
 
-  final Map<String, _EscrowRecord> _records = <String, _EscrowRecord>{};
+  final Dio _dio;
+  final AppStorage _storage;
 
-  Future<void> hold(String jobId, double amount) async {
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    _records[jobId] = _EscrowRecord(
-      amount: amount,
-      status: EscrowStatus.held,
-      updatedAt: DateTime.now(),
-    );
-  }
-
-  Future<void> release(String jobId) async {
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-    final record = _records[jobId];
-    if (record == null) {
-      return;
+  Future<EscrowRecord?> getEscrow(String jobId) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/escrow/$jobId',
+        options: await _authorizedOptions(),
+      );
+      final data = response.data;
+      if (data == null) return null;
+      return EscrowRecord.fromJson(data);
+    } on DioException catch (error) {
+      if (_isUnavailable(error)) {
+        throw EscrowUnavailable(
+          'Escrow belum tersedia / tiada akses.',
+          statusCode: error.response?.statusCode,
+        );
+      }
+      rethrow;
     }
-
-    _records[jobId] = record.copyWith(
-      status: EscrowStatus.released,
-      updatedAt: DateTime.now(),
-    );
-    notificationService.pushLocal(
-      'Pembayaran Dilepaskan',
-      'Dana untuk job $jobId telah dilepaskan.',
-    );
   }
 
-  Future<void> refund(String jobId) async {
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-    final record = _records[jobId];
-    if (record == null) {
-      return;
+  Future<EscrowRecord?> hold(String jobId) async {
+    return _mutate('/escrow/$jobId/hold', 'Dana dipegang untuk job $jobId.');
+  }
+
+  Future<EscrowRecord?> release(String jobId) async {
+    return _mutate('/escrow/$jobId/release', 'Dana dilepaskan untuk job $jobId.');
+  }
+
+  Future<EscrowRecord?> refund(String jobId) async {
+    return _mutate('/escrow/$jobId/refund', 'Dana dipulangkan untuk job $jobId.');
+  }
+
+  Future<EscrowRecord?> _mutate(String path, String notificationMessage) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        path,
+        options: await _authorizedOptions(),
+      );
+      final data = response.data;
+      if (data == null) return null;
+      final record = EscrowRecord.fromJson(data);
+      notificationService.pushLocal('Escrow', notificationMessage);
+      return record;
+    } on DioException catch (error) {
+      if (_isUnavailable(error)) {
+        throw EscrowUnavailable(
+          'Escrow belum tersedia / tiada akses.',
+          statusCode: error.response?.statusCode,
+        );
+      }
+      rethrow;
     }
-
-    _records[jobId] = record.copyWith(
-      status: EscrowStatus.refunded,
-      updatedAt: DateTime.now(),
-    );
   }
 
-  EscrowStatus? getStatus(String jobId) {
-    return _records[jobId]?.status;
+  bool _isUnavailable(DioException error) {
+    final status = error.response?.statusCode;
+    return status == 403 || status == 404;
   }
 
-  double? getAmount(String jobId) {
-    return _records[jobId]?.amount;
-  }
-
-  bool get isEmpty => _records.isEmpty;
-
-  List<EscrowRecordSummary> getAllRecords() {
-    return _records.entries
-        .map(
-          (MapEntry<String, _EscrowRecord> entry) => EscrowRecordSummary(
-            jobId: entry.key,
-            amount: entry.value.amount,
-            status: entry.value.status,
-            updatedAt: entry.value.updatedAt,
-          ),
-        )
-        .toList(growable: false);
+  Future<Options> _authorizedOptions() async {
+    final token = await _storage.read(AuthRepository.tokenStorageKey);
+    if (token == null || token.isEmpty) {
+      throw EscrowUnavailable('Token tidak ditemui. Sila log masuk semula.');
+    }
+    return Options(headers: <String, String>{'Authorization': 'Bearer $token'});
   }
 }
 

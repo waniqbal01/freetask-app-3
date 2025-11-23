@@ -41,8 +41,12 @@ export class JobsController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
-    return this.jobsService.findOneForUser(id, userId);
+  findOne(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('userId') userId: number,
+    @GetUser('role') role: UserRole,
+  ) {
+    return this.jobsService.findOneForUser(id, userId, role);
   }
 
   @Patch(':id/status')

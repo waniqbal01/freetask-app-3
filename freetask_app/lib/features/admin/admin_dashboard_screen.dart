@@ -15,8 +15,10 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   late Future<List<Job>> _jobsFuture;
-  List<EscrowRecordSummary> _escrowRecords = <EscrowRecordSummary>[];
-  Map<String, EscrowRecordSummary> _escrowByJob = <String, EscrowRecordSummary>{};
+  List<EscrowRecord> _escrowRecords = <EscrowRecord>[];
+  Map<String, EscrowRecord> _escrowByJob = <String, EscrowRecord>{};
+  String? _escrowError;
+  bool _isEscrowLoading = false;
 
   @override
   void initState() {
@@ -25,16 +27,64 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   void _loadData() {
-    _jobsFuture = jobsRepository.getAllJobs();
-    _escrowRecords = escrowService.getAllRecords();
-    _escrowByJob = <String, EscrowRecordSummary>{
-      for (final record in _escrowRecords) record.jobId: record,
-    };
+    _jobsFuture = _fetchJobs();
   }
 
   Future<void> _refreshDashboard() async {
     setState(_loadData);
     await _jobsFuture;
+  }
+
+  Future<List<Job>> _fetchJobs() async {
+    final jobs = await jobsRepository.getAllJobs();
+    await _hydrateEscrow(jobs);
+    return jobs;
+  }
+
+  Future<void> _hydrateEscrow(List<Job> jobs) async {
+    setState(() {
+      _isEscrowLoading = true;
+      _escrowError = null;
+    });
+
+    try {
+      final records = <EscrowRecord>[];
+      for (final job in jobs) {
+        final record = await escrowService.getEscrow(job.id);
+        if (record != null) {
+          records.add(record);
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _escrowRecords = records;
+        _escrowByJob = <String, EscrowRecord>{
+          for (final record in records) record.jobId: record,
+        };
+        _escrowError = null;
+      });
+    } on EscrowUnavailable catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _escrowError = error.message;
+        _escrowRecords = <EscrowRecord>[];
+        _escrowByJob = <String, EscrowRecord>{};
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _escrowError = 'Gagal memuat escrow: $error';
+        _escrowRecords = <EscrowRecord>[];
+        _escrowByJob = <String, EscrowRecord>{};
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isEscrowLoading = false;
+        });
+      }
+    }
   }
 
   String _jobStatusLabel(JobStatus status) {
@@ -78,6 +128,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   String _escrowStatusLabel(EscrowStatus status) {
     switch (status) {
+      case EscrowStatus.pending:
+        return 'Pending';
       case EscrowStatus.held:
         return 'Held';
       case EscrowStatus.released:
@@ -89,6 +141,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Color _escrowStatusColor(EscrowStatus status) {
     switch (status) {
+      case EscrowStatus.pending:
+        return Colors.blueGrey;
       case EscrowStatus.held:
         return Colors.orange;
       case EscrowStatus.released:
@@ -157,9 +211,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             const SizedBox(height: 16),
             ...jobs.map((Job job) {
-              final EscrowRecordSummary? escrow = _escrowByJob[job.id];
-              final String escrowLabel =
-                  escrow != null ? _escrowStatusLabel(escrow.status) : 'Tiada';
+              final EscrowRecord? escrow = _escrowByJob[job.id];
+              final String escrowLabel = escrow != null
+                  ? _escrowStatusLabel(escrow.status)
+                  : (_escrowError != null ? 'Tidak tersedia' : 'Tiada');
               final Color? escrowColor =
                   escrow != null ? _escrowStatusColor(escrow.status) : null;
 
@@ -223,11 +278,49 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildPaymentsSection() {
-    if (_escrowRecords.isEmpty) {
-      return const Card(
+    if (_escrowError != null) {
+      return Card(
         child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Text('Tiada data'),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _escrowError!,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(color: Colors.redAccent),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: _refreshDashboard,
+                child: const Text('Cuba semula'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_escrowRecords.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              if (_isEscrowLoading)
+                const Padding(
+                  padding: EdgeInsets.only(right: 8),
+                  child: SizedBox(
+                    height: 16,
+                    width: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              Text(_isEscrowLoading ? 'Memuat status escrow...' : 'Tiada data'),
+            ],
+          ),
         ),
       );
     }
@@ -237,7 +330,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: _escrowRecords.map((EscrowRecordSummary record) {
+          children: _escrowRecords.map((EscrowRecord record) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -246,7 +339,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 4),
-                Text('Jumlah dipegang: RM${record.amount.toStringAsFixed(2)}'),
+                Text(
+                  record.amount != null
+                      ? 'Jumlah dipegang: RM${record.amount!.toStringAsFixed(2)}'
+                      : 'Jumlah tidak tersedia',
+                ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
@@ -262,7 +359,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Dikemas kini: ${record.updatedAt.toLocal()}',
+                        record.updatedAt != null
+                            ? 'Dikemas kini: ${record.updatedAt!.toLocal()}'
+                            : 'Tarikh belum tersedia',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),

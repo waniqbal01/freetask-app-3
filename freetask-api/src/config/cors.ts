@@ -28,16 +28,13 @@ export function getAllowedOrigins(
     return [normalizedBase];
   }
 
+  const warningMessage =
+    '⚠️  ALLOWED_ORIGINS missing. Falling back to localhost/loopback patterns. Set ALLOWED_ORIGINS or PUBLIC_BASE_URL to lock down CORS.';
   if (isProduction) {
-    const message =
-      'ALLOWED_ORIGINS and PUBLIC_BASE_URL are required in production. Set ALLOWED_ORIGINS="https://app.freetask.my,https://admin.freetask.my" or PUBLIC_BASE_URL="https://app.freetask.my" before starting the server.';
-    logger.error(`🚫 ${message}`);
-    throw new Error(message);
+    logger.error(`🚫 ${warningMessage}`);
+  } else {
+    logger.warn(warningMessage);
   }
-
-  logger.warn(
-    '⚠️  ALLOWED_ORIGINS missing. Allowing common localhost origins for development only. Set ALLOWED_ORIGINS to secure.',
-  );
 
   return [
     'http://localhost:4000',

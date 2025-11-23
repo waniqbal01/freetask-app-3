@@ -23,6 +23,13 @@ enum JobStatus {
   DISPUTED
 }
 
+enum EscrowStatus {
+  PENDING
+  HELD
+  RELEASED
+  REFUNDED
+}
+
 model User {
   id           Int           @id @default(autoincrement())
   createdAt    DateTime      @default(now())
@@ -74,6 +81,7 @@ model Job {
   freelancerId   Int
   messages       ChatMessage[]
   review         Review?
+  escrow         Escrow?
 }
 
 model ChatMessage {
@@ -97,6 +105,16 @@ model Review {
   reviewerId    Int
   reviewee      User      @relation("RevieweeReviews", fields: [revieweeId], references: [id])
   revieweeId    Int
+}
+
+model Escrow {
+  id        Int           @id @default(autoincrement())
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  job       Job           @relation(fields: [jobId], references: [id])
+  jobId     Int           @unique
+  status    EscrowStatus  @default(PENDING)
+  amount    Decimal?      @db.Decimal(10, 2)
 }
 
 model Session {

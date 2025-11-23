@@ -16,20 +16,28 @@ npm install
 3. Update `.env` with your database connection, JWT secret, and `PUBLIC_BASE_URL`
    (e.g. `http://localhost:4000` for local dev, `http://192.168.x.x:4000` for LAN
    devices, or your production domain). The default `ALLOWED_ORIGINS` covers local
-   web/desktop testing. **Production boots will now fail fast if `ALLOWED_ORIGINS`
-   and `PUBLIC_BASE_URL` are empty—set at least one.**
+   web/desktop testing. In production, set `PUBLIC_BASE_URL` and `ALLOWED_ORIGINS`
+   explicitly; the server now boots with warnings when they are missing but will
+   still block unknown origins.
 4. Apply Prisma migrations:
 ```bash
 npx prisma migrate dev
 ```
-5. Seed demo data:
+5. Seed demo data (safe by default – no truncation unless `SEED_RESET=true`):
 ```bash
-SEED_FORCE=true npm run seed
+npm run seed
 ```
 6. Start development server:
 ```bash
 npm run start:dev
 ```
+
+## Production env checklist
+
+- `PUBLIC_BASE_URL` – set to your API origin; used to build absolute upload URLs.
+- `ALLOWED_ORIGINS` – explicit list of allowed frontends (e.g. admin + app domains).
+- `TRUST_PROXY=true` – enable when running behind ingress/reverse-proxy so forwarded
+  headers are trusted.
 
 Environment summary:
 
@@ -48,8 +56,8 @@ Environment summary:
   running behind reverse proxies/ingress that rewrite hosts
 - `TRUST_PROXY` – set to `true` to trust `X-Forwarded-*` headers for upload URL
   generation when behind a proxy
-- `SEED_FORCE` – set to `true` to allow seeding (dev auto-seeds an empty DB once)
-- `SEED_RESET` – set to `false` to preserve data on reseed; defaults to destructive mode
+- `SEED_FORCE` – set to `true` to allow seeding when data already exists (dev auto-seeds an empty DB once)
+- `SEED_RESET` – defaults to `false` (non-destructive). Set to `true` only when you intentionally want to wipe data.
 
 Demo credentials from the seed script:
 
@@ -113,8 +121,19 @@ between restarts.
   for all origins.
 - Uploads larger than 5MB or outside the allowed MIME list (jpeg/png/gif/pdf/doc/docx) are rejected.
 
+## API contract updates
+
+- `GET /jobs/:id` accepts `ADMIN` tokens to view any job. Non-admin users must still be the client
+  or freelancer or will receive `404/403`.
+- Escrow endpoints:
+  - `GET /escrow/:jobId` (admin, client, or freelancer) returns `{ id, jobId, status, amount, createdAt, updatedAt }`.
+  - `POST /escrow/:jobId/hold` → status transitions `PENDING -> HELD` (admin only).
+  - `POST /escrow/:jobId/release` or `POST /escrow/:jobId/refund` require current status `HELD` (admin only);
+    invalid transitions return `409` with a clear message.
+- Uploads remain publicly served from `/uploads/**` with a strict allowlist (images/PDF/DOC/DOCX) and 5MB limit.
+
 Seeding tips:
-- If the database already has data, rerun with `SEED_FORCE=true`. Add `SEED_RESET=false`
-  to keep existing rows while adding/updating seed records.
-- Default seeding is destructive when `SEED_RESET` is `true` (wipes reviews, chats,
+- If the database already has data, rerun with `SEED_FORCE=true`. Keep `SEED_RESET=false`
+  to preserve existing rows while adding/updating seed records.
+- Only set `SEED_RESET=true` for local/dev destructive reseeds (wipes reviews, chats,
   jobs, services, users before recreating).

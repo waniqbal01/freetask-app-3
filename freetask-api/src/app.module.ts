@@ -12,6 +12,7 @@ import { HealthController } from './health.controller';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard } from '@nestjs/throttler';
+import { EscrowModule } from './escrow/escrow.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
     ChatsModule,
     UploadsModule,
     ReviewsModule,
+    EscrowModule,
   ],
   controllers: [HealthController],
   providers: [
