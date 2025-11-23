@@ -91,20 +91,27 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
         description,
         serviceTitle: _title.isEmpty ? _summary['serviceTitle']?.toString() : _title,
       );
-      await escrowService.hold(job.id, job.amount);
+      try {
+        await escrowService.hold(job.id);
 
-      if (!mounted) {
-        return;
-      }
+        if (!mounted) {
+          return;
+        }
 
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            'Order ${job.id} dicipta. Dana (demo) RM${job.amount.toStringAsFixed(2)} dipegang untuk status Booked.',
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Order ${job.id} dicipta. Dana RM${job.amount.toStringAsFixed(2)} dipegang untuk status Booked.',
+            ),
           ),
-        ),
-      );
+        );
+      } on EscrowUnavailable catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
+      }
       await _showSuccessDialog();
       if (mounted) {
         context.go('/jobs');

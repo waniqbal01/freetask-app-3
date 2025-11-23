@@ -10,13 +10,14 @@ cd freetask-api
 cp .env.example .env
 npm install
 npx prisma migrate dev
-# Seed sample users/services
-SEED_FORCE=true npm run seed
+# Seed sample users/services (safe by default)
+npm run seed
 npm run start:dev
 ```
 
-**Do not skip envs in production** – the API now fails fast when
-`ALLOWED_ORIGINS`/`PUBLIC_BASE_URL` are missing.
+**Do not skip envs in production** – set `ALLOWED_ORIGINS`/`PUBLIC_BASE_URL` so the
+API can emit correct URLs and allow only intended origins. The server now warns when
+these are missing but will still block unknown origins.
 
 Copy/paste starter envs:
 
@@ -44,7 +45,8 @@ Copy/paste starter envs:
   ```
 
 Persist uploads between restarts by mounting/volume-binding the `./uploads` folder
-when running in Docker or on a host machine.
+when running in Docker or on a host machine. `/uploads/**` URLs are public by design
+for this MVP and limited to safe file types/5MB size.
 
 Demo logins from the seed:
 
@@ -107,6 +109,12 @@ Jobs
 2. As freelancer, accept → start → complete; client cannot call complete.
 3. Invalid transitions (e.g. complete from `PENDING`) return conflict messages.
 
+Escrow / Payments
+
+1. Admin can view any job detail and hit `POST /escrow/:jobId/hold` → status `HELD`.
+2. From `HELD`, admin can `release` or `refund` and status persists after restart.
+3. Non-admin participants calling escrow actions receive `403/404`; GET still works for participants when enabled.
+
 Chat
 
 1. Open a job chat from list: `/chats/:jobId/messages` should load messages.
@@ -114,8 +122,8 @@ Chat
 
 Uploads
 
-1. Upload valid JPG/PNG/PDF under 5MB – URL returned.
-2. Upload unsupported type or >5MB – API responds 400.
+1. Upload valid JPG/PNG/PDF/DOC/DOCX under 5MB – URL returned.
+2. Upload unsupported type or >5MB – API responds 400 and file is rejected.
 
 See [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md) for deployment hardening (env
 requirements, proxy headers, uploads volume, and seed usage guidance).

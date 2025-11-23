@@ -76,15 +76,19 @@ async function upsertJob(
 
 async function main() {
   const force = process.env.SEED_FORCE === 'true';
-  const reset = process.env.SEED_RESET !== 'false';
+  const reset = process.env.SEED_RESET === 'true';
   const isProd = process.env.NODE_ENV === 'production';
   const existingUsers = await prisma.user.count();
 
   const allowDevAutoSeed = !force && !isProd && existingUsers === 0;
 
+  if (force) {
+    console.warn('⚠️  SEED_FORCE enabled: existing data may be overwritten.');
+  }
+
   if (!force && !allowDevAutoSeed) {
     const message =
-      '❌ Seed blocked: database already has data. Set SEED_FORCE=true to rerun. Use SEED_RESET=false for non-destructive reseed.';
+      '❌ Seed blocked: database already has data. Set SEED_FORCE=true to rerun. Use SEED_RESET=true only when you are sure data can be wiped.';
     console.error(message);
     throw new Error(message);
   }
@@ -94,7 +98,7 @@ async function main() {
   }
 
   if (reset) {
-    console.warn('⚠️  Destructive seed: existing data will be wiped.');
+    console.warn('⚠️  Destructive seed enabled: existing data will be wiped.');
     await prisma.review.deleteMany();
     await prisma.chatMessage.deleteMany();
     await prisma.job.deleteMany();
@@ -210,6 +214,16 @@ async function main() {
       'Report missing agreed benchmarks.',
     ),
   ]);
+
+  await Promise.all(
+    jobs.map((job) =>
+      prisma.$executeRaw`
+        INSERT INTO "Escrow" ("jobId", status, amount, "createdAt", "updatedAt")
+        VALUES (${job.id}, 'PENDING', ${job.amount}, NOW(), NOW())
+        ON CONFLICT ("jobId") DO NOTHING
+      `,
+    ),
+  );
 
   await prisma.review.upsert({
     where: { jobId: jobs[4].id },

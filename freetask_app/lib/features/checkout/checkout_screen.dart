@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../payments/escrow_service.dart';
@@ -98,17 +99,33 @@ class CheckoutScreen extends StatelessWidget {
                         return;
                       }
 
-                      await escrowService.hold(jobId, price);
+                      try {
+                        await escrowService.hold(jobId);
 
-                      if (!context.mounted) return;
+                        if (!context.mounted) return;
 
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Dana (demo) RM${price.toStringAsFixed(2)} dipegang untuk status Booked job $jobId.',
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Dana RM${price.toStringAsFixed(2)} dipegang untuk status Booked job $jobId.',
+                            ),
                           ),
-                        ),
-                      );
+                        );
+                      } on EscrowUnavailable catch (error) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(error.message)),
+                        );
+                      } on DioException catch (error) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              error.response?.data.toString() ?? 'Ralat escrow.',
+                            ),
+                          ),
+                        );
+                      }
                     },
                     child: const Text('Teruskan Pembayaran'),
                   ),

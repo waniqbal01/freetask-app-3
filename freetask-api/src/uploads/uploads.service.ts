@@ -100,6 +100,12 @@ export class UploadsService {
     return allowed.includes(mimeType.toLowerCase());
   }
 
+  static isAllowedExtension(extension: string) {
+    const normalized = extension.toLowerCase();
+    const allowed = ['.jpg', '.jpeg', '.png', '.gif', '.pdf', '.doc', '.docx'];
+    return allowed.includes(normalized);
+  }
+
   static sanitizeBaseName(originalName: string) {
     const normalized = basename(originalName).replace(/[/\\]+/g, '');
     const base = normalized.replace(extname(normalized), '').replace(/\s+/g, '-');

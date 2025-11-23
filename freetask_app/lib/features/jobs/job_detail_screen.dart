@@ -9,6 +9,7 @@ import '../../models/job.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/section_card.dart';
 import '../auth/auth_repository.dart';
+import '../payments/escrow_service.dart';
 import 'jobs_repository.dart';
 import 'widgets/job_status_badge.dart';
 
@@ -40,7 +41,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   Job? _job;
   bool _isLoading = false;
   bool _isProcessing = false;
+  bool _isEscrowProcessing = false;
+  bool _isEscrowLoading = false;
   String? _errorMessage;
+  String? _escrowError;
+  EscrowRecord? _escrow;
   String? _userRole;
   String? _userId;
   bool _isUserLoading = true;
@@ -56,6 +61,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     _job = widget.initialJob;
     _hydrateUser();
     _loadJobIfNeeded();
+    _fetchEscrow();
   }
 
   Future<void> _hydrateUser() async {
@@ -89,6 +95,43 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     await _fetchJob();
   }
 
+  Future<void> _fetchEscrow() async {
+    setState(() {
+      _isEscrowLoading = true;
+      _escrowError = null;
+    });
+
+    try {
+      final record = await escrowService.getEscrow(widget.jobId);
+      if (!mounted) return;
+      setState(() {
+        _escrow = record;
+      });
+    } on EscrowUnavailable catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _escrow = null;
+        _escrowError = error.message;
+      });
+    } on DioException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _escrowError = resolveDioErrorMessage(error);
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _escrowError = 'Gagal memuat escrow: $error';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isEscrowLoading = false;
+        });
+      }
+    }
+  }
+
   Future<void> _fetchJob() async {
     setState(() {
       _isLoading = true;
@@ -106,10 +149,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       setState(() {
         _job = job;
       });
+      await _fetchEscrow();
     } on DioException catch (error) {
       if (!mounted) return;
+      final status = error.response?.statusCode;
       setState(() {
-        _errorMessage = resolveDioErrorMessage(error);
+        _errorMessage = (status == 403 || status == 404)
+            ? 'Admin access blocked atau job tidak sah.'
+            : resolveDioErrorMessage(error);
       });
     } catch (error) {
       if (!mounted) return;
@@ -172,6 +219,51 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
   }
 
+  Future<void> _handleEscrowAction(
+    Future<EscrowRecord?> Function() action,
+    String successMessage,
+  ) async {
+    if (_isEscrowProcessing) return;
+    setState(() {
+      _isEscrowProcessing = true;
+      _escrowError = null;
+    });
+
+    try {
+      final updated = await action();
+      if (!mounted) return;
+      setState(() {
+        _isEscrowProcessing = false;
+        _escrow = updated ?? _escrow;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(successMessage)),
+      );
+    } on EscrowUnavailable catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isEscrowProcessing = false;
+        _escrowError = error.message;
+      });
+    } on DioException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isEscrowProcessing = false;
+        _escrowError = resolveDioErrorMessage(error);
+      });
+      showErrorSnackBar(context, resolveDioErrorMessage(error));
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isEscrowProcessing = false;
+        _escrowError = 'Ralat escrow: $error';
+      });
+      showErrorSnackBar(context, 'Ralat escrow: $error');
+    } finally {
+      await _fetchEscrow();
+    }
+  }
+
   Future<String?> _promptDisputeReason() async {
     final controller = TextEditingController();
     final reason = await showDialog<String>(
@@ -223,6 +315,36 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       return 'Jumlah tidak sah / sila refresh';
     }
     return 'RM${job.amount.toStringAsFixed(2)}';
+  }
+
+  String _escrowStatusLabel(EscrowStatus? status) {
+    switch (status) {
+      case EscrowStatus.pending:
+        return 'Pending';
+      case EscrowStatus.held:
+        return 'Held';
+      case EscrowStatus.released:
+        return 'Released';
+      case EscrowStatus.refunded:
+        return 'Refunded';
+      default:
+        return '—';
+    }
+  }
+
+  Color _escrowStatusColor(EscrowStatus? status) {
+    switch (status) {
+      case EscrowStatus.pending:
+        return Colors.blueGrey;
+      case EscrowStatus.held:
+        return Colors.orange;
+      case EscrowStatus.released:
+        return Colors.green;
+      case EscrowStatus.refunded:
+        return Colors.redAccent;
+      default:
+        return Colors.grey;
+    }
   }
 
   List<Widget> _buildActions(Job job) {
@@ -345,6 +467,117 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return actions;
   }
 
+  Widget _buildEscrowSection(TextTheme textTheme) {
+    final isAdmin = _userRole?.toUpperCase() == 'ADMIN';
+    final record = _escrow;
+    final statusLabel = _escrowStatusLabel(record?.status);
+    final statusColor = _escrowStatusColor(record?.status);
+    final List<Widget> actions = <Widget>[];
+
+    if (isAdmin && _escrowError == null && !_isEscrowLoading) {
+      if (record?.status == EscrowStatus.pending) {
+        actions.add(
+          FTButton(
+            label: 'Hold',
+            size: FTButtonSize.small,
+            expanded: false,
+            isLoading: _isEscrowProcessing,
+            onPressed: () => _handleEscrowAction(
+              () => escrowService.hold(widget.jobId),
+              'Dana dipegang untuk job ${widget.jobId}.',
+            ),
+          ),
+        );
+      }
+      if (record?.status == EscrowStatus.held) {
+        actions.addAll([
+          FTButton(
+            label: 'Release',
+            size: FTButtonSize.small,
+            expanded: false,
+            isLoading: _isEscrowProcessing,
+            onPressed: () => _handleEscrowAction(
+              () => escrowService.release(widget.jobId),
+              'Dana dilepaskan.',
+            ),
+          ),
+          const SizedBox(width: AppSpacing.s8),
+          FTButton(
+            label: 'Refund',
+            size: FTButtonSize.small,
+            expanded: false,
+            isLoading: _isEscrowProcessing,
+            onPressed: () => _handleEscrowAction(
+              () => escrowService.refund(widget.jobId),
+              'Dana dipulangkan.',
+            ),
+          ),
+        ]);
+      }
+    }
+
+    return SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Escrow',
+                style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              if (_isEscrowLoading)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s8),
+          Wrap(
+            spacing: AppSpacing.s8,
+            runSpacing: AppSpacing.s8,
+            children: [
+              Chip(
+                label: Text(statusLabel),
+                backgroundColor: statusColor.withValues(alpha: 0.12),
+                labelStyle: TextStyle(
+                  color: statusColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Chip(
+                label: Text(
+                  record?.amount != null
+                      ? 'Jumlah: RM${record!.amount!.toStringAsFixed(2)}'
+                      : 'Jumlah belum tersedia',
+                ),
+              ),
+            ],
+          ),
+          if (_escrowError != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.s8),
+              child: Text(
+                _escrowError!,
+                style: textTheme.bodyMedium?.copyWith(color: Colors.redAccent),
+              ),
+            ),
+          if (actions.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.s12),
+            Wrap(
+              spacing: AppSpacing.s8,
+              runSpacing: AppSpacing.s8,
+              children: actions,
+            ),
+          ]
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -369,10 +602,20 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.s16),
-              FTButton(
-                label: 'Cuba lagi',
-                onPressed: _fetchJob,
-                expanded: false,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    child: const Text('Kembali'),
+                  ),
+                  const SizedBox(width: AppSpacing.s12),
+                  FTButton(
+                    label: 'Cuba lagi',
+                    onPressed: _fetchJob,
+                    expanded: false,
+                  ),
+                ],
               ),
             ],
           ),
@@ -521,6 +764,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: AppSpacing.s16),
+              _buildEscrowSection(textTheme),
             ],
           ),
         ),
@@ -541,7 +786,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         child: Stack(
           children: [
             body,
-            if (_isProcessing) ...[
+            if (_isProcessing || _isEscrowProcessing) ...[
               const LoadingOverlay(
                 message: 'Memproses tindakan...',
                 backgroundOpacity: 0.3,

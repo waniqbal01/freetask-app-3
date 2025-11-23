@@ -10,6 +10,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { Request } from 'express';
+import { extname } from 'path';
 import { UploadsService } from './uploads.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -32,6 +33,14 @@ export class UploadsController {
             new BadRequestException(
               'Fail tidak disokong. Hanya imej dan dokumen PDF/DOC dibenarkan.',
             ),
+            false,
+          );
+        }
+
+        const fileExt = extname(file.originalname || '').toLowerCase();
+        if (!UploadsService.isAllowedExtension(fileExt)) {
+          return cb(
+            new BadRequestException('Jenis fail tidak dibenarkan. Hanya gambar/PDF/DOC.'),
             false,
           );
         }
