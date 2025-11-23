@@ -30,12 +30,23 @@ class JobsRepository {
         throw StateError('ID servis tidak sah.');
       }
 
+      final trimmedDescription = description.trim();
+      final normalizedAmount = double.parse(amount.toStringAsFixed(2));
+
+      if (trimmedDescription.length < 5) {
+        throw StateError('Penerangan perlu sekurang-kurangnya 5 aksara.');
+      }
+
+      if (normalizedAmount < 0.01) {
+        throw StateError('Jumlah minima ialah RM0.01.');
+      }
+
       final response = await _dio.post<Map<String, dynamic>>(
         '/jobs',
         data: <String, dynamic>{
           'serviceId': parsedServiceId,
-          'amount': amount,
-          'description': description,
+          'amount': normalizedAmount,
+          'description': trimmedDescription,
           'title': (serviceTitle == null || serviceTitle.isEmpty)
               ? null
               : serviceTitle,
@@ -224,6 +235,14 @@ class JobsRepository {
   Future<void> _handleDioError(DioException error) async {
     if (error.response?.statusCode == 401) {
       await authRepository.logout();
+      return;
+    }
+
+    if (error.response?.statusCode == 400 || error.response?.statusCode == 404) {
+      final message = _extractErrorMessage(error);
+      notificationService.messengerKey.currentState?.showSnackBar(
+        SnackBar(content: Text(message.isEmpty ? 'Permintaan tidak sah.' : message)),
+      );
     }
   }
 

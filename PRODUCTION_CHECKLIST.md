@@ -2,7 +2,7 @@
 
 - **Environment variables**
   - `DATABASE_URL` points to production Postgres
-  - `JWT_SECRET` is strong and non-empty; `JWT_EXPIRES_IN` set per policy
+  - `JWT_SECRET` is strong and non-empty; `JWT_ACCESS_EXPIRES_IN`/`JWT_REFRESH_EXPIRES_IN` set per policy
   - `PUBLIC_BASE_URL` set to the externally reachable API URL (e.g. `https://api.example.com`)
   - `ALLOWED_ORIGINS` lists exact front-end origins (web, Flutter web, desktop wrappers)
   - `PORT` configured for your runtime; `NODE_ENV=production`

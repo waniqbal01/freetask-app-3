@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
@@ -23,9 +25,19 @@ class HttpClient {
             connectTimeout: const Duration(seconds: 10),
             receiveTimeout: const Duration(seconds: 20),
           ),
+        ),
+        _refreshDio = Dio(
+          BaseOptions(
+            baseUrl: Env.defaultApiBaseUrl,
+            connectTimeout: const Duration(seconds: 10),
+            receiveTimeout: const Duration(seconds: 20),
+          ),
         ) {
     _baseUrlFuture = _baseUrlStore.readBaseUrl();
-    _baseUrlFuture.then((base) => dio.options.baseUrl = base);
+    _baseUrlFuture.then((base) {
+      dio.options.baseUrl = base;
+      _refreshDio.options.baseUrl = base;
+    });
 
     dio.interceptors.add(
       InterceptorsWrapper(
@@ -44,34 +56,30 @@ class HttpClient {
         },
         onError: (DioException error, ErrorInterceptorHandler handler) async {
           final status = error.response?.statusCode ?? 0;
-          final isPublicRequest = _isPublicRequest(error.requestOptions);
-          final hadAuthHeader =
-              error.requestOptions.headers['Authorization']?.toString().isNotEmpty ?? false;
-          final alreadyRetried = error.requestOptions.extra['__retried'] == true;
-          final isAuthRelevant = !isPublicRequest && (hadAuthHeader || !_isNetworkFailure(error));
 
-          if ((status == 401 || status == 403 || status == 419) && isAuthRelevant) {
-            if (!alreadyRetried) {
-              try {
-                await Future<void>.delayed(const Duration(milliseconds: 450));
-                final retryResponse = await dio.fetch<dynamic>(
-                  error.requestOptions..extra['__retried'] = true,
-                );
-                return handler.resolve(retryResponse);
-              } on DioException catch (retryError) {
-                final retryStatus = retryError.response?.statusCode ?? status;
-                if (retryStatus == 401 || retryStatus == 403 || retryStatus == 419) {
-                  await _handleAuthFailure(retryStatus);
+          if (status == 401) {
+            if (await _shouldAttemptRefresh(error.requestOptions)) {
+              final refreshed = await _refreshAccessToken();
+              if (refreshed) {
+                try {
+                  final retryOptions = error.requestOptions
+                    ..headers['Authorization'] =
+                        'Bearer ${await _storage.read(AuthRepository.tokenStorageKey)}'
+                    ..extra['__retriedAfterRefresh'] = true;
+
+                  final retryResponse = await dio.fetch<dynamic>(retryOptions);
+                  return handler.resolve(retryResponse);
+                } on DioException catch (retryError) {
                   return handler.next(retryError);
                 }
-                return handler.next(retryError);
-              } catch (_) {
-                await _handleAuthFailure(status);
-                return handler.next(error);
               }
             }
 
-            await _handleAuthFailure(status);
+            if (!_isAuthEndpoint(error.requestOptions)) {
+              await _handleSessionExpired();
+            }
+          } else if (status == 403) {
+            _showForbiddenMessage();
           }
 
           handler.next(error);
@@ -84,6 +92,7 @@ class HttpClient {
     await _baseUrlStore.saveBaseUrl(value);
     _baseUrlFuture = _baseUrlStore.readBaseUrl();
     dio.options.baseUrl = await _baseUrlFuture;
+    _refreshDio.options.baseUrl = dio.options.baseUrl;
   }
 
   Future<String> currentBaseUrl() async {
@@ -91,33 +100,31 @@ class HttpClient {
   }
 
   Future<void> _clearStoredTokens() async {
+    _sessionHandled = false;
     await _storage.delete(AuthRepository.tokenStorageKey);
     await _storage.delete(AuthRepository.legacyTokenStorageKey);
+    await _storage.delete(AuthRepository.refreshTokenStorageKey);
   }
 
-  Future<void> _handleMissingToken() async {
+  Future<void> _handleSessionExpired() async {
+    if (_sessionHandled) {
+      return;
+    }
+    _sessionHandled = true;
     notificationService.messengerKey.currentState?.showSnackBar(
       const SnackBar(content: Text('Sesi tamat. Sila log masuk semula.')),
-    );
-    await _clearStoredTokens();
-    authRefreshNotifier.value = DateTime.now();
-    appRouter.go('/login');
-  }
-
-  Future<void> _handleAuthFailure(int status) async {
-    notificationService.messengerKey.currentState?.showSnackBar(
-      SnackBar(
-        content: Text(status == 403
-            ? 'Anda tidak dibenarkan untuk tindakan ini.'
-            : 'Sesi tamat, sila log masuk semula.'),
-        duration: const Duration(seconds: 3),
-      ),
     );
     await _clearStoredTokens();
     authRefreshNotifier.value = DateTime.now();
     if (!kIsWeb || appRouter.canPop()) {
       appRouter.go('/login');
     }
+  }
+
+  void _showForbiddenMessage() {
+    notificationService.messengerKey.currentState?.showSnackBar(
+      const SnackBar(content: Text('Anda tidak dibenarkan untuk tindakan ini.')),
+    );
   }
 
   Future<String?> _readTokenWithMigration() async {
@@ -140,10 +147,61 @@ class HttpClient {
     return options.method.toUpperCase() == 'GET' && options.path.startsWith('/services');
   }
 
-  bool _isNetworkFailure(DioException error) {
-    return error.type == DioExceptionType.connectionError ||
-        error.type == DioExceptionType.connectionTimeout ||
-        error.type == DioExceptionType.receiveTimeout;
+  bool _isAuthEndpoint(RequestOptions options) {
+    return options.path.startsWith('/auth/login') ||
+        options.path.startsWith('/auth/register') ||
+        options.path.startsWith('/auth/refresh');
+  }
+
+  Future<bool> _shouldAttemptRefresh(RequestOptions requestOptions) async {
+    if (requestOptions.extra['__retriedAfterRefresh'] == true) {
+      return false;
+    }
+    if (_isAuthEndpoint(requestOptions) || _isPublicRequest(requestOptions)) {
+      return false;
+    }
+    final refreshToken = await _storage.read(AuthRepository.refreshTokenStorageKey);
+    return refreshToken != null && refreshToken.isNotEmpty;
+  }
+
+  Future<bool> _refreshAccessToken() async {
+    if (_refreshing != null) {
+      return _refreshing!;
+    }
+
+    final refreshToken = await _storage.read(AuthRepository.refreshTokenStorageKey);
+    if (refreshToken == null || refreshToken.isEmpty) {
+      return false;
+    }
+
+    final completer = Completer<bool>();
+    _refreshing = completer.future;
+    try {
+      final response = await _refreshDio.post<Map<String, dynamic>>(
+        '/auth/refresh',
+        data: <String, dynamic>{'refreshToken': refreshToken},
+      );
+
+      final data = response.data;
+      final newAccess = data?['accessToken']?.toString();
+      final newRefresh = data?['refreshToken']?.toString();
+      if (newAccess == null || newAccess.isEmpty || newRefresh == null || newRefresh.isEmpty) {
+        completer.complete(false);
+        return completer.future;
+      }
+
+      await _storage.write(AuthRepository.tokenStorageKey, newAccess);
+      await _storage.write(AuthRepository.refreshTokenStorageKey, newRefresh);
+      _sessionHandled = false;
+      authRefreshNotifier.value = DateTime.now();
+      completer.complete(true);
+    } catch (_) {
+      completer.complete(false);
+    } finally {
+      _refreshing = null;
+    }
+
+    return completer.future;
   }
 
   static HttpClient? _instance;
@@ -151,4 +209,7 @@ class HttpClient {
   final BaseUrlStore _baseUrlStore;
   final AppStorage _storage;
   final Dio dio;
+  final Dio _refreshDio;
+  Future<bool>? _refreshing;
+  bool _sessionHandled = false;
 }

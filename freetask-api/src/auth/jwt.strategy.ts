@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor() {
+  constructor(private readonly prisma: PrismaService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -12,7 +13,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: { sub: number; role: string }) {
-    return { id: payload.sub, userId: payload.sub, role: payload.role };
+  async validate(payload: { sub: number; role: string; sid?: number }) {
+    if (!payload.sid) {
+      throw new UnauthorizedException('Sesi tidak sah');
+    }
+
+    const session = await this.prisma.session.findUnique({ where: { id: payload.sid } });
+
+    if (!session || session.revoked || session.refreshTokenExpiresAt.getTime() < Date.now()) {
+      throw new UnauthorizedException('Sesi telah tamat. Sila log masuk semula.');
+    }
+
+    return { id: payload.sub, userId: payload.sub, role: payload.role, sessionId: payload.sid };
   }
 }

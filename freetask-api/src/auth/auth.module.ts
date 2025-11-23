@@ -14,7 +14,9 @@ import { JwtStrategy } from './jwt.strategy';
         }
         return {
           secret: process.env.JWT_SECRET,
-          signOptions: { expiresIn: process.env.JWT_EXPIRES_IN || '7d' },
+          signOptions: {
+            expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '30m',
+          },
         };
       },
     }),

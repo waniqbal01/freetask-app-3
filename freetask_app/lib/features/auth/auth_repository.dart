@@ -11,6 +11,7 @@ class AuthRepository {
 
   static const tokenStorageKey = 'auth_token';
   static const legacyTokenStorageKey = 'access_token';
+  static const refreshTokenStorageKey = 'refresh_token';
 
   final AppStorage _storage;
   final Dio _dio;
@@ -29,10 +30,11 @@ class AuthRepository {
       );
       final data = response.data;
       final token = data?['accessToken']?.toString();
-      if (token == null || token.isEmpty) {
+      final refreshToken = data?['refreshToken']?.toString();
+      if (token == null || token.isEmpty || refreshToken == null || refreshToken.isEmpty) {
         return false;
       }
-      await _saveToken(token);
+      await _saveTokens(token, refreshToken);
       final userJson = data?['user'];
       if (userJson is Map<String, dynamic>) {
         _cachedUser = AppUser.fromJson(userJson);
@@ -54,8 +56,9 @@ class AuthRepository {
       );
       final data = response.data;
       final token = data?['accessToken']?.toString();
-      if (token != null && token.isNotEmpty) {
-        await _saveToken(token);
+      final refreshToken = data?['refreshToken']?.toString();
+      if (token != null && token.isNotEmpty && refreshToken != null && refreshToken.isNotEmpty) {
+        await _saveTokens(token, refreshToken);
       }
       final userJson = data?['user'];
       if (userJson is Map<String, dynamic>) {
@@ -119,6 +122,10 @@ class AuthRepository {
     return token;
   }
 
+  Future<String?> getSavedRefreshToken() {
+    return _storage.read(refreshTokenStorageKey);
+  }
+
   Future<void> logout() async {
     final token = await _storage.read(tokenStorageKey);
     try {
@@ -134,6 +141,7 @@ class AuthRepository {
       _cachedUser = null;
       await _storage.delete(tokenStorageKey);
       await _storage.delete(legacyTokenStorageKey);
+      await _storage.delete(refreshTokenStorageKey);
     }
   }
 
@@ -141,8 +149,9 @@ class AuthRepository {
     return <String, String>{'Authorization': 'Bearer $token'};
   }
 
-  Future<void> _saveToken(String token) {
-    return _storage.write(tokenStorageKey, token);
+  Future<void> _saveTokens(String token, String refreshToken) async {
+    await _storage.write(tokenStorageKey, token);
+    await _storage.write(refreshTokenStorageKey, refreshToken);
   }
 
   Map<String, dynamic> _buildRegisterPayload(Map<String, dynamic> payload) {

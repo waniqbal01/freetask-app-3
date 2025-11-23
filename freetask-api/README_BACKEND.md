@@ -34,7 +34,8 @@ Environment summary:
 
 - `DATABASE_URL` – Postgres connection string
 - `JWT_SECRET` – secret for signing tokens
-- `JWT_EXPIRES_IN` – expiry duration (e.g. `7d`)
+- `JWT_ACCESS_EXPIRES_IN` – access token lifetime (default `30m`)
+- `JWT_REFRESH_EXPIRES_IN` – refresh token lifetime (default `14d`)
 - `ALLOWED_ORIGINS` – comma-separated list of allowed CORS origins (dev falls back to
   common localhost/lan URLs if empty, including `http://192.168.*.*` and emulator
   hosts such as `http://10.0.2.2:*`)
