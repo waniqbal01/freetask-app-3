@@ -25,9 +25,8 @@ export class CreateJobDto {
   @MinLength(5)
   description: string;
 
-  @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
-  amount?: number;
+  amount: number;
 }

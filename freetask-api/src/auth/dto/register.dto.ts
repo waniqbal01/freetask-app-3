@@ -1,5 +1,14 @@
 import { Type, Transform } from 'class-transformer';
-import { IsArray, IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsArray,
+  IsEmail,
+  IsIn,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 export class RegisterDto {
   @IsEmail()
@@ -14,6 +23,8 @@ export class RegisterDto {
 
   @IsString()
   @IsNotEmpty()
+  @IsIn(['CLIENT', 'FREELANCER'], { message: 'Role must be CLIENT or FREELANCER' })
+  @Transform(({ value }) => value?.toString().toUpperCase())
   role: string;
 
   @IsOptional()

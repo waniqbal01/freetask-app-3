@@ -52,3 +52,43 @@ per platform, but you can override them using `API_BASE_URL`:
 
 For web/desktop testing, ensure your browser origin (e.g. `http://localhost:3000` or
 `http://localhost:5173`) appears in `ALLOWED_ORIGINS` when running the API in production.
+
+## Readiness checklist (RED → GREEN)
+
+- [x] Public registration locked to `CLIENT`/`FREELANCER` roles only.
+- [x] JWT secret + expiry enforced at startup (fails fast when missing).
+- [x] Chat routes aligned to `/chats/:jobId/messages` on API + Flutter.
+- [x] API base URL configurable per platform via `--dart-define=API_BASE_URL`.
+- [x] CORS honours explicit `ALLOWED_ORIGINS` (required in production).
+- [x] Job creation payload requires amount/description with safe Decimal casting.
+- [x] Uploads constrained by size/MIME with sanitized filenames.
+- [x] Global rate limiter enabled (30 req/min default) beyond auth.
+- [x] Login screen documents seed credentials for quick QA.
+
+## Manual E2E test guide
+
+Auth
+
+1. `POST /auth/register` with role `ADMIN` should return 400; `CLIENT`/`FREELANCER` should succeed.
+2. Missing `JWT_SECRET` in `.env` should prevent the API from starting.
+
+Jobs
+
+1. Create job from Flutter (client) with title/description/amount – succeeds.
+2. As freelancer, accept → start → complete; client cannot call complete.
+3. Invalid transitions (e.g. complete from `PENDING`) return conflict messages.
+
+Chat
+
+1. Open a job chat from list: `/chats/:jobId/messages` should load messages.
+2. Sending a message appends to the same thread without 404s.
+
+Uploads
+
+1. Upload valid JPG/PNG/PDF under 5MB – URL returned.
+2. Upload unsupported type or >5MB – API responds 400.
+
+Env & onboarding
+
+1. Backend: `cp .env.example .env && npm install && npx prisma migrate dev && npm run seed && npm run start:dev`.
+2. Flutter: `flutter pub get` then `flutter run --dart-define=API_BASE_URL=http://10.0.2.2:4000` (emulator) or your host.

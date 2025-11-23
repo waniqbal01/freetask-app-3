@@ -45,7 +45,7 @@ final appRouter = GoRouter(
     final isAuthPage = ['/login', '/register', '/role-selection'].contains(location);
     final isStartup = location == '/startup' || location == '/';
     final needsAuth =
-        location.startsWith('/jobs') || location.startsWith('/chat') || location.startsWith('/admin');
+        location.startsWith('/jobs') || location.startsWith('/chats') || location.startsWith('/admin');
 
     final tokenExists = await hasToken();
 
@@ -114,15 +114,15 @@ final appRouter = GoRouter(
       },
     ),
     GoRoute(
-      path: '/chat',
+      path: '/chats',
       builder: (BuildContext context, GoRouterState state) {
         return const ChatListScreen();
       },
     ),
     GoRoute(
-      path: '/chat/:id',
+      path: '/chats/:jobId/messages',
       builder: (BuildContext context, GoRouterState state) {
-        final chatId = state.pathParameters['id'] ?? 'unknown';
+        final chatId = state.pathParameters['jobId'] ?? 'unknown';
         return ChatRoomScreen(chatId: chatId);
       },
     ),

@@ -44,7 +44,7 @@ Demo credentials from the seed script:
 - Freelancers: `freelancer1@example.com`, `freelancer2@example.com` (password `Password123!`)
 
 Swagger is available at `http://localhost:4000/api` when running.
-Ensure the `./uploads` folder is persisted or mounted in deployments so uploaded files remain available.
+ Ensure the `./uploads` folder is persisted or mounted in deployments so uploaded files remain available.
 
 ## Platform base URLs & CORS
 
@@ -60,3 +60,5 @@ If `ALLOWED_ORIGINS` is empty during local development, the server will auto-all
 ### Troubleshooting
 - Ensure `DATABASE_URL` points to a running Postgres instance.
 - Set `JWT_SECRET` to a non-empty value; the app will refuse to start otherwise.
+- In production, `ALLOWED_ORIGINS` must be set explicitly; missing values will stop the app from booting.
+- Uploads larger than 5MB or outside the allowed MIME list (jpeg/png/gif/pdf/doc/docx) are rejected.

@@ -167,6 +167,9 @@ class AuthRepository {
       data[key] = value;
     }
 
+    if (payload.containsKey('avatarUrl')) {
+      data['avatarUrl'] = payload['avatarUrl'];
+    }
     addOptional('avatar');
     addOptional('bio');
     addOptional('skills');
