@@ -155,7 +155,7 @@ final appRouter = GoRouter(
       builder: (BuildContext context, GoRouterState state) {
         final extras = state.extra as Map<String, dynamic>?;
         final job = extras?['job'] as Job?;
-        final isClientView = extras?['isClientView'] as bool? ?? true;
+        final isClientView = extras?['isClientView'] as bool?;
         final jobId = state.pathParameters['id'] ?? 'unknown';
         return JobDetailScreen(
           jobId: jobId,

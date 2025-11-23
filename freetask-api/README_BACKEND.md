@@ -16,7 +16,8 @@ npm install
 3. Update `.env` with your database connection, JWT secret, and `PUBLIC_BASE_URL`
    (e.g. `http://localhost:4000` for local dev, `http://192.168.x.x:4000` for LAN
    devices, or your production domain). The default `ALLOWED_ORIGINS` covers local
-   web/desktop testing.
+   web/desktop testing. **Production boots will now fail fast if `ALLOWED_ORIGINS`
+   and `PUBLIC_BASE_URL` are empty—set at least one.**
 4. Apply Prisma migrations:
 ```bash
 npx prisma migrate dev
@@ -38,7 +39,8 @@ Environment summary:
 - `JWT_REFRESH_EXPIRES_IN` – refresh token lifetime (default `14d`)
 - `ALLOWED_ORIGINS` – comma-separated list of allowed CORS origins (dev falls back to
   common localhost/lan URLs if empty, including `http://192.168.*.*` and emulator
-  hosts such as `http://10.0.2.2:*`)
+  hosts such as `http://10.0.2.2:*`). **Required in production unless
+  `PUBLIC_BASE_URL` is set.**
 - `PORT` – defaults to `4000`
 - `PUBLIC_BASE_URL` – required in production to build absolute upload URLs (set to
   your API origin, e.g. `https://api.example.com`)
@@ -77,7 +79,32 @@ origins and warn loudly—set `ALLOWED_ORIGINS` (or `PUBLIC_BASE_URL`) to avoid 
 
 When `PUBLIC_BASE_URL` is set, the upload URL host is enforced. Disable enforcement via
 `PUBLIC_BASE_URL_STRICT=false` or set `TRUST_PROXY=true` to respect `X-Forwarded-Host`
-and `X-Forwarded-Proto` headers if running behind ingress/reverse proxy.
+and `X-Forwarded-Proto` headers if running behind ingress/reverse proxy. Persist the
+`./uploads` directory via a Docker volume or host bind mount to avoid losing files
+between restarts.
+
+### Env presets
+
+- **Local dev (web + emulator)**
+
+  ```env
+  PUBLIC_BASE_URL=http://localhost:4000
+  ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://10.0.2.2:3000,http://localhost:4000,http://127.0.0.1:4000
+  ```
+
+- **Staging / LAN**
+
+  ```env
+  PUBLIC_BASE_URL=http://192.168.0.10:4000
+  ALLOWED_ORIGINS=http://192.168.0.10:4000,http://10.0.2.2:4000
+  ```
+
+- **Production (web)**
+
+  ```env
+  PUBLIC_BASE_URL=https://api.freetask.my
+  ALLOWED_ORIGINS=https://app.freetask.my,https://admin.freetask.my
+  ```
 
 ### Troubleshooting
 - Ensure `DATABASE_URL` points to a running Postgres instance.

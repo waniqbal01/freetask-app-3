@@ -30,6 +30,24 @@ Add your frontend origin to the API `ALLOWED_ORIGINS` if running the backend in 
 - Android emulator webviews: `http://10.0.2.2:3000`
 - iOS simulator/LAN: `http://127.0.0.1:4000` or `http://<your-ip>:4000`
 
+Backend env snippets to copy into `.env`:
+
+- **Local dev:**
+
+  ```env
+  PUBLIC_BASE_URL=http://localhost:4000
+  ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://10.0.2.2:3000,http://localhost:4000,http://127.0.0.1:4000
+  ```
+
+- **Production web:**
+
+  ```env
+  PUBLIC_BASE_URL=https://api.freetask.my
+  ALLOWED_ORIGINS=https://app.freetask.my,https://admin.freetask.my
+  ```
+
+Ensure the backend mounts/persists the `./uploads` folder (volume or host directory) so uploaded avatars/documents survive restarts.
+
 ### Demo credentials (from seed)
 
 - Admin: `admin@example.com` / `Password123!`

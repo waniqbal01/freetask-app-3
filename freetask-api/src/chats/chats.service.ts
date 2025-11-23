@@ -62,17 +62,26 @@ export class ChatsService {
 
   async postMessage(jobId: number, userId: number, dto: CreateMessageDto): Promise<ChatMessageDto> {
     await this.ensureJobParticipant(jobId, userId);
-    const message = await this.prisma.chatMessage.create({
-      data: {
-        content: dto.content,
-        jobId,
-        senderId: userId,
-      },
-      include: {
-        sender: {
-          select: { id: true, name: true },
+    const message = await this.prisma.$transaction(async (tx) => {
+      const createdMessage = await tx.chatMessage.create({
+        data: {
+          content: dto.content,
+          jobId,
+          senderId: userId,
         },
-      },
+        include: {
+          sender: {
+            select: { id: true, name: true },
+          },
+        },
+      });
+
+      await tx.job.update({
+        where: { id: jobId },
+        data: { updatedAt: new Date() },
+      });
+
+      return createdMessage;
     });
 
     return {
