@@ -298,6 +298,15 @@ class _MarketplaceHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.s16),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => context.push('/settings/api'),
+              icon: const Icon(Icons.settings_ethernet_outlined),
+              label: const Text('API Server'),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s12),
           TextField(
             controller: searchController,
             onChanged: (_) => onSearchChanged(),

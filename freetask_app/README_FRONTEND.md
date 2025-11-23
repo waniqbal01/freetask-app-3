@@ -1,0 +1,43 @@
+# Freetask Flutter QA Onboarding
+
+## Setup
+
+```bash
+cd freetask_app
+flutter pub get
+```
+
+## Running the app
+
+- **Android emulator**: `flutter run -d emulator-5554`
+- **iOS simulator**: `flutter run -d ios`
+- **Web (Chrome)**: `flutter run -d chrome`
+
+The app will default to `http://10.0.2.2:4000` on Android emulators and `http://localhost:4000` elsewhere. You can override it at runtime without rebuilding.
+
+### Changing API base URL at runtime
+
+1. Open the app and tap **Tukar API Server** on the login screen (or **API Server** in the services list).
+2. Enter the full base URL (e.g. `http://localhost:4000`, `http://10.0.2.2:4000`, or your LAN IP such as `http://192.168.0.10:4000`).
+3. Save. The client will immediately use the new URL; clear the field to reset to the default.
+
+### Common origins / CORS tips
+
+Add your frontend origin to the API `ALLOWED_ORIGINS` if running the backend in production mode:
+
+- Flutter web dev: `http://localhost:3000`
+- Vite/other web dev: `http://localhost:5173`
+- Android emulator webviews: `http://10.0.2.2:3000`
+- iOS simulator/LAN: `http://127.0.0.1:4000` or `http://<your-ip>:4000`
+
+### Demo credentials (from seed)
+
+- Admin: `admin@example.com` / `Password123!`
+- Clients: `client1@example.com`, `client2@example.com` / `Password123!`
+- Freelancers: `freelancer1@example.com`, `freelancer2@example.com` / `Password123!`
+
+### Troubleshooting
+
+- **CORS error on web**: ensure your origin is listed in `ALLOWED_ORIGINS` (backend `.env`) and restart the API.
+- **Emulator cannot reach host**: use `http://10.0.2.2:4000` for Android; iOS simulator usually works with `http://localhost:4000` or your LAN IP.
+- **Session expired**: the app will redirect to login; log in again after seeding.

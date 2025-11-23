@@ -1,24 +1,37 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../core/base_url_store.dart';
 import '../core/env.dart';
 import '../core/router.dart';
 import '../core/notifications/notification_service.dart';
 import '../features/auth/auth_repository.dart';
 
 class HttpClient {
-  HttpClient({FlutterSecureStorage? secureStorage})
+  factory HttpClient({FlutterSecureStorage? secureStorage}) {
+    _instance ??= HttpClient._(secureStorage: secureStorage);
+    return _instance!;
+  }
+
+  HttpClient._({FlutterSecureStorage? secureStorage})
       : _storage = secureStorage ?? const FlutterSecureStorage(),
+        _baseUrlStore = BaseUrlStore(secureStorage: secureStorage),
         dio = Dio(
           BaseOptions(
-            baseUrl: Env.apiBaseUrl,
+            baseUrl: Env.defaultApiBaseUrl,
             connectTimeout: const Duration(seconds: 10),
             receiveTimeout: const Duration(seconds: 20),
           ),
         ) {
+    _baseUrlFuture = _baseUrlStore.readBaseUrl();
+    _baseUrlFuture.then((base) => dio.options.baseUrl = base);
+
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (RequestOptions options, RequestInterceptorHandler handler) async {
+          final resolvedBase = await _baseUrlFuture;
+          options.baseUrl = resolvedBase;
+
           final isPublicServicesGet =
               options.method.toUpperCase() == 'GET' && options.path.startsWith('/services');
           final token = await _readTokenWithMigration();
@@ -54,9 +67,28 @@ class HttpClient {
     );
   }
 
+  Future<void> updateBaseUrl(String value) async {
+    await _baseUrlStore.saveBaseUrl(value);
+    _baseUrlFuture = _baseUrlStore.readBaseUrl();
+    dio.options.baseUrl = await _baseUrlFuture;
+  }
+
+  Future<String> currentBaseUrl() async {
+    return await _baseUrlFuture;
+  }
+
   Future<void> _clearStoredTokens() async {
     await _storage.delete(key: AuthRepository.tokenStorageKey);
     await _storage.delete(key: AuthRepository.legacyTokenStorageKey);
+  }
+
+  Future<void> _handleMissingToken() async {
+    notificationService.messengerKey.currentState?.showSnackBar(
+      const SnackBar(content: Text('Sesi tamat. Sila log masuk semula.')),
+    );
+    await _clearStoredTokens();
+    authRefreshNotifier.value = DateTime.now();
+    appRouter.go('/login');
   }
 
   Future<String?> _readTokenWithMigration() async {
@@ -75,6 +107,9 @@ class HttpClient {
     return token;
   }
 
+  static HttpClient? _instance;
+  late Future<String> _baseUrlFuture;
+  final BaseUrlStore _baseUrlStore;
   final FlutterSecureStorage _storage;
   final Dio dio;
 }

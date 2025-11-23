@@ -1,4 +1,9 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateServiceDto } from './dto/create-service.dto';
@@ -13,11 +18,16 @@ export class ServicesService {
       throw new ForbiddenException('Only freelancers can create services');
     }
 
+    const parsedPrice = Number(dto.price);
+    if (!Number.isFinite(parsedPrice)) {
+      throw new BadRequestException('price must be a valid number');
+    }
+
     const created = await this.prisma.service.create({
       data: {
         title: dto.title,
         description: dto.description,
-        price: new Prisma.Decimal(dto.price),
+        price: new Prisma.Decimal(parsedPrice.toFixed(2)),
         category: dto.category,
         freelancerId: userId,
       },
@@ -71,12 +81,19 @@ export class ServicesService {
   async update(id: number, userId: number, dto: UpdateServiceDto) {
     await this.ensureOwner(id, userId);
     const { price, ...rest } = dto;
+    const data: Prisma.ServiceUpdateInput = { ...rest };
+
+    if (price !== undefined) {
+      const parsed = Number(price);
+      if (!Number.isFinite(parsed)) {
+        throw new BadRequestException('price must be a valid number');
+      }
+      data.price = new Prisma.Decimal(parsed.toFixed(2));
+    }
+
     const updated = await this.prisma.service.update({
       where: { id },
-      data: {
-        ...rest,
-        price: price !== undefined ? new Prisma.Decimal(price) : undefined,
-      },
+      data,
     });
 
     return this.serializeService(updated);

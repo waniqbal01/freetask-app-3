@@ -34,6 +34,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   bool _isProcessing = false;
   String? _errorMessage;
   String? _userRole;
+  String? _userId;
   late bool _isClientView;
 
   @override
@@ -51,6 +52,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       if (!mounted) return;
       setState(() {
         _userRole = user?.role;
+        _userId = user?.id;
         if (user != null) {
           _isClientView = user.role.toUpperCase() == 'CLIENT';
         }
@@ -203,9 +205,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   List<Widget> _buildActions(Job job) {
     final role = (_userRole ?? (_isClientView ? 'CLIENT' : 'FREELANCER')).toUpperCase();
+    final isJobClient = _userId != null && job.clientId == _userId;
+    final isJobFreelancer = _userId != null && job.freelancerId == _userId;
     final actions = <Widget>[];
 
-    if (role == 'FREELANCER') {
+    if (role == 'FREELANCER' && isJobFreelancer) {
       if (job.status == JobStatus.pending) {
         actions.addAll([
           FTButton(
@@ -274,7 +278,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       }
     }
 
-    if (role == 'CLIENT') {
+    if (role == 'CLIENT' && isJobClient) {
       if ({JobStatus.pending, JobStatus.accepted, JobStatus.inProgress}.contains(job.status)) {
         actions.add(
           FTButton(

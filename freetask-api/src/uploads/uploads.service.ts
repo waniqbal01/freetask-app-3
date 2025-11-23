@@ -30,10 +30,16 @@ export class UploadsService {
   }
 
   buildFileUrl(request: Request, filename: string) {
-    const host = request.get('host');
-    const protocol = request.protocol;
+    const forwardedProto = request.get('x-forwarded-proto');
+    const forwardedHost = request.get('x-forwarded-host');
+    const configuredBase = process.env.PUBLIC_BASE_URL?.trim();
 
-    return `${protocol}://${host}/uploads/${filename}`;
+    const host = forwardedHost || request.get('host');
+    const protocol = forwardedProto || request.protocol;
+    const origin = configuredBase || `${protocol}://${host}`;
+
+    const sanitizedOrigin = origin.endsWith('/') ? origin.slice(0, -1) : origin;
+    return `${sanitizedOrigin}/uploads/${filename}`;
   }
 
   static isAllowedMimeType(mimeType?: string | null) {

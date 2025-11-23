@@ -433,7 +433,13 @@ class _JobListScreenState extends State<JobListScreen> {
     required bool isClientView,
     required bool alreadyReviewed,
   }) {
+    final role = _currentUser?.role.toUpperCase();
+    final isClientOwner = _currentUser?.id == job.clientId;
+    final isFreelancerOwner = _currentUser?.id == job.freelancerId;
+
     if (isClientView &&
+        role == 'CLIENT' &&
+        isClientOwner &&
         {JobStatus.pending, JobStatus.accepted, JobStatus.inProgress}.contains(job.status)) {
       return Align(
         alignment: Alignment.centerRight,
@@ -471,6 +477,9 @@ class _JobListScreenState extends State<JobListScreen> {
     }
 
     if (!isClientView && job.status == JobStatus.pending) {
+      if (role != 'FREELANCER' || !isFreelancerOwner) {
+        return const SizedBox.shrink();
+      }
       return Row(
         children: [
           FTButton(
@@ -499,6 +508,9 @@ class _JobListScreenState extends State<JobListScreen> {
     }
 
     if (!isClientView && job.status == JobStatus.accepted) {
+      if (role != 'FREELANCER' || !isFreelancerOwner) {
+        return const SizedBox.shrink();
+      }
       return Align(
         alignment: Alignment.centerRight,
         child: FTButton(
@@ -515,6 +527,9 @@ class _JobListScreenState extends State<JobListScreen> {
     }
 
     if (!isClientView && job.status == JobStatus.inProgress) {
+      if (role != 'FREELANCER' || !isFreelancerOwner) {
+        return const SizedBox.shrink();
+      }
       return Row(
         children: [
           FTButton(
@@ -547,10 +562,10 @@ class _JobListScreenState extends State<JobListScreen> {
       );
     }
 
-    final isClient = _currentUser?.role.toUpperCase() == 'CLIENT';
-    final isJobOwner = _currentUser?.id == job.clientId;
-
-    if (isClientView && job.status == JobStatus.completed && isClient && isJobOwner) {
+    if (isClientView &&
+        job.status == JobStatus.completed &&
+        role == 'CLIENT' &&
+        isClientOwner) {
       return Align(
         alignment: Alignment.centerRight,
         child: alreadyReviewed

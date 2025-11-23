@@ -13,6 +13,7 @@ import '../features/checkout/checkout_screen.dart';
 import '../features/jobs/checkout_screen.dart';
 import '../features/jobs/job_detail_screen.dart';
 import '../features/jobs/job_list_screen.dart';
+import '../features/settings/api_settings_screen.dart';
 import '../features/services/service_detail_screen.dart';
 import '../features/services/service_list_screen.dart';
 import '../models/job.dart';
@@ -164,6 +165,12 @@ final appRouter = GoRouter(
       path: '/admin',
       builder: (BuildContext context, GoRouterState state) {
         return const AdminDashboardScreen();
+      },
+    ),
+    GoRoute(
+      path: '/settings/api',
+      builder: (BuildContext context, GoRouterState state) {
+        return const ApiSettingsScreen();
       },
     ),
   ],

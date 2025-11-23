@@ -139,6 +139,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       'Akses marketplace profesional untuk cari atau tawar khidmat terbaik.',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
+                    const SizedBox(height: AppSpacing.s8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () => context.push('/settings/api'),
+                        icon: const Icon(Icons.settings_ethernet_outlined),
+                        label: const Text('Tukar API Server'),
+                      ),
+                    ),
                     const SizedBox(height: AppSpacing.s24),
                     SectionCard(
                       title: 'Log masuk akaun',

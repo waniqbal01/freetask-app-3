@@ -12,7 +12,8 @@ export class CreateServiceDto {
   description: string;
 
   @Type(() => Number)
-  @IsNumber()
+  @IsNotEmpty()
+  @IsNumber({ maxDecimalPlaces: 2 })
   @IsPositive()
   price: number;
 
