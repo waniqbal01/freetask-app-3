@@ -635,14 +635,24 @@ class _JobListScreenState extends State<JobListScreen> {
     }
 
     if (jobs.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.assignment_outlined, size: 48, color: Colors.grey),
-            SizedBox(height: 12),
-            Text('Tiada job ditemui'),
-          ],
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.assignment_outlined, size: 48, color: Colors.grey),
+              const SizedBox(height: 12),
+              const Text('Tiada job ditemui'),
+              const SizedBox(height: 12),
+              FTButton(
+                label: 'Muat Semula',
+                onPressed: onRefresh,
+                expanded: false,
+              ),
+            ],
+          ),
         ),
       );
     }

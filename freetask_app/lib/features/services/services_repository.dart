@@ -1,18 +1,18 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../models/service.dart';
 import '../../services/http_client.dart';
 import '../auth/auth_repository.dart';
+import '../../core/storage/storage.dart';
 
 class ServicesRepository {
-  ServicesRepository({FlutterSecureStorage? secureStorage, Dio? dio})
-      : _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+  ServicesRepository({AppStorage? storage, Dio? dio})
+      : _storage = storage ?? appStorage,
         _dio = dio ?? HttpClient().dio;
 
-  final FlutterSecureStorage _secureStorage;
+  final AppStorage _storage;
   final Dio _dio;
 
   Future<List<Service>> getServices({String? q, String? category}) async {
@@ -75,7 +75,7 @@ class ServicesRepository {
   }
 
   Future<Options> _authorizedOptions({bool requireAuth = true}) async {
-    final token = await _secureStorage.read(key: AuthRepository.tokenStorageKey);
+    final token = await _storage.read(AuthRepository.tokenStorageKey);
     if (token == null || token.isEmpty) {
       if (requireAuth) {
         throw StateError('Token tidak ditemui. Sila log masuk semula.');

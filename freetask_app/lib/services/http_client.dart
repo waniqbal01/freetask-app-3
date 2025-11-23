@@ -1,21 +1,22 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/foundation.dart';
 
 import '../core/base_url_store.dart';
 import '../core/env.dart';
 import '../core/router.dart';
 import '../core/notifications/notification_service.dart';
 import '../features/auth/auth_repository.dart';
+import '../core/storage/storage.dart';
 
 class HttpClient {
-  factory HttpClient({FlutterSecureStorage? secureStorage}) {
-    _instance ??= HttpClient._(secureStorage: secureStorage);
+  factory HttpClient({AppStorage? storage}) {
+    _instance ??= HttpClient._(storage: storage);
     return _instance!;
   }
 
-  HttpClient._({FlutterSecureStorage? secureStorage})
-      : _storage = secureStorage ?? const FlutterSecureStorage(),
-        _baseUrlStore = BaseUrlStore(secureStorage: secureStorage),
+  HttpClient._({AppStorage? storage})
+      : _storage = storage ?? appStorage,
+        _baseUrlStore = BaseUrlStore(storage: storage),
         dio = Dio(
           BaseOptions(
             baseUrl: Env.defaultApiBaseUrl,
@@ -32,8 +33,7 @@ class HttpClient {
           final resolvedBase = await _baseUrlFuture;
           options.baseUrl = resolvedBase;
 
-          final isPublicServicesGet =
-              options.method.toUpperCase() == 'GET' && options.path.startsWith('/services');
+          final isPublicServicesGet = _isPublicRequest(options);
           final token = await _readTokenWithMigration();
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
@@ -43,24 +43,37 @@ class HttpClient {
           handler.next(options);
         },
         onError: (DioException error, ErrorInterceptorHandler handler) async {
-          final isPublicServicesGet = error.requestOptions.method.toUpperCase() == 'GET' &&
-              error.requestOptions.path.startsWith('/services');
+          final status = error.response?.statusCode ?? 0;
+          final isPublicRequest = _isPublicRequest(error.requestOptions);
           final hadAuthHeader =
               error.requestOptions.headers['Authorization']?.toString().isNotEmpty ?? false;
-          final status = error.response?.statusCode ?? 0;
-          if ((status == 401 || status == 403 || status == 419) && !isPublicServicesGet && hadAuthHeader) {
-            notificationService.messengerKey.currentState?.showSnackBar(
-              SnackBar(
-                content: Text(status == 403
-                    ? 'Anda tidak dibenarkan untuk tindakan ini.'
-                    : 'Session expired, please login again.'),
-                duration: const Duration(seconds: 3),
-              ),
-            );
-            await _clearStoredTokens();
-            authRefreshNotifier.value = DateTime.now();
-            appRouter.go('/login');
+          final alreadyRetried = error.requestOptions.extra['__retried'] == true;
+          final isAuthRelevant = !isPublicRequest && (hadAuthHeader || !_isNetworkFailure(error));
+
+          if ((status == 401 || status == 403 || status == 419) && isAuthRelevant) {
+            if (!alreadyRetried) {
+              try {
+                await Future<void>.delayed(const Duration(milliseconds: 450));
+                final retryResponse = await dio.fetch<dynamic>(
+                  error.requestOptions..extra['__retried'] = true,
+                );
+                return handler.resolve(retryResponse);
+              } on DioException catch (retryError) {
+                final retryStatus = retryError.response?.statusCode ?? status;
+                if (retryStatus == 401 || retryStatus == 403 || retryStatus == 419) {
+                  await _handleAuthFailure(retryStatus);
+                  return handler.next(retryError);
+                }
+                return handler.next(retryError);
+              } catch (_) {
+                await _handleAuthFailure(status);
+                return handler.next(error);
+              }
+            }
+
+            await _handleAuthFailure(status);
           }
+
           handler.next(error);
         },
       ),
@@ -78,8 +91,8 @@ class HttpClient {
   }
 
   Future<void> _clearStoredTokens() async {
-    await _storage.delete(key: AuthRepository.tokenStorageKey);
-    await _storage.delete(key: AuthRepository.legacyTokenStorageKey);
+    await _storage.delete(AuthRepository.tokenStorageKey);
+    await _storage.delete(AuthRepository.legacyTokenStorageKey);
   }
 
   Future<void> _handleMissingToken() async {
@@ -91,25 +104,51 @@ class HttpClient {
     appRouter.go('/login');
   }
 
+  Future<void> _handleAuthFailure(int status) async {
+    notificationService.messengerKey.currentState?.showSnackBar(
+      SnackBar(
+        content: Text(status == 403
+            ? 'Anda tidak dibenarkan untuk tindakan ini.'
+            : 'Sesi tamat, sila log masuk semula.'),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+    await _clearStoredTokens();
+    authRefreshNotifier.value = DateTime.now();
+    if (!kIsWeb || appRouter.canPop()) {
+      appRouter.go('/login');
+    }
+  }
+
   Future<String?> _readTokenWithMigration() async {
-    final token = await _storage.read(key: AuthRepository.tokenStorageKey);
+    final token = await _storage.read(AuthRepository.tokenStorageKey);
     if (token != null && token.isNotEmpty) {
       return token;
     }
 
-    final legacy = await _storage.read(key: AuthRepository.legacyTokenStorageKey);
+    final legacy = await _storage.read(AuthRepository.legacyTokenStorageKey);
     if (legacy != null && legacy.isNotEmpty) {
-      await _storage.write(key: AuthRepository.tokenStorageKey, value: legacy);
-      await _storage.delete(key: AuthRepository.legacyTokenStorageKey);
+      await _storage.write(AuthRepository.tokenStorageKey, legacy);
+      await _storage.delete(AuthRepository.legacyTokenStorageKey);
       return legacy;
     }
 
     return token;
   }
 
+  bool _isPublicRequest(RequestOptions options) {
+    return options.method.toUpperCase() == 'GET' && options.path.startsWith('/services');
+  }
+
+  bool _isNetworkFailure(DioException error) {
+    return error.type == DioExceptionType.connectionError ||
+        error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.receiveTimeout;
+  }
+
   static HttpClient? _instance;
   late Future<String> _baseUrlFuture;
   final BaseUrlStore _baseUrlStore;
-  final FlutterSecureStorage _storage;
+  final AppStorage _storage;
   final Dio dio;
 }

@@ -10,13 +10,16 @@ cd freetask-api
 cp .env.example .env
 npm install
 npx prisma migrate dev
+# Set PUBLIC_BASE_URL to your API origin (e.g. http://localhost:4000 or http://192.168.x.x:4000)
 SEED_FORCE=true npm run seed
 npm run start:dev
 ```
 
 `ALLOWED_ORIGINS` in `.env` is pre-populated for localhost testing; when left empty in
-development the API allows common local origins automatically. For production, always
-set an explicit list.
+development the API allows common local origins automatically (including
+`http://localhost:*`, `http://127.0.0.1:*`, `http://10.0.2.2:*`, and `http://192.168.*.*:*`).
+For production, always set an explicit list and configure `PUBLIC_BASE_URL` to your API
+domain so upload links are stable and unspoofable.
 
 Demo logins from the seed:
 
@@ -88,6 +91,9 @@ Uploads
 
 1. Upload valid JPG/PNG/PDF under 5MB – URL returned.
 2. Upload unsupported type or >5MB – API responds 400.
+
+See [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md) for deployment hardening (env
+requirements, proxy headers, uploads volume, and seed usage guidance).
 
 Env & onboarding
 

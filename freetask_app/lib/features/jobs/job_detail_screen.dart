@@ -35,6 +35,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   String? _errorMessage;
   String? _userRole;
   String? _userId;
+  bool _isUserLoading = true;
   late bool _isClientView;
 
   @override
@@ -47,6 +48,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   }
 
   Future<void> _hydrateUser() async {
+    setState(() {
+      _isUserLoading = true;
+    });
     try {
       final user = await authRepository.getCurrentUser();
       if (!mounted) return;
@@ -59,6 +63,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       });
     } catch (_) {
       // best effort only
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUserLoading = false;
+        });
+      }
     }
   }
 
@@ -204,7 +214,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   }
 
   List<Widget> _buildActions(Job job) {
-    final role = (_userRole ?? (_isClientView ? 'CLIENT' : 'FREELANCER')).toUpperCase();
+    if (_isUserLoading || _userRole == null) {
+      return const <Widget>[];
+    }
+    final role = _userRole!.toUpperCase();
     final isJobClient = _userId != null && job.clientId == _userId;
     final isJobFreelancer = _userId != null && job.freelancerId == _userId;
     final actions = <Widget>[];
@@ -414,7 +427,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             ],
                           ),
                         ),
-                        if (actions.isNotEmpty) ...[
+                        if (_isUserLoading) ...[
+                          const SizedBox(width: AppSpacing.s8),
+                          const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ] else if (actions.isNotEmpty) ...[
                           const SizedBox(width: AppSpacing.s8),
                           Wrap(
                             spacing: AppSpacing.s8,

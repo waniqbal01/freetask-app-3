@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../core/notifications/notification_service.dart';
 import '../../core/router.dart';
+import '../../core/storage/storage.dart';
 import '../../services/http_client.dart';
 import '../auth/auth_repository.dart';
 import 'chat_models.dart';
@@ -29,11 +29,11 @@ final chatMessagesProvider = StreamProvider.family<List<ChatMessage>, String>(
 });
 
 class ChatRepository {
-  ChatRepository({FlutterSecureStorage? secureStorage, Dio? dio})
-      : _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+  ChatRepository({AppStorage? storage, Dio? dio})
+      : _storage = storage ?? appStorage,
         _dio = dio ?? HttpClient().dio;
 
-  final FlutterSecureStorage _secureStorage;
+  final AppStorage _storage;
   final Dio _dio;
   List<ChatThread> _threads = <ChatThread>[];
   final Map<String, List<ChatMessage>> _messages = <String, List<ChatMessage>>{};
@@ -129,7 +129,7 @@ class ChatRepository {
   }
 
   Future<Options> _authorizedOptions() async {
-    final token = await _secureStorage.read(key: AuthRepository.tokenStorageKey);
+    final token = await _storage.read(AuthRepository.tokenStorageKey);
     if (token == null || token.isEmpty) {
       await _handleMissingToken();
       return Options();

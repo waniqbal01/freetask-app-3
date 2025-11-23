@@ -1,16 +1,15 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-
 import 'env.dart';
+import 'storage/storage.dart';
 
 class BaseUrlStore {
-  BaseUrlStore({FlutterSecureStorage? secureStorage})
-      : _storage = secureStorage ?? const FlutterSecureStorage();
+  BaseUrlStore({AppStorage? storage})
+      : _storage = storage ?? appStorage;
 
   static const _key = 'api_base_url_override';
-  final FlutterSecureStorage _storage;
+  final AppStorage _storage;
 
   Future<String> readBaseUrl() async {
-    final stored = (await _storage.read(key: _key))?.trim();
+    final stored = (await _storage.read(_key))?.trim();
     if (stored != null && stored.isNotEmpty) {
       return stored;
     }
@@ -20,9 +19,9 @@ class BaseUrlStore {
   Future<void> saveBaseUrl(String? value) async {
     final normalized = value?.trim() ?? '';
     if (normalized.isEmpty) {
-      await _storage.delete(key: _key);
+      await _storage.delete(_key);
       return;
     }
-    await _storage.write(key: _key, value: normalized);
+    await _storage.write(_key, normalized);
   }
 }

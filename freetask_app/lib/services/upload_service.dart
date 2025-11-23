@@ -3,19 +3,19 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mime/mime.dart';
 import 'package:path/path.dart' as p;
 
 import 'http_client.dart';
+import '../core/storage/storage.dart';
 
 class UploadService {
-  UploadService({Dio? dio, FlutterSecureStorage? secureStorage})
+  UploadService({Dio? dio, AppStorage? storage})
       : _dio = dio ?? HttpClient().dio,
-        _storage = secureStorage ?? const FlutterSecureStorage();
+        _storage = storage ?? appStorage;
 
   final Dio _dio;
-  final FlutterSecureStorage _storage;
+  final AppStorage _storage;
 
   Future<String> uploadFile(String filePath) async {
     await _validateFile(filePath);
@@ -24,8 +24,8 @@ class UploadService {
       'file': await MultipartFile.fromFile(filePath, filename: fileName),
     });
 
-    final token = await _storage.read(key: _authTokenKey) ??
-        await _storage.read(key: _legacyAccessTokenKey);
+    final token = await _storage.read(_authTokenKey) ??
+        await _storage.read(_legacyAccessTokenKey);
     final headers = <String, dynamic>{};
     if (token != null && token.isNotEmpty) {
       headers['Authorization'] = 'Bearer $token';
@@ -59,18 +59,18 @@ class UploadService {
     }
 
     final size = await file.length();
-    if (size > _maxFileBytes) {
+    if (size > maxFileBytes) {
       throw const ValidationException('Saiz fail melebihi had 5MB.');
     }
 
     final mimeType = lookupMimeType(filePath) ?? '';
-    if (!_allowedMimeTypes.contains(mimeType)) {
+    if (!allowedMimeTypes.contains(mimeType)) {
       throw const ValidationException('Jenis fail tidak disokong untuk muat naik.');
     }
   }
 
-  static const int _maxFileBytes = 5 * 1024 * 1024;
-  static const Set<String> _allowedMimeTypes = <String>{
+  static const int maxFileBytes = 5 * 1024 * 1024;
+  static const Set<String> allowedMimeTypes = <String>{
     'image/jpeg',
     'image/png',
     'image/gif',

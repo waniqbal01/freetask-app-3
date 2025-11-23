@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../features/auth/auth_repository.dart';
 import '../../services/http_client.dart';
+import '../../core/storage/storage.dart';
 
 class Review {
   Review({
@@ -41,12 +41,12 @@ class Review {
 }
 
 class ReviewsRepository {
-  ReviewsRepository({Dio? dio, FlutterSecureStorage? secureStorage})
+  ReviewsRepository({Dio? dio, AppStorage? storage})
       : _dio = dio ?? HttpClient().dio,
-        _storage = secureStorage ?? const FlutterSecureStorage();
+        _storage = storage ?? appStorage;
 
   final Dio _dio;
-  final FlutterSecureStorage _storage;
+  final AppStorage _storage;
   final Set<int> _submittedJobIds = <int>{};
 
   bool hasSubmittedReview(String jobId) {
@@ -116,7 +116,7 @@ class ReviewsRepository {
   }
 
   Future<String> _requireAuthToken() async {
-    final token = await _storage.read(key: AuthRepository.tokenStorageKey);
+    final token = await _storage.read(AuthRepository.tokenStorageKey);
     if (token == null || token.isEmpty) {
       throw const AuthRequiredException('Sila log masuk untuk buat/lihat review');
     }

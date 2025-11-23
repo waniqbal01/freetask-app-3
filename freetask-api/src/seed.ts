@@ -77,12 +77,20 @@ async function upsertJob(
 async function main() {
   const force = process.env.SEED_FORCE === 'true';
   const reset = process.env.SEED_RESET !== 'false';
+  const isProd = process.env.NODE_ENV === 'production';
+  const existingUsers = await prisma.user.count();
 
-  if (!force) {
-    console.warn(
-      '⚠️  Seed aborted. Set SEED_FORCE=true to allow seeding. Use SEED_RESET=false for non-destructive mode.',
-    );
-    return;
+  const allowDevAutoSeed = !force && !isProd && existingUsers === 0;
+
+  if (!force && !allowDevAutoSeed) {
+    const message =
+      '❌ Seed blocked. Set SEED_FORCE=true to allow seeding. Use SEED_RESET=false for non-destructive mode.';
+    console.error(message);
+    throw new Error(message);
+  }
+
+  if (allowDevAutoSeed) {
+    console.info('ℹ️  Auto-seeding empty development database (set SEED_FORCE=true to override).');
   }
 
   if (reset) {

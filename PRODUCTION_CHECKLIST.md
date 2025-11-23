@@ -1,0 +1,20 @@
+# Production readiness checklist
+
+- **Environment variables**
+  - `DATABASE_URL` points to production Postgres
+  - `JWT_SECRET` is strong and non-empty; `JWT_EXPIRES_IN` set per policy
+  - `PUBLIC_BASE_URL` set to the externally reachable API URL (e.g. `https://api.example.com`)
+  - `ALLOWED_ORIGINS` lists exact front-end origins (web, Flutter web, desktop wrappers)
+  - `PORT` configured for your runtime; `NODE_ENV=production`
+- **Networking & proxy**
+  - If running behind a proxy/load balancer, ensure forwarded headers are correct; `PUBLIC_BASE_URL` avoids Host spoofing for uploads.
+  - CORS matches your deployed hosts; include mobile webviews/desktop origins if applicable.
+- **Uploads & static files**
+  - Mount/persist the `uploads/` directory (or map to object storage/CDN) so files survive restarts.
+  - Ensure reverse proxy serves `/uploads/*` directly if offloading.
+- **Database & migrations**
+  - Run `npx prisma migrate deploy` against production DB.
+  - Seed script is for development only; run with `SEED_FORCE=true` in non-production environments or on first-time staging data loads.
+- **Monitoring & logging**
+  - Enable application logs and monitor for 401/403 spikes.
+  - Set up backups for the database and uploaded files.

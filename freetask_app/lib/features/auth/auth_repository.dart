@@ -1,18 +1,18 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../../core/storage/storage.dart';
 import '../../models/user.dart';
 import '../../services/http_client.dart';
 
 class AuthRepository {
-  AuthRepository({FlutterSecureStorage? secureStorage, Dio? dio})
-      : _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+  AuthRepository({AppStorage? storage, Dio? dio})
+      : _storage = storage ?? appStorage,
         _dio = dio ?? HttpClient().dio;
 
   static const tokenStorageKey = 'auth_token';
   static const legacyTokenStorageKey = 'access_token';
 
-  final FlutterSecureStorage _secureStorage;
+  final AppStorage _storage;
   final Dio _dio;
   AppUser? _cachedUser;
 
@@ -104,15 +104,15 @@ class AuthRepository {
   }
 
   Future<String?> getSavedToken() async {
-    final token = await _secureStorage.read(key: tokenStorageKey);
+    final token = await _storage.read(tokenStorageKey);
     if (token != null && token.isNotEmpty) {
       return token;
     }
 
-    final legacy = await _secureStorage.read(key: legacyTokenStorageKey);
+    final legacy = await _storage.read(legacyTokenStorageKey);
     if (legacy != null && legacy.isNotEmpty) {
-      await _secureStorage.write(key: tokenStorageKey, value: legacy);
-      await _secureStorage.delete(key: legacyTokenStorageKey);
+      await _storage.write(tokenStorageKey, legacy);
+      await _storage.delete(legacyTokenStorageKey);
       return legacy;
     }
 
@@ -120,7 +120,7 @@ class AuthRepository {
   }
 
   Future<void> logout() async {
-    final token = await _secureStorage.read(key: tokenStorageKey);
+    final token = await _storage.read(tokenStorageKey);
     try {
       if (token != null && token.isNotEmpty) {
         await _dio.post<void>(
@@ -132,8 +132,8 @@ class AuthRepository {
       // Ignore logout failures and continue clearing local session.
     } finally {
       _cachedUser = null;
-      await _secureStorage.delete(key: tokenStorageKey);
-      await _secureStorage.delete(key: legacyTokenStorageKey);
+      await _storage.delete(tokenStorageKey);
+      await _storage.delete(legacyTokenStorageKey);
     }
   }
 
@@ -142,7 +142,7 @@ class AuthRepository {
   }
 
   Future<void> _saveToken(String token) {
-    return _secureStorage.write(key: tokenStorageKey, value: token);
+    return _storage.write(tokenStorageKey, token);
   }
 
   Map<String, dynamic> _buildRegisterPayload(Map<String, dynamic> payload) {

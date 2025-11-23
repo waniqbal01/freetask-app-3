@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../features/admin/admin_dashboard_screen.dart';
 import '../features/auth/login_screen.dart';
@@ -18,20 +17,21 @@ import '../features/services/service_detail_screen.dart';
 import '../features/services/service_list_screen.dart';
 import '../models/job.dart';
 import '../features/auth/auth_repository.dart';
+import 'storage/storage.dart';
 
 final authRefreshNotifier = ValueNotifier<DateTime>(DateTime.now());
-const _storage = FlutterSecureStorage();
+final AppStorage _storage = appStorage;
 
 Future<bool> hasToken() async {
-  final token = await _storage.read(key: AuthRepository.tokenStorageKey);
+  final token = await _storage.read(AuthRepository.tokenStorageKey);
   if (token != null && token.isNotEmpty) {
     return true;
   }
 
-  final legacy = await _storage.read(key: AuthRepository.legacyTokenStorageKey);
+  final legacy = await _storage.read(AuthRepository.legacyTokenStorageKey);
   if (legacy != null && legacy.isNotEmpty) {
-    await _storage.write(key: AuthRepository.tokenStorageKey, value: legacy);
-    await _storage.delete(key: AuthRepository.legacyTokenStorageKey);
+    await _storage.write(AuthRepository.tokenStorageKey, legacy);
+    await _storage.delete(AuthRepository.legacyTokenStorageKey);
     return true;
   }
 
