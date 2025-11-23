@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/job.dart';
 import '../jobs/jobs_repository.dart';
-import '../payments/escrow_service.dart';
+import '../escrow/escrow_repository.dart';
 import '../../core/utils/error_utils.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -50,7 +50,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     try {
       final records = <EscrowRecord>[];
       for (final job in jobs) {
-        final record = await escrowService.getEscrow(job.id);
+        final record = await escrowRepository.getEscrow(job.id);
         if (record != null) {
           records.add(record);
         }

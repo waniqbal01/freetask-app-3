@@ -9,7 +9,7 @@ import '../../models/job.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/section_card.dart';
 import '../auth/auth_repository.dart';
-import '../payments/escrow_service.dart';
+import '../escrow/escrow_repository.dart';
 import 'jobs_repository.dart';
 import 'widgets/job_status_badge.dart';
 
@@ -102,7 +102,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     });
 
     try {
-      final record = await escrowService.getEscrow(widget.jobId);
+      final record = await escrowRepository.getEscrow(widget.jobId);
       if (!mounted) return;
       setState(() {
         _escrow = record;
@@ -483,7 +483,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             expanded: false,
             isLoading: _isEscrowProcessing,
             onPressed: () => _handleEscrowAction(
-              () => escrowService.hold(widget.jobId),
+              () => escrowRepository.hold(widget.jobId),
               'Dana dipegang untuk job ${widget.jobId}.',
             ),
           ),
@@ -497,7 +497,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             expanded: false,
             isLoading: _isEscrowProcessing,
             onPressed: () => _handleEscrowAction(
-              () => escrowService.release(widget.jobId),
+              () => escrowRepository.release(widget.jobId),
               'Dana dilepaskan.',
             ),
           ),
@@ -508,7 +508,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             expanded: false,
             isLoading: _isEscrowProcessing,
             onPressed: () => _handleEscrowAction(
-              () => escrowService.refund(widget.jobId),
+              () => escrowRepository.refund(widget.jobId),
               'Dana dipulangkan.',
             ),
           ),
