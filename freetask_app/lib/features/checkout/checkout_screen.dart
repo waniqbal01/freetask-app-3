@@ -12,6 +12,15 @@ class CheckoutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final draft = jobDraft ?? <String, dynamic>{};
+    final rawPrice = draft['price'];
+    double? parsedPrice;
+    if (rawPrice is num) {
+      parsedPrice = rawPrice.toDouble();
+    } else if (rawPrice is String && rawPrice.isNotEmpty) {
+      parsedPrice = double.tryParse(rawPrice);
+    }
+    final priceText =
+        parsedPrice == null || parsedPrice <= 0 ? 'Harga belum tersedia / invalid' : 'RM${parsedPrice.toStringAsFixed(2)}';
 
     return Scaffold(
       body: Container(
@@ -64,31 +73,11 @@ class CheckoutScreen extends StatelessWidget {
                               children: [
                                 const Icon(Icons.payments_outlined, color: AppColors.neutral300),
                                 const SizedBox(width: 8),
-                                Text('Harga: RM${(draft['price'] as num?)?.toStringAsFixed(2) ?? '0.00'}'),
+                                Text('Harga: $priceText'),
                               ],
                             ),
                             const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                const Icon(Icons.schedule_outlined, color: AppColors.neutral300),
-                                const SizedBox(width: 8),
-                                Text('Tempoh siap: ${draft['deliveryDays'] ?? '-'} hari'),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            const Text('Termasuk:'),
-                            const SizedBox(height: 8),
-                            ...(draft['includes'] as List<dynamic>? ?? <dynamic>[])
-                                .map((dynamic item) => Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 2),
-                                      child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const Text('• '),
-                                          Expanded(child: Text(item.toString())),
-                                        ],
-                                      ),
-                                    )),
+                            const Text('Maklumat tambahan tidak tersedia untuk demo ini.'),
                           ],
                         ),
                 ),
@@ -98,9 +87,9 @@ class CheckoutScreen extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () async {
                       final jobId = (draft['jobId'] ?? draft['serviceId'])?.toString();
-                      final price = draft['price'];
+                      final price = parsedPrice;
 
-                      if (jobId == null || jobId.isEmpty || price is! num) {
+                      if (jobId == null || jobId.isEmpty || price == null || price <= 0) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Maklumat job tidak lengkap untuk demo escrow.'),
@@ -109,7 +98,7 @@ class CheckoutScreen extends StatelessWidget {
                         return;
                       }
 
-                      await escrowService.hold(jobId, price.toDouble());
+                      await escrowService.hold(jobId, price);
 
                       if (!context.mounted) return;
 

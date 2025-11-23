@@ -1,8 +1,30 @@
 # freetask-app-3
 
-This repository contains the Flutter project scaffold for the **FreeTask App**.
+This repository contains the Flutter project scaffold for the **FreeTask App** and the
+NestJS API powering it.
 
-## Getting started
+## Backend quickstart (NestJS + Prisma/Postgres)
+
+```bash
+cd freetask-api
+cp .env.example .env
+npm install
+npx prisma migrate dev
+npm run seed
+npm run start:dev
+```
+
+`ALLOWED_ORIGINS` in `.env` is pre-populated for localhost testing; when left empty in
+development the API allows common local origins automatically. For production, always
+set an explicit list.
+
+Demo logins from the seed:
+
+- Admin: `admin@example.com` / `Password123!`
+- Clients: `client1@example.com`, `client2@example.com` (password `Password123!`)
+- Freelancers: `freelancer1@example.com`, `freelancer2@example.com` (password `Password123!`)
+
+## Flutter client quickstart
 
 The Flutter application lives in the [`freetask_app`](freetask_app/) directory. To fetch
 dependencies and run the project locally, make sure you have the Flutter SDK installed,
@@ -27,3 +49,6 @@ per platform, but you can override them using `API_BASE_URL`:
   ```bash
   flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:4000
   ```
+
+For web/desktop testing, ensure your browser origin (e.g. `http://localhost:3000` or
+`http://localhost:5173`) appears in `ALLOWED_ORIGINS` when running the API in production.

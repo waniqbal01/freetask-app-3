@@ -194,6 +194,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return DateFormat('dd MMM yyyy, h:mm a').format(date.toLocal());
   }
 
+  String _formatAmount(Job job) {
+    if (job.hasAmountIssue || job.amount <= 0) {
+      return 'Jumlah tidak sah / sila refresh';
+    }
+    return 'RM${job.amount.toStringAsFixed(2)}';
+  }
+
   List<Widget> _buildActions(Job job) {
     final role = (_userRole ?? (_isClientView ? 'CLIENT' : 'FREELANCER')).toUpperCase();
     final actions = <Widget>[];
@@ -268,7 +275,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
 
     if (role == 'CLIENT') {
-      if (job.status == JobStatus.pending) {
+      if ({JobStatus.pending, JobStatus.accepted, JobStatus.inProgress}.contains(job.status)) {
         actions.add(
           FTButton(
             label: 'Batalkan',
@@ -281,7 +288,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             size: FTButtonSize.small,
           ),
         );
-      } else if (job.status == JobStatus.inProgress || job.status == JobStatus.completed) {
+      }
+
+      if (job.status == JobStatus.inProgress || job.status == JobStatus.completed) {
+        if (actions.isNotEmpty) {
+          actions.add(const SizedBox(width: AppSpacing.s8));
+        }
         actions.add(
           FTButton(
             label: 'Dispute',
@@ -426,7 +438,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     _DetailRow(
                       icon: Icons.payments_outlined,
                       label: 'Jumlah',
-                      value: 'RM${job.amount.toStringAsFixed(2)}',
+                      value: _formatAmount(job),
                     ),
                     const SizedBox(height: 12),
                     _DetailRow(

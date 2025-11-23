@@ -12,18 +12,34 @@ async function bootstrap() {
     const app = await NestFactory.create(AppModule, {
       bufferLogs: true,
     });
-    const origins = (process.env.ALLOWED_ORIGINS || '')
+    const isProduction = process.env.NODE_ENV === 'production';
+    const configuredOrigins = (process.env.ALLOWED_ORIGINS || '')
       .split(',')
       .map((o) => o.trim())
       .filter(Boolean);
 
+    const devFallbackOrigins = [
+      'http://localhost:4000',
+      'http://127.0.0.1:4000',
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://10.0.2.2:4000',
+    ];
+
+    const allowedOrigins =
+      configuredOrigins.length > 0 || isProduction
+        ? configuredOrigins
+        : devFallbackOrigins;
+
     app.enableCors({
       origin: (origin, cb) => {
         if (!origin) return cb(null, true);
-        if (origins.includes(origin)) return cb(null, true);
+        if (allowedOrigins.includes(origin)) return cb(null, true);
         return cb(new Error(`CORS blocked origin: ${origin}`), false);
       },
       credentials: true,
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+      allowedHeaders: 'Content-Type, Authorization',
     });
 
     // ------------------------------
@@ -54,7 +70,7 @@ async function bootstrap() {
     await app.listen(port);
 
     console.log(`🚀 Application running at: ${await app.getUrl()}`);
-    console.log('Allowed Origins:', origins);
+    console.log('Allowed Origins:', allowedOrigins);
 
   } catch (error) {
     console.error('❌ Failed to bootstrap application.', error);

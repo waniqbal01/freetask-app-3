@@ -272,6 +272,13 @@ class _JobListScreenState extends State<JobListScreen> {
     return DateFormat('dd MMM yyyy, h:mm a').format(date.toLocal());
   }
 
+  String _formatAmount(Job job) {
+    if (job.hasAmountIssue || job.amount <= 0) {
+      return 'Jumlah tidak sah / sila refresh';
+    }
+    return 'RM${job.amount.toStringAsFixed(2)}';
+  }
+
   void _openJobDetail(Job job, {required bool isClientView}) {
     context.push(
       '/jobs/${job.id}',
@@ -288,7 +295,7 @@ class _JobListScreenState extends State<JobListScreen> {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final dateText = _formatJobDate(job.createdAt);
-    final amountText = 'RM${job.amount.toStringAsFixed(2)}';
+    final amountText = _formatAmount(job);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -426,39 +433,39 @@ class _JobListScreenState extends State<JobListScreen> {
     required bool isClientView,
     required bool alreadyReviewed,
   }) {
-    if (isClientView && job.status == JobStatus.pending) {
-      return Align(
-        alignment: Alignment.centerRight,
-        child: FTButton(
-          label: 'Batalkan',
-          isLoading: _isProcessing,
-          onPressed: () => _handleAction(
-            () => jobsRepository.cancelJob(job.id),
-            'Job dibatalkan.',
-          ),
-          expanded: false,
-          size: FTButtonSize.small,
-        ),
-      );
-    }
-
     if (isClientView &&
-        (job.status == JobStatus.accepted || job.status == JobStatus.inProgress)) {
+        {JobStatus.pending, JobStatus.accepted, JobStatus.inProgress}.contains(job.status)) {
       return Align(
         alignment: Alignment.centerRight,
-        child: FTButton(
-          label: 'Dispute',
-          isLoading: _isProcessing,
-          onPressed: () async {
-            final reason = await _promptDisputeReason();
-            if (reason == null) return;
-            await _handleAction(
-              () => jobsRepository.disputeJob(job.id, reason),
-              'Dispute dihantar.',
-            );
-          },
-          expanded: false,
-          size: FTButtonSize.small,
+        child: Wrap(
+          spacing: AppSpacing.s8,
+          children: [
+            FTButton(
+              label: 'Batalkan',
+              isLoading: _isProcessing,
+              onPressed: () => _handleAction(
+                () => jobsRepository.cancelJob(job.id),
+                'Job dibatalkan.',
+              ),
+              expanded: false,
+              size: FTButtonSize.small,
+            ),
+            if (job.status == JobStatus.inProgress)
+              FTButton(
+                label: 'Dispute',
+                isLoading: _isProcessing,
+                onPressed: () async {
+                  final reason = await _promptDisputeReason();
+                  if (reason == null) return;
+                  await _handleAction(
+                    () => jobsRepository.disputeJob(job.id, reason),
+                    'Dispute dihantar.',
+                  );
+                },
+                expanded: false,
+                size: FTButtonSize.small,
+              ),
+          ],
         ),
       );
     }

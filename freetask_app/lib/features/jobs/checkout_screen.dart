@@ -36,18 +36,25 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
     if (value is num) {
       return value.toDouble();
     }
+    if (value is String && value.isNotEmpty) {
+      return double.tryParse(value);
+    }
     return null;
   }
+
+  bool get _hasPriceIssue => _summary['priceIssue'] == true;
 
   Future<void> _createOrder() async {
     final serviceId = _serviceId;
     final amount = _amount;
     final description = _description;
 
-    if (serviceId.isEmpty || amount == null || description.isEmpty) {
+    if (serviceId.isEmpty || amount == null || description.isEmpty || _hasPriceIssue) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Maklumat servis tidak lengkap.'),
+        SnackBar(
+          content: Text(_hasPriceIssue
+              ? 'Harga servis belum tersedia. Sila cuba lagi selepas refresh.'
+              : 'Maklumat servis tidak lengkap.'),
         ),
       );
       return;
@@ -175,8 +182,9 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     final title = _summary['title']?.toString();
-    final includes = (_summary['includes'] as List<dynamic>?)?.cast<String>();
-    final delivery = _summary['deliveryDays'];
+    final amount = _amount;
+    final amountText =
+        amount == null || amount <= 0 || _hasPriceIssue ? 'Harga belum tersedia' : 'RM${amount.toStringAsFixed(2)}';
 
     return Scaffold(
       body: Container(
@@ -214,41 +222,21 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
                     const SizedBox(height: AppSpacing.s24),
                     SectionCard(
                       title: 'Ringkasan Servis',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title ?? 'Servis ID: $_serviceId',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(height: 8),
-                          if (delivery != null)
-                            Text('Tempoh siap: $delivery hari'),
-                          const SizedBox(height: 8),
-                          Text('Jumlah: RM${(_amount ?? 0).toStringAsFixed(2)}'),
-                          const SizedBox(height: 12),
-                          if (includes != null && includes.isNotEmpty) ...[
-                            const Text('Termasuk:'),
-                            const SizedBox(height: 8),
-                            ...includes.map(
-                              (String item) => Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 2),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text('• '),
-                                    Expanded(child: Text(item)),
-                                  ],
-                                ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                title ?? 'Servis ID: $_serviceId',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700),
                               ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
+                              const SizedBox(height: 8),
+                              Text('Jumlah: $amountText'),
+                            ],
+                          ),
+                        ),
                     const Spacer(),
                     if (_errorMessage != null) ...[
                       Container(

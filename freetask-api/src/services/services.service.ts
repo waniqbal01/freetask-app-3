@@ -13,7 +13,7 @@ export class ServicesService {
       throw new ForbiddenException('Only freelancers can create services');
     }
 
-    return this.prisma.service.create({
+    const created = await this.prisma.service.create({
       data: {
         title: dto.title,
         description: dto.description,
@@ -27,10 +27,12 @@ export class ServicesService {
         },
       },
     });
+
+    return this.serializeService(created);
   }
 
-  findAll(q?: string, category?: string) {
-    return this.prisma.service.findMany({
+  async findAll(q?: string, category?: string) {
+    const services = await this.prisma.service.findMany({
       where: {
         ...(q
           ? {
@@ -48,6 +50,7 @@ export class ServicesService {
         },
       },
     });
+    return services.map((service) => this.serializeService(service));
   }
 
   async findOne(id: number) {
@@ -62,19 +65,21 @@ export class ServicesService {
     if (!service) {
       throw new NotFoundException('Service not found');
     }
-    return service;
+    return this.serializeService(service);
   }
 
   async update(id: number, userId: number, dto: UpdateServiceDto) {
     await this.ensureOwner(id, userId);
     const { price, ...rest } = dto;
-    return this.prisma.service.update({
+    const updated = await this.prisma.service.update({
       where: { id },
       data: {
         ...rest,
         price: price !== undefined ? new Prisma.Decimal(price) : undefined,
       },
     });
+
+    return this.serializeService(updated);
   }
 
   async remove(id: number, userId: number) {
@@ -106,5 +111,22 @@ export class ServicesService {
     if (service.freelancerId !== userId) {
       throw new ForbiddenException('You do not own this service');
     }
+  }
+
+  private serializeService<T extends { price: Prisma.Decimal | number | string }>(
+    service: T,
+  ) {
+    const price = service.price;
+    const normalizedPrice =
+      price instanceof Prisma.Decimal
+        ? price.toNumber()
+        : typeof price === 'string'
+          ? Number(price)
+          : Number(price);
+
+    return {
+      ...service,
+      price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
+    };
   }
 }

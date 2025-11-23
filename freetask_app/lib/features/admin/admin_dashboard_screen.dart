@@ -98,6 +98,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  String _formatAmount(Job job) {
+    if (job.hasAmountIssue || job.amount <= 0) {
+      return 'Jumlah tidak sah / sila refresh';
+    }
+    return 'RM${job.amount.toStringAsFixed(2)}';
+  }
+
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -170,7 +177,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   Text('Client: ${job.clientId}'),
                   Text('Freelancer: ${job.freelancerId}'),
                   const SizedBox(height: 4),
-                  Text('Jumlah: RM${job.amount.toStringAsFixed(2)}'),
+                  Text('Jumlah: ${_formatAmount(job)}'),
                   const SizedBox(height: 6),
                   Wrap(
                     spacing: 8,

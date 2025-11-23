@@ -68,6 +68,15 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   }
 
   Future<void> _handleHire(Service service) async {
+    if (service.isPriceUnavailable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Harga servis belum tersedia. Sila cuba lagi atau hubungi sokongan.'),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isHireLoading = true;
     });
@@ -77,8 +86,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       'title': service.title,
       'description': service.description,
       'price': service.price,
-      'deliveryDays': service.deliveryDays,
-      'includes': service.includes,
+      'priceIssue': service.hasPriceIssue,
     };
 
     try {
@@ -163,22 +171,10 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                     style: AppTextStyles.headlineMedium,
                   ),
                   AppSpacing.vertical8,
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.star, color: AppColors.secondary, size: 22),
-                      const SizedBox(width: AppSpacing.s8),
-                      Text(
-                        service.rating.toStringAsFixed(1),
-                        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.neutral500),
-                      ),
-                      const SizedBox(width: AppSpacing.s16),
-                      Chip(
-                        label: Text(service.category),
-                        backgroundColor: theme.colorScheme.surface,
-                        shape: const StadiumBorder(),
-                      ),
-                    ],
+                  Chip(
+                    label: Text(service.category),
+                    backgroundColor: theme.colorScheme.surface,
+                    shape: const StadiumBorder(),
                   ),
                   AppSpacing.vertical16,
                   Container(
@@ -200,13 +196,22 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                                 style: AppTextStyles.labelSmall,
                               ),
                               AppSpacing.vertical8,
-                              Text(
-                                'RM${service.price.toStringAsFixed(2)}',
-                                style: AppTextStyles.headlineSmall,
-                              ),
+                              if (service.isPriceUnavailable)
+                                Text(
+                                  'Harga belum tersedia / invalid, sila refresh',
+                                  style: AppTextStyles.bodyMedium
+                                      .copyWith(color: Colors.orange.shade700),
+                                )
+                              else
+                                Text(
+                                  'RM${service.price.toStringAsFixed(2)}',
+                                  style: AppTextStyles.headlineSmall,
+                                ),
                               AppSpacing.vertical8,
                               Text(
-                                'Siap dalam ${service.deliveryDays} hari',
+                                service.freelancerName?.isNotEmpty == true
+                                    ? 'Disediakan oleh ${service.freelancerName}'
+                                    : 'Disediakan oleh freelancer',
                                 style: AppTextStyles.bodySmall,
                               ),
                             ],
@@ -225,33 +230,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   Text(
                     service.description,
                     style: AppTextStyles.bodyMedium,
-                  ),
-                  AppSpacing.vertical24,
-                  const Text(
-                    'Termasuk',
-                    style: AppTextStyles.headlineSmall,
-                  ),
-                  AppSpacing.vertical8,
-                  ...service.includes.map(
-                    (String include) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s8 / 2),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Padding(
-                            padding: EdgeInsets.only(top: 4),
-                            child: Icon(Icons.check_circle, color: AppColors.primary, size: 18),
-                          ),
-                          const SizedBox(width: AppSpacing.s8),
-                          Expanded(
-                            child: Text(
-                              include,
-                              style: AppTextStyles.bodyMedium,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ),
                   AppSpacing.vertical24,
                   _FreelancerProfile(freelancerId: service.freelancerId),
@@ -279,6 +257,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
         builder: (BuildContext context) {
           final service = _service;
           if (service == null || _isLoading) return const SizedBox.shrink();
+          final disableHire = service.isPriceUnavailable;
 
           return SafeArea(
             top: false,
@@ -292,7 +271,15 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
               child: FTButton(
                 label: 'Hire Sekarang',
                 isLoading: _isHireLoading,
-                onPressed: () => _handleHire(service),
+                onPressed: disableHire
+                    ? () => ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Harga servis belum tersedia. Sila cuba lagi selepas refresh.',
+                            ),
+                          ),
+                        )
+                    : () => _handleHire(service),
               ),
             ),
           );
@@ -353,29 +340,30 @@ class _ServiceBanner extends StatelessWidget {
                       side: BorderSide.none,
                     ),
                     AppSpacing.vertical16,
-                    Text(
-                      service.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.headlineSmall.copyWith(color: Colors.white),
-                    ),
-                    AppSpacing.vertical8,
-                    Row(
-                      children: [
-                        const Icon(Icons.star_rounded, color: Colors.amber, size: 22),
-                        const SizedBox(width: AppSpacing.s8),
+                  Text(
+                    service.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.headlineSmall.copyWith(color: Colors.white),
+                  ),
+                  AppSpacing.vertical8,
+                  Row(
+                    children: [
+                      if (service.isPriceUnavailable)
                         Text(
-                          service.rating.toStringAsFixed(1),
-                          style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
-                        ),
-                        const SizedBox(width: AppSpacing.s16),
+                          'Harga belum tersedia',
+                          style:
+                              AppTextStyles.bodyMedium.copyWith(color: Colors.white),
+                        )
+                      else
                         Text(
                           'RM${service.price.toStringAsFixed(2)}',
-                          style: AppTextStyles.headlineSmall.copyWith(color: Colors.white),
+                          style:
+                              AppTextStyles.headlineSmall.copyWith(color: Colors.white),
                         ),
-                      ],
-                    ),
-                  ],
+                    ],
+                  ),
+                ],
                 ),
               ),
             ),

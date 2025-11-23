@@ -52,8 +52,15 @@ class ServiceCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                          const SizedBox(width: AppSpacing.s8),
-                          _RatingPill(rating: service.rating),
+                          if (service.freelancerName != null &&
+                              service.freelancerName!.isNotEmpty) ...[
+                            const SizedBox(width: AppSpacing.s8),
+                            Text(
+                              service.freelancerName!,
+                              style: textTheme.labelMedium
+                                  ?.copyWith(color: AppColors.neutral400),
+                            ),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 6),
@@ -61,11 +68,13 @@ class ServiceCard extends StatelessWidget {
                         children: [
                           _CategoryChip(label: service.category),
                           const SizedBox(width: AppSpacing.s8),
-                          const Icon(Icons.schedule,
+                          const Icon(Icons.person_outline,
                               size: 16, color: AppColors.neutral300),
                           const SizedBox(width: 4),
                           Text(
-                            '${service.deliveryDays} hari',
+                            service.freelancerId.isNotEmpty
+                                ? 'ID: ${service.freelancerId}'
+                                : 'Freelancer',
                             style: textTheme.bodySmall,
                           ),
                         ],
@@ -81,7 +90,10 @@ class ServiceCard extends StatelessWidget {
                       const SizedBox(height: 14),
                       Row(
                         children: <Widget>[
-                          _PriceTag(price: service.price),
+                          _PriceTag(
+                            price: service.price,
+                            showWarning: service.isPriceUnavailable,
+                          ),
                           const Spacer(),
                           const Icon(Icons.arrow_forward_ios,
                               size: 14, color: AppColors.neutral300),
@@ -243,44 +255,32 @@ class _CategoryChip extends StatelessWidget {
   }
 }
 
-class _RatingPill extends StatelessWidget {
-  const _RatingPill({required this.rating});
-
-  final double rating;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.amber.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.star_rounded, size: 16, color: Colors.amber),
-          const SizedBox(width: 4),
-          Text(
-            rating.toStringAsFixed(1),
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.neutral400,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _PriceTag extends StatelessWidget {
-  const _PriceTag({required this.price});
+  const _PriceTag({required this.price, required this.showWarning});
 
   final double price;
+  final bool showWarning;
 
   @override
   Widget build(BuildContext context) {
+    if (showWarning) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.orange.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+        ),
+        child: Text(
+          'Harga belum tersedia / invalid, sila refresh',
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: Colors.orange.shade700,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(

@@ -5,30 +5,26 @@ class Service {
     required this.category,
     required this.description,
     required this.price,
-    required this.deliveryDays,
-    required this.includes,
     required this.freelancerId,
-    required this.rating,
+    this.freelancerName,
+    this.hasPriceIssue = false,
   });
 
   factory Service.fromJson(Map<String, dynamic> json) {
-    final includes = json['includes'];
+    final priceResult = _parsePrice(json['price']);
+    final freelancer = json['freelancer'];
     return Service(
       id: json['id']?.toString() ?? '',
       title: json['title']?.toString() ?? '',
       category: json['category']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
-      price: (json['price'] as num?)?.toDouble() ?? 0,
-      deliveryDays: json['delivery_days'] as int? ??
-          json['deliveryDays'] as int? ??
-          0,
-      includes: includes is List
-          ? includes.map((dynamic item) => item.toString()).toList()
-          : <String>[],
+      price: priceResult.value,
+      hasPriceIssue: priceResult.hadError,
       freelancerId: json['freelancer_id']?.toString() ??
           json['freelancerId']?.toString() ??
+          freelancer?['id']?.toString() ??
           '',
-      rating: (json['rating'] as num?)?.toDouble() ?? 0,
+      freelancerName: freelancer?['name']?.toString(),
     );
   }
 
@@ -36,9 +32,25 @@ class Service {
   final String title;
   final String category;
   final String description;
-  final double price;
-  final int deliveryDays;
-  final List<String> includes;
   final String freelancerId;
-  final double rating;
+  final String? freelancerName;
+  final double price;
+  final bool hasPriceIssue;
+
+  bool get isPriceUnavailable => hasPriceIssue || price <= 0;
+
+  static ({double value, bool hadError}) _parsePrice(dynamic price) {
+    if (price is num) {
+      return (value: price.toDouble(), hadError: false);
+    }
+
+    if (price is String && price.trim().isNotEmpty) {
+      final parsed = double.tryParse(price);
+      if (parsed != null) {
+        return (value: parsed, hadError: false);
+      }
+    }
+
+    return (value: 0, hadError: true);
+  }
 }
