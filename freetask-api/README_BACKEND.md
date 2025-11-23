@@ -27,6 +27,8 @@ npx prisma migrate dev
 ```bash
 npm run seed
 ```
+   - If the database already has data, the seed will stop unless you set `SEED_FORCE=true`.
+   - To wipe demo tables first, run `SEED_RESET=true npm run seed` (destructive: deletes users, services, jobs, chats, reviews).
 6. Start development server:
 ```bash
 npm run start:dev

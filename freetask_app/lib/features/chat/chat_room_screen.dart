@@ -115,16 +115,29 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
               },
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (Object error, StackTrace stackTrace) {
-                if (error is DioException) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (!mounted) {
-                      return;
-                    }
-                    _showSnackBar(resolveDioErrorMessage(error));
-                  });
-                }
-                return const Center(
-                  child: Text('Chat akan datang (Coming Soon). Sila cuba lagi nanti.'),
+                final message = error is DioException
+                    ? resolveDioErrorMessage(error)
+                    : 'Ralat memuat mesej. Sila cuba lagi.';
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.error_outline, size: 40, color: Colors.redAccent),
+                        const SizedBox(height: 12),
+                        Text(
+                          message,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton(
+                          onPressed: () => ref.refresh(chatMessagesProvider(widget.chatId)),
+                          child: const Text('Cuba Lagi'),
+                        ),
+                      ],
+                    ),
+                  ),
                 );
               },
             ),

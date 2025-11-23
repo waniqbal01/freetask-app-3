@@ -44,6 +44,7 @@ class HttpClient {
         onRequest: (RequestOptions options, RequestInterceptorHandler handler) async {
           final resolvedBase = await _baseUrlFuture;
           options.baseUrl = resolvedBase;
+          options.extra['__baseUrl'] = resolvedBase;
 
           final isPublicServicesGet = _isPublicRequest(options);
           final token = await _readTokenWithMigration();
@@ -62,10 +63,13 @@ class HttpClient {
               final refreshed = await _refreshAccessToken();
               if (refreshed) {
                 try {
+                  final stableBaseUrl =
+                      error.requestOptions.extra['__baseUrl']?.toString() ?? error.requestOptions.baseUrl;
                   final retryOptions = error.requestOptions
                     ..headers['Authorization'] =
                         'Bearer ${await _storage.read(AuthRepository.tokenStorageKey)}'
-                    ..extra['__retriedAfterRefresh'] = true;
+                    ..extra['__retriedAfterRefresh'] = true
+                    ..baseUrl = stableBaseUrl;
 
                   final retryResponse = await dio.fetch<dynamic>(retryOptions);
                   return handler.resolve(retryResponse);
@@ -167,6 +171,9 @@ class HttpClient {
 
   Future<bool> _refreshAccessToken() async {
     if (_refreshing != null) {
+      if (kDebugMode) {
+        debugPrint('Reusing in-flight refresh token request');
+      }
       return _refreshing!;
     }
 
@@ -178,6 +185,8 @@ class HttpClient {
     final completer = Completer<bool>();
     _refreshing = completer.future;
     try {
+      final refreshBase = await _baseUrlFuture;
+      _refreshDio.options.baseUrl = refreshBase;
       final response = await _refreshDio.post<Map<String, dynamic>>(
         '/auth/refresh',
         data: <String, dynamic>{'refreshToken': refreshToken},
