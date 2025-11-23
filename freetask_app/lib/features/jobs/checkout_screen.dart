@@ -29,6 +29,9 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
 
   String get _description => _summary['description']?.toString() ?? '';
 
+  String get _serviceDescription =>
+      _summary['serviceDescription']?.toString() ?? _summary['service_desc']?.toString() ?? '';
+
   String get _title => _summary['title']?.toString() ?? '';
 
   double? get _amount {
@@ -47,7 +50,7 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
   Future<void> _createOrder() async {
     final serviceId = _serviceId;
     final amount = _amount;
-    final description = _description;
+    final description = _description.isNotEmpty ? _description : _serviceDescription;
 
     if (serviceId.isEmpty || amount == null || description.isEmpty || _hasPriceIssue) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -69,11 +72,9 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       return;
     }
 
-    if (amount <= 0) {
+    if (amount < 0.01) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Jumlah perlu lebih daripada 0.'),
-        ),
+        const SnackBar(content: Text('Jumlah minima ialah RM0.01.')),
       );
       return;
     }
@@ -113,6 +114,18 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
         return;
       }
       final message = resolveDioErrorMessage(error);
+      setState(() {
+        _errorMessage = message;
+      });
+      final status = error.response?.statusCode;
+      if (status != 400 && status != 404) {
+        showErrorSnackBar(context, message);
+      }
+    } on StateError catch (error) {
+      if (!mounted) {
+        return;
+      }
+      final message = error.message.isEmpty ? 'Maklumat tempahan tidak sah.' : error.message;
       setState(() {
         _errorMessage = message;
       });

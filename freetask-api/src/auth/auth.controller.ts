@@ -5,6 +5,7 @@ import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { GetUser } from './get-user.decorator';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @UseGuards(ThrottlerGuard)
 @Controller('auth')
@@ -23,6 +24,12 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
+  @Post('refresh')
+  @Throttle(20, 60)
+  refresh(@Body() dto: RefreshTokenDto) {
+    return this.authService.refresh(dto);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get('me')
   me(@GetUser('userId') userId: number) {
@@ -31,7 +38,7 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('logout')
-  logout(@GetUser('userId') _userId: number) {
-    return { message: 'logged out' };
+  logout(@GetUser('userId') userId: number, @GetUser('sessionId') sessionId?: number) {
+    return this.authService.logout(userId, sessionId);
   }
 }
