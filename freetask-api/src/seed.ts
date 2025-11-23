@@ -140,6 +140,27 @@ async function main() {
         freelancerId: freelancers[0].id,
       },
     }),
+    prisma.job.create({
+      data: {
+        title: 'Logo tweaks round',
+        description: 'Rejected after initial consultation.',
+        status: JobStatus.REJECTED,
+        serviceId: services[0].id,
+        clientId: clients[1].id,
+        freelancerId: freelancers[1].id,
+      },
+    }),
+    prisma.job.create({
+      data: {
+        title: 'E-commerce audit',
+        description: 'Client disputed deliverables.',
+        status: JobStatus.DISPUTED,
+        disputeReason: 'Report missing agreed benchmarks.',
+        serviceId: services[2].id,
+        clientId: clients[0].id,
+        freelancerId: freelancers[1].id,
+      },
+    }),
   ]);
 
   await prisma.review.create({

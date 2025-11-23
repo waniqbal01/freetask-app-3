@@ -199,6 +199,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'Avatar berjaya dimuat naik dan dikemaskini.',
         );
       }
+    } on ValidationException catch (error) {
+      if (mounted) {
+        showErrorSnackBar(context, error.message);
+      }
     } on DioException catch (error) {
       if (mounted) {
         showErrorSnackBar(

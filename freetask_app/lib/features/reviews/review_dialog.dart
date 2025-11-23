@@ -136,6 +136,15 @@ class _ReviewDialogState extends State<ReviewDialog> {
       });
 
       Navigator.of(context).pop(true);
+    } on AuthRequiredException catch (error) {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
+      }
     } on DioException catch (error) {
       final message = resolveDioErrorMessage(error);
       if (mounted) {

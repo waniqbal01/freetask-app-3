@@ -57,10 +57,7 @@ class JobsRepository {
       );
       return true;
     } on DioException catch (error) {
-      await _handleDioError(error);
-      if (error.response?.statusCode == 409) {
-        return false;
-      }
+      await _handleStatusError(error);
       rethrow;
     }
   }
@@ -81,10 +78,7 @@ class JobsRepository {
       }
       return true;
     } on DioException catch (error) {
-      await _handleDioError(error);
-      if (error.response?.statusCode == 409) {
-        return false;
-      }
+      await _handleStatusError(error);
       rethrow;
     }
   }
@@ -97,10 +91,7 @@ class JobsRepository {
       );
       return true;
     } on DioException catch (error) {
-      await _handleDioError(error);
-      if (error.response?.statusCode == 409) {
-        return false;
-      }
+      await _handleStatusError(error);
       rethrow;
     }
   }
@@ -114,7 +105,7 @@ class JobsRepository {
       );
       return true;
     } on DioException catch (error) {
-      await _handleDioError(error);
+      await _handleStatusError(error);
       rethrow;
     }
   }
@@ -135,10 +126,7 @@ class JobsRepository {
       }
       return true;
     } on DioException catch (error) {
-      await _handleDioError(error);
-      if (error.response?.statusCode == 409) {
-        return false;
-      }
+      await _handleStatusError(error);
       rethrow;
     }
   }
@@ -151,10 +139,7 @@ class JobsRepository {
       );
       return true;
     } on DioException catch (error) {
-      await _handleDioError(error);
-      if (error.response?.statusCode == 409) {
-        return false;
-      }
+      await _handleStatusError(error);
       rethrow;
     }
   }
@@ -222,6 +207,44 @@ class JobsRepository {
       await authRepository.logout();
     }
   }
+
+  Future<void> _handleStatusError(DioException error) async {
+    final statusCode = error.response?.statusCode;
+    if (statusCode == 403 || statusCode == 409) {
+      final message = _extractErrorMessage(error);
+      throw JobStatusConflict(message);
+    }
+    await _handleDioError(error);
+  }
+
+  String _extractErrorMessage(DioException error) {
+    final data = error.response?.data;
+    if (data is Map<String, dynamic>) {
+      final message = data['message'];
+      if (message is String && message.trim().isNotEmpty) {
+        return message.trim();
+      }
+      if (message is List) {
+        final joined = message
+            .whereType<String>()
+            .map((String item) => item.trim())
+            .where((String item) => item.isNotEmpty)
+            .join('\n');
+        if (joined.isNotEmpty) {
+          return joined;
+        }
+      }
+    }
+    return error.message ?? 'Tindakan tidak dibenarkan.';
+  }
 }
 
 final jobsRepository = JobsRepository();
+
+class JobStatusConflict implements Exception {
+  JobStatusConflict(this.message);
+  final String message;
+
+  @override
+  String toString() => message;
+}

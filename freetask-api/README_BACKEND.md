@@ -5,25 +5,35 @@
 - PostgreSQL database
 
 ## Setup
-1. Copy `.env.example` to `.env` and fill the values.
-2. Install dependencies:
+1. Copy `.env.example` to `.env`.
+2. Edit `.env` and set:
+   - `DATABASE_URL` to your Postgres connection string.
+   - `JWT_SECRET` to a long random string (min 32 chars).
+   - `ALLOWED_ORIGINS` with the frontend origins (comma-separated).
+   - `UPLOAD_DIR` and `MAX_UPLOAD_MB` if you need custom upload paths/limits.
+3. Install dependencies:
 ```bash
 npm install
 ```
-3. Run migrations:
+4. Generate the Prisma client:
 ```bash
-npx prisma migrate deploy
+npx prisma generate
 ```
-4. Seed demo data:
+5. Apply migrations:
+```bash
+npx prisma migrate dev
+```
+6. Seed demo data:
 ```bash
 npm run seed
 ```
-5. Start development server:
+7. Start development server:
 ```bash
 npm run start:dev
 ```
 
 Swagger is available at `http://localhost:4000/api` when running.
+Ensure the `./uploads` folder is persisted or mounted in deployments so uploaded files remain available.
 
 ## Platform base URLs & CORS
 
