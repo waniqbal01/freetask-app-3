@@ -1,15 +1,5 @@
 import { Type, Transform } from 'class-transformer';
-import {
-  IsArray,
-  IsEmail,
-  IsEnum,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-  MinLength,
-} from 'class-validator';
-import { UserRole } from '@prisma/client';
+import { IsArray, IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class RegisterDto {
   @IsEmail()
@@ -22,8 +12,9 @@ export class RegisterDto {
   @IsNotEmpty()
   name: string;
 
-  @IsEnum(UserRole)
-  role: UserRole;
+  @IsString()
+  @IsNotEmpty()
+  role: string;
 
   @IsOptional()
   @IsString()

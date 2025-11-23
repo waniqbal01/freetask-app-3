@@ -12,6 +12,7 @@ import {
 export class CreateJobDto {
   @Type(() => Number)
   @IsInt()
+  @Min(1)
   serviceId: number;
 
   @IsOptional()
@@ -27,6 +28,6 @@ export class CreateJobDto {
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0.01)
+  @Min(0)
   amount?: number;
 }

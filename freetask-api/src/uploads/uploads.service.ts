@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { Request } from 'express';
 import { mkdirSync, existsSync } from 'fs';
 import { extname, join, basename } from 'path';
@@ -9,7 +9,11 @@ export class UploadsService {
 
   ensureUploadsDir() {
     if (!existsSync(this.uploadsDir)) {
-      mkdirSync(this.uploadsDir, { recursive: true });
+      try {
+        mkdirSync(this.uploadsDir, { recursive: true });
+      } catch (error) {
+        throw new InternalServerErrorException('Upload directory not writable');
+      }
     }
   }
 

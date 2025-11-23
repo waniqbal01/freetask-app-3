@@ -10,7 +10,8 @@ async function main() {
   await prisma.service.deleteMany();
   await prisma.user.deleteMany();
 
-  const password = await bcrypt.hash('Password123!', 10);
+  const rawPassword = 'Password123!';
+  const password = await bcrypt.hash(rawPassword, 10);
 
   const freelancers = await Promise.all([
     prisma.user.create({
@@ -104,6 +105,7 @@ async function main() {
         title: 'Logo Design for Startup',
         description: 'Need a modern logo for a tech startup.',
         status: JobStatus.PENDING,
+        amount: new Prisma.Decimal(200),
         serviceId: services[0].id,
         clientId: clients[0].id,
         freelancerId: freelancers[0].id,
@@ -114,6 +116,7 @@ async function main() {
         title: 'Landing Page Build',
         description: 'Simple responsive landing page.',
         status: JobStatus.ACCEPTED,
+        amount: new Prisma.Decimal(750),
         serviceId: services[1].id,
         clientId: clients[1].id,
         freelancerId: freelancers[0].id,
@@ -124,6 +127,7 @@ async function main() {
         title: 'SEO for E-commerce',
         description: 'Optimize SEO for online shop.',
         status: JobStatus.IN_PROGRESS,
+        amount: new Prisma.Decimal(600),
         serviceId: services[2].id,
         clientId: clients[1].id,
         freelancerId: freelancers[1].id,
@@ -134,6 +138,7 @@ async function main() {
         title: 'Social Campaign',
         description: 'Two-week campaign management.',
         status: JobStatus.CANCELLED,
+        amount: new Prisma.Decimal(280),
         serviceId: services[3].id,
         clientId: clients[0].id,
         freelancerId: freelancers[1].id,
@@ -144,6 +149,7 @@ async function main() {
         title: 'Storefront redesign',
         description: 'Completed storefront redesign.',
         status: JobStatus.COMPLETED,
+        amount: new Prisma.Decimal(1200),
         serviceId: services[1].id,
         clientId: clients[0].id,
         freelancerId: freelancers[0].id,
@@ -154,6 +160,7 @@ async function main() {
         title: 'Logo tweaks round',
         description: 'Rejected after initial consultation.',
         status: JobStatus.REJECTED,
+        amount: new Prisma.Decimal(150),
         serviceId: services[0].id,
         clientId: clients[1].id,
         freelancerId: freelancers[1].id,
@@ -164,6 +171,7 @@ async function main() {
         title: 'E-commerce audit',
         description: 'Client disputed deliverables.',
         status: JobStatus.DISPUTED,
+        amount: new Prisma.Decimal(450),
         disputeReason: 'Report missing agreed benchmarks.',
         serviceId: services[2].id,
         clientId: clients[0].id,
@@ -198,12 +206,11 @@ async function main() {
   });
 
   console.log('Seed data created successfully');
-  console.log('Demo users:');
-  console.log(`Admin (${admin.email}) / Password123!`);
-  console.log('Client One / client1@example.com / Password123!');
-  console.log('Client Two / client2@example.com / Password123!');
-  console.log('Freelancer One / freelancer1@example.com / Password123!');
-  console.log('Freelancer Two / freelancer2@example.com / Password123!');
+  console.log('Demo users (email / role):');
+  [admin, ...clients, ...freelancers].forEach((user) => {
+    console.log(`- ${user.email} / ${user.role}`);
+  });
+  console.log(`Demo password for all users: ${rawPassword}`);
 }
 
 main()

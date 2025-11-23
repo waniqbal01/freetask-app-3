@@ -5,30 +5,6 @@ import { join } from 'path';
 import { JwtExceptionFilter } from './common/filters/jwt-exception.filter';
 
 // ---------------------------------------------------
-// Build Allowed CORS Origins (default + .env)
-// ---------------------------------------------------
-function buildAllowedOrigins(): string[] {
-  const safeDefaults = [
-    'http://localhost:3000',
-    'http://localhost:4000',
-    'http://localhost:5173',
-    'http://10.0.2.2:4000',
-    'http://127.0.0.1:4000',
-  ];
-
-  const envOrigins = (process.env.ALLOWED_ORIGINS ?? '')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-
-  if (envOrigins.length > 0) {
-    return envOrigins;
-  }
-
-  return safeDefaults;
-}
-
-// ---------------------------------------------------
 // Bootstrap NestJS App (Dev mode = restricted CORS)
 // ---------------------------------------------------
 async function bootstrap() {
@@ -36,18 +12,18 @@ async function bootstrap() {
     const app = await NestFactory.create(AppModule, {
       bufferLogs: true,
     });
+    const origins = (process.env.ALLOWED_ORIGINS || '')
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean);
 
-    const isProd = process.env.NODE_ENV === 'production';
-    const allowedOrigins = buildAllowedOrigins();
-
-    // ------------------------------
-    // CORS Config (no permissive wildcard)
-    // ------------------------------
     app.enableCors({
-      origin: allowedOrigins,
+      origin: (origin, cb) => {
+        if (!origin) return cb(null, true);
+        if (origins.includes(origin)) return cb(null, true);
+        return cb(new Error(`CORS blocked origin: ${origin}`), false);
+      },
       credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
     });
 
     // ------------------------------
@@ -78,8 +54,7 @@ async function bootstrap() {
     await app.listen(port);
 
     console.log(`🚀 Application running at: ${await app.getUrl()}`);
-    console.log(`🌐 CORS mode: ${isProd ? 'PRODUCTION' : 'NON-PROD (restricted list)'}`);
-    console.log('Allowed Origins:', allowedOrigins);
+    console.log('Allowed Origins:', origins);
 
   } catch (error) {
     console.error('❌ Failed to bootstrap application.', error);
