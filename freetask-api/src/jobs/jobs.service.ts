@@ -146,9 +146,7 @@ export class JobsService {
 
     const allowedNextStates = transitions[current] ?? [];
     if (!allowedNextStates.includes(next)) {
-      throw new ConflictException(
-        `Invalid status transition: ${current} -> ${next}`,
-      );
+      throw new ConflictException('Invalid status transition');
     }
   }
 

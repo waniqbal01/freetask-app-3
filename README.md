@@ -13,16 +13,16 @@ cd freetask_app
 flutter pub get
 ```
 
-To run the app against the local API service, launch Flutter with the
-`API_BASE_URL` define that points to the mock server:
+The backend runs on port **4000** by default. Flutter will pick sensible defaults
+per platform, but you can override them using `API_BASE_URL`:
 
-* **Android emulator**
+* **Android emulator** (default: `http://10.0.2.2:4000`)
 
   ```bash
   flutter run -d emulator-5554 --dart-define=API_BASE_URL=http://10.0.2.2:4000
   ```
 
-* **Web / Chrome**
+* **Web / Chrome** (default: `http://localhost:4000`)
 
   ```bash
   flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:4000

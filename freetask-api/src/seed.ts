@@ -10,7 +10,7 @@ async function main() {
   await prisma.service.deleteMany();
   await prisma.user.deleteMany();
 
-  const password = await bcrypt.hash('password123', 10);
+  const password = await bcrypt.hash('Password123!', 10);
 
   const freelancers = await Promise.all([
     prisma.user.create({
@@ -49,6 +49,15 @@ async function main() {
       },
     }),
   ]);
+
+  const admin = await prisma.user.create({
+    data: {
+      email: 'admin@example.com',
+      name: 'Admin User',
+      password,
+      role: UserRole.ADMIN,
+    },
+  });
 
   const services = await Promise.all([
     prisma.service.create({
@@ -190,10 +199,11 @@ async function main() {
 
   console.log('Seed data created successfully');
   console.log('Demo users:');
-  console.log('Client One / client1@example.com / password123');
-  console.log('Client Two / client2@example.com / password123');
-  console.log('Freelancer One / freelancer1@example.com / password123');
-  console.log('Freelancer Two / freelancer2@example.com / password123');
+  console.log(`Admin (${admin.email}) / Password123!`);
+  console.log('Client One / client1@example.com / Password123!');
+  console.log('Client Two / client2@example.com / Password123!');
+  console.log('Freelancer One / freelancer1@example.com / Password123!');
+  console.log('Freelancer Two / freelancer2@example.com / Password123!');
 }
 
 main()

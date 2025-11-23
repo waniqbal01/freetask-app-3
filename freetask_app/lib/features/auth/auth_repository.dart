@@ -10,6 +10,7 @@ class AuthRepository {
         _dio = dio ?? HttpClient().dio;
 
   static const tokenStorageKey = 'auth_token';
+  static const legacyTokenStorageKey = 'access_token';
 
   final FlutterSecureStorage _secureStorage;
   final Dio _dio;
@@ -102,8 +103,20 @@ class AuthRepository {
     }
   }
 
-  Future<String?> getSavedToken() {
-    return _secureStorage.read(key: tokenStorageKey);
+  Future<String?> getSavedToken() async {
+    final token = await _secureStorage.read(key: tokenStorageKey);
+    if (token != null && token.isNotEmpty) {
+      return token;
+    }
+
+    final legacy = await _secureStorage.read(key: legacyTokenStorageKey);
+    if (legacy != null && legacy.isNotEmpty) {
+      await _secureStorage.write(key: tokenStorageKey, value: legacy);
+      await _secureStorage.delete(key: legacyTokenStorageKey);
+      return legacy;
+    }
+
+    return token;
   }
 
   Future<void> logout() async {
@@ -120,6 +133,7 @@ class AuthRepository {
     } finally {
       _cachedUser = null;
       await _secureStorage.delete(key: tokenStorageKey);
+      await _secureStorage.delete(key: legacyTokenStorageKey);
     }
   }
 

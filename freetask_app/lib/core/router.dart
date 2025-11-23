@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../features/admin/admin_dashboard_screen.dart';
 import '../features/auth/login_screen.dart';
@@ -15,9 +16,63 @@ import '../features/jobs/job_list_screen.dart';
 import '../features/services/service_detail_screen.dart';
 import '../features/services/service_list_screen.dart';
 import '../models/job.dart';
+import '../features/auth/auth_repository.dart';
+
+final authRefreshNotifier = ValueNotifier<DateTime>(DateTime.now());
+const _storage = FlutterSecureStorage();
+
+Future<bool> hasToken() async {
+  final token = await _storage.read(key: AuthRepository.tokenStorageKey);
+  if (token != null && token.isNotEmpty) {
+    return true;
+  }
+
+  final legacy = await _storage.read(key: AuthRepository.legacyTokenStorageKey);
+  if (legacy != null && legacy.isNotEmpty) {
+    await _storage.write(key: AuthRepository.tokenStorageKey, value: legacy);
+    await _storage.delete(key: AuthRepository.legacyTokenStorageKey);
+    return true;
+  }
+
+  return false;
+}
 
 final appRouter = GoRouter(
   initialLocation: '/startup',
+  refreshListenable: authRefreshNotifier,
+  redirect: (context, state) async {
+    final location = state.uri.path;
+    final isAuthPage = ['/login', '/register', '/role-selection'].contains(location);
+    final isStartup = location == '/startup' || location == '/';
+    final needsAuth =
+        location.startsWith('/jobs') || location.startsWith('/chat') || location.startsWith('/admin');
+
+    final tokenExists = await hasToken();
+
+    if (!tokenExists && needsAuth) {
+      return '/login';
+    }
+
+    if (tokenExists && (isAuthPage || isStartup)) {
+      return '/home';
+    }
+
+    if (location.startsWith('/admin')) {
+      try {
+        final user = await authRepository.getCurrentUser();
+        if (user == null) {
+          return '/login';
+        }
+        if (user.role.toUpperCase() != 'ADMIN') {
+          return '/home';
+        }
+      } catch (_) {
+        return '/login';
+      }
+    }
+
+    return null;
+  },
   routes: <RouteBase>[
     GoRoute(
       path: '/startup',
@@ -83,16 +138,12 @@ final appRouter = GoRouter(
         final extras = state.extra as Map<String, dynamic>?;
         final job = extras?['job'] as Job?;
         final isClientView = extras?['isClientView'] as bool? ?? true;
-
-        if (job == null) {
-          return const Scaffold(
-            body: Center(
-              child: Text('Maklumat job tidak tersedia.'),
-            ),
-          );
-        }
-
-        return JobDetailScreen(job: job, isClientView: isClientView);
+        final jobId = state.pathParameters['id'] ?? 'unknown';
+        return JobDetailScreen(
+          jobId: jobId,
+          initialJob: job,
+          isClientView: isClientView,
+        );
       },
     ),
     GoRoute(

@@ -148,7 +148,7 @@ class _JobListScreenState extends State<JobListScreen> {
   }
 
   Future<void> _handleAction(
-    Future<bool> Function() action,
+    Future<Job?> Function() action,
     String successMessage,
   ) async {
     if (_isProcessing) return;
@@ -157,7 +157,7 @@ class _JobListScreenState extends State<JobListScreen> {
     });
 
     try {
-      final success = await action();
+      final result = await action();
 
       if (!mounted) return;
 
@@ -165,7 +165,7 @@ class _JobListScreenState extends State<JobListScreen> {
         _isProcessing = false;
       });
 
-      if (success) {
+      if (result != null) {
         await _loadJobs();
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
