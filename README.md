@@ -10,16 +10,41 @@ cd freetask-api
 cp .env.example .env
 npm install
 npx prisma migrate dev
-# Set PUBLIC_BASE_URL to your API origin (e.g. http://localhost:4000 or http://192.168.x.x:4000)
+# Seed sample users/services
 SEED_FORCE=true npm run seed
 npm run start:dev
 ```
 
-`ALLOWED_ORIGINS` in `.env` is pre-populated for localhost testing; when left empty in
-development the API allows common local origins automatically (including
-`http://localhost:*`, `http://127.0.0.1:*`, `http://10.0.2.2:*`, and `http://192.168.*.*:*`).
-For production, always set an explicit list and configure `PUBLIC_BASE_URL` to your API
-domain so upload links are stable and unspoofable.
+**Do not skip envs in production** – the API now fails fast when
+`ALLOWED_ORIGINS`/`PUBLIC_BASE_URL` are missing.
+
+Copy/paste starter envs:
+
+- **Local dev (web + emulator)**
+
+  ```env
+  DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/freetask?schema=public
+  JWT_SECRET=CHANGE_ME_SUPER_SECRET
+  PUBLIC_BASE_URL=http://localhost:4000
+  ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://10.0.2.2:3000,http://localhost:4000,http://127.0.0.1:4000
+  ```
+
+- **Staging (LAN/IP testing)**
+
+  ```env
+  PUBLIC_BASE_URL=http://192.168.0.10:4000
+  ALLOWED_ORIGINS=http://192.168.0.10:4000,http://10.0.2.2:4000
+  ```
+
+- **Production (web)**
+
+  ```env
+  PUBLIC_BASE_URL=https://api.freetask.my
+  ALLOWED_ORIGINS=https://app.freetask.my,https://admin.freetask.my
+  ```
+
+Persist uploads between restarts by mounting/volume-binding the `./uploads` folder
+when running in Docker or on a host machine.
 
 Demo logins from the seed:
 

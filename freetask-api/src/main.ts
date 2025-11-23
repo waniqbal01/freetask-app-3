@@ -4,51 +4,7 @@ import { AppModule } from './app.module';
 import { join } from 'path';
 import { JwtExceptionFilter } from './common/filters/jwt-exception.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-
-function normalizeOrigin(origin: string) {
-  return origin.trim().replace(/\/$/, '');
-}
-
-function getAllowedOrigins(logger: Logger, isProduction: boolean) {
-  const configuredOrigins = (process.env.ALLOWED_ORIGINS || '')
-    .split(',')
-    .flatMap((o) => o.split(/\s+/))
-    .map(normalizeOrigin)
-    .filter(Boolean);
-
-  if (configuredOrigins.length > 0) {
-    return configuredOrigins;
-  }
-
-  const publicBase = process.env.PUBLIC_BASE_URL?.trim();
-  if (publicBase) {
-    const normalizedBase = normalizeOrigin(publicBase);
-    logger.warn(
-      `⚠️  ALLOWED_ORIGINS missing. Falling back to PUBLIC_BASE_URL (${normalizedBase}). Set ALLOWED_ORIGINS to lock this down.`,
-    );
-    return [normalizedBase];
-  }
-
-  if (isProduction) {
-    logger.error(
-      '🚧 ALLOWED_ORIGINS is empty in production. CORS will be blocked for external origins until configured.',
-    );
-    return [];
-  }
-
-  logger.warn(
-    '⚠️  ALLOWED_ORIGINS missing. Allowing common localhost origins for development only. Set ALLOWED_ORIGINS to secure.',
-  );
-
-  return [
-    'http://localhost:4000',
-    'http://127.0.0.1:4000',
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'http://10.0.2.2:3000',
-    'http://10.0.2.2:4000',
-  ];
-}
+import { getAllowedOrigins, normalizeOrigin } from './config/cors';
 
 // ---------------------------------------------------
 // Bootstrap NestJS App (Dev mode = restricted CORS)

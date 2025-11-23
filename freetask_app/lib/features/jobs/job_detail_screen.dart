@@ -12,17 +12,25 @@ import '../auth/auth_repository.dart';
 import 'jobs_repository.dart';
 import 'widgets/job_status_badge.dart';
 
+bool resolveClientViewMode({bool? navigationFlag, String? role}) {
+  if (navigationFlag != null) {
+    return navigationFlag;
+  }
+
+  return role?.toUpperCase() == 'CLIENT';
+}
+
 class JobDetailScreen extends StatefulWidget {
   const JobDetailScreen({
     super.key,
     required this.jobId,
     this.initialJob,
-    required this.isClientView,
+    this.isClientView,
   });
 
   final String jobId;
   final Job? initialJob;
-  final bool isClientView;
+  final bool? isClientView;
 
   @override
   State<JobDetailScreen> createState() => _JobDetailScreenState();
@@ -41,7 +49,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _isClientView = widget.isClientView;
+    _isClientView = resolveClientViewMode(
+      navigationFlag: widget.isClientView,
+      role: null,
+    );
     _job = widget.initialJob;
     _hydrateUser();
     _loadJobIfNeeded();
@@ -57,9 +68,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       setState(() {
         _userRole = user?.role;
         _userId = user?.id;
-        if (user != null) {
-          _isClientView = user.role.toUpperCase() == 'CLIENT';
-        }
+        _isClientView = resolveClientViewMode(
+          navigationFlag: widget.isClientView,
+          role: user?.role,
+        );
       });
     } catch (_) {
       // best effort only

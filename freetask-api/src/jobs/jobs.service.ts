@@ -131,6 +131,10 @@ export class JobsService {
       throw new ForbiddenException('Only freelancers can update job status');
     }
 
+    if (dto.status === JobStatus.CANCELLED) {
+      throw new ForbiddenException('Freelancers cannot cancel jobs');
+    }
+
     const job = await this.ensureJobForFreelancer(id, userId);
     this.ensureValidTransition(job.status, dto.status);
     return this.applyStatusUpdate(id, dto.status);
