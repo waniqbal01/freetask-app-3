@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/notifications/notification_service.dart';
+import '../../core/utils/api_error_handler.dart';
 import '../../core/router.dart';
 import '../../core/storage/storage.dart';
 import '../../models/job.dart';
@@ -233,8 +234,9 @@ class JobsRepository {
   }
 
   Future<void> _handleDioError(DioException error) async {
-    if (error.response?.statusCode == 401) {
-      await authRepository.logout();
+    await handleApiError(error);
+
+    if (error.response?.statusCode == 401 || error.response?.statusCode == 403) {
       return;
     }
 
@@ -247,8 +249,9 @@ class JobsRepository {
   }
 
   Future<void> _handleStatusError(DioException error) async {
+    await handleApiError(error);
     final statusCode = error.response?.statusCode;
-    if (statusCode == 403 || statusCode == 409) {
+    if (statusCode == 409) {
       final message = _extractErrorMessage(error);
       throw JobStatusConflict(message);
     }

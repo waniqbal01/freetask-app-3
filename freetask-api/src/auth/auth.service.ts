@@ -158,7 +158,11 @@ export class AuthService {
 
   async logout(userId: number, sessionId?: number) {
     if (!sessionId) {
-      return { message: 'logged out' };
+      await this.prisma.session.updateMany({
+        where: { userId },
+        data: { revoked: true, refreshTokenHash: null },
+      });
+      return { message: 'logged out (all sessions revoked)' };
     }
 
     await this.prisma.session.updateMany({

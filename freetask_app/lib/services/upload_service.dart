@@ -26,12 +26,11 @@ class UploadService {
 
     final token = await _storage.read(_authTokenKey) ??
         await _storage.read(_legacyAccessTokenKey);
-    final headers = <String, dynamic>{};
-    if (token != null && token.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $token';
-    } else {
-      debugPrint('UploadService: no auth token found; uploads may be rejected with 401.');
+    if (token == null || token.isEmpty) {
+      throw const UnauthenticatedUploadException('Sila login dulu untuk upload.');
     }
+    final headers = <String, dynamic>{};
+    headers['Authorization'] = 'Bearer $token';
 
     final response = await _dio.post<Map<String, dynamic>>(
       '/uploads',
@@ -87,6 +86,14 @@ final uploadService = UploadService();
 
 class ValidationException implements Exception {
   const ValidationException(this.message);
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
+class UnauthenticatedUploadException implements Exception {
+  const UnauthenticatedUploadException(this.message);
   final String message;
 
   @override

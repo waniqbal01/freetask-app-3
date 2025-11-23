@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/notifications/notification_service.dart';
+import '../../core/utils/api_error_handler.dart';
 import '../../core/router.dart';
 import '../../core/storage/storage.dart';
 import '../../services/http_client.dart';
@@ -84,13 +85,15 @@ class ChatRepository {
       return;
     }
     try {
-      await _dio.post<void>(
-        '/chats/$jobId/messages',
-        data: <String, dynamic>{
-          'content': trimmed,
-        },
-        options: await _authorizedOptions(),
-      );
+      await _retryRequest(() async {
+        await _dio.post<void>(
+          '/chats/$jobId/messages',
+          data: <String, dynamic>{
+            'content': trimmed,
+          },
+          options: await _authorizedOptions(),
+        );
+      });
       await _loadMessages(jobId);
     } on DioException catch (error) {
       await _handleError(error);
@@ -106,10 +109,12 @@ class ChatRepository {
 
   Future<void> _loadMessages(String jobId) async {
     try {
-      final response = await _dio.get<List<dynamic>>(
-        '/chats/$jobId/messages',
-        options: await _authorizedOptions(),
-      );
+      final response = await _retryRequest(() async {
+        return _dio.get<List<dynamic>>(
+          '/chats/$jobId/messages',
+          options: await _authorizedOptions(),
+        );
+      });
       final data = response.data ?? <dynamic>[];
       final messages = data
           .whereType<Map<String, dynamic>>()
@@ -124,8 +129,24 @@ class ChatRepository {
       controller.add(List<ChatMessage>.unmodifiable(messages));
     } on DioException catch (error) {
       await _handleError(error);
-      _notifyStreamError(resolveErrorMessage(error));
+      _notifyStreamError('Rangkaian terputus. Tap untuk cuba lagi.');
     }
+  }
+
+  Future<T> _retryRequest<T>(Future<T> Function() action) async {
+    DioException? lastError;
+    for (int attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await action();
+      } on DioException catch (error) {
+        lastError = error;
+        if (attempt == 2) {
+          rethrow;
+        }
+        await Future<void>.delayed(Duration(milliseconds: 200 * (1 << attempt)));
+      }
+    }
+    throw lastError ?? Exception('Permintaan gagal selepas percubaan semula.');
   }
 
   Future<Options> _authorizedOptions() async {
@@ -138,9 +159,7 @@ class ChatRepository {
   }
 
   Future<void> _handleError(DioException error) async {
-    if (error.response?.statusCode == 401) {
-      await authRepository.logout();
-    }
+    await handleApiError(error);
   }
 
   Future<void> _handleMissingToken() async {

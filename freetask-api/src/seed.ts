@@ -84,7 +84,7 @@ async function main() {
 
   if (!force && !allowDevAutoSeed) {
     const message =
-      '❌ Seed blocked. Set SEED_FORCE=true to allow seeding. Use SEED_RESET=false for non-destructive mode.';
+      '❌ Seed blocked: database already has data. Set SEED_FORCE=true to rerun. Use SEED_RESET=false for non-destructive reseed.';
     console.error(message);
     throw new Error(message);
   }
