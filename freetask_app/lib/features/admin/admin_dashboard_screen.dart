@@ -122,7 +122,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(16),
-          child: Text('Tiada data'),
+          child: Text('Tiada job untuk dipaparkan.'),
         ),
       );
     }

@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { join } from 'path';
 import { JwtExceptionFilter } from './common/filters/jwt-exception.filter';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 // ---------------------------------------------------
 // Bootstrap NestJS App (Dev mode = restricted CORS)
@@ -67,6 +68,19 @@ async function bootstrap() {
     // Serve static uploaded files
     // ------------------------------
     app.useStaticAssets(join(process.cwd(), 'uploads'));
+
+    // ------------------------------
+    // Swagger documentation
+    // ------------------------------
+    const config = new DocumentBuilder()
+      .setTitle('Freetask API')
+      .setDescription('API docs for Freetask MVP')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api', app, document);
 
     // ------------------------------
     // Start server
