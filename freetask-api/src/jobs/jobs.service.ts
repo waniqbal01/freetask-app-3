@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -26,7 +27,11 @@ export class JobsService {
       throw new NotFoundException('Service not found');
     }
 
-    const amount = new Prisma.Decimal(Number(dto.amount).toFixed(2));
+    const parsedAmount = Number(dto.amount);
+    if (!Number.isFinite(parsedAmount)) {
+      throw new BadRequestException('amount must be a valid number');
+    }
+    const amount = new Prisma.Decimal(parsedAmount.toFixed(2));
 
     const job = await this.prisma.job.create({
       data: {

@@ -21,7 +21,7 @@ npx prisma migrate dev
 ```
 5. Seed demo data:
 ```bash
-npm run seed
+SEED_FORCE=true npm run seed
 ```
 6. Start development server:
 ```bash

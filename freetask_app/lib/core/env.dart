@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 class Env {
-  static String get apiBaseUrl {
+  static String get defaultApiBaseUrl {
     const envOverride = String.fromEnvironment('API_BASE_URL');
     if (envOverride.isNotEmpty) return envOverride;
 

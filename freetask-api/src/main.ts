@@ -20,7 +20,8 @@ async function bootstrap() {
     const isProduction = process.env.NODE_ENV === 'production';
     const configuredOrigins = (process.env.ALLOWED_ORIGINS || '')
       .split(',')
-      .map((o) => o.trim())
+      .flatMap((o) => o.split(/\s+/))
+      .map((o) => o.trim().replace(/\/$/, ''))
       .filter(Boolean);
 
     const devFallbackOrigins = [
@@ -28,6 +29,7 @@ async function bootstrap() {
       'http://127.0.0.1:4000',
       'http://localhost:3000',
       'http://localhost:5173',
+      'http://10.0.2.2:3000',
       'http://10.0.2.2:4000',
     ];
 
@@ -35,7 +37,9 @@ async function bootstrap() {
       throw new Error('ALLOWED_ORIGINS must be configured in production');
     }
 
-    const allowedOrigins = configuredOrigins.length > 0 ? configuredOrigins : devFallbackOrigins;
+    const allowedOrigins = Array.from(
+      new Set(configuredOrigins.length > 0 ? configuredOrigins : devFallbackOrigins),
+    );
 
     app.enableCors({
       origin: (origin, cb) => {

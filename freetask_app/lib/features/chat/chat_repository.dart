@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../../core/notifications/notification_service.dart';
+import '../../core/router.dart';
 import '../../services/http_client.dart';
 import '../auth/auth_repository.dart';
 import 'chat_models.dart';
@@ -61,11 +64,10 @@ class ChatRepository {
       () => StreamController<List<ChatMessage>>.broadcast(),
     );
     unawaited(
-      _loadMessages(jobId).catchError(
-        (Object error, StackTrace stackTrace) {
-          controller.addError(error, stackTrace);
-        },
-      ),
+      _loadMessages(jobId).catchError((Object error, StackTrace _) {
+        _notifyStreamError(error);
+        controller.add(List<ChatMessage>.unmodifiable(_messages[jobId] ?? <ChatMessage>[]));
+      }),
     );
     controller
         .add(List<ChatMessage>.unmodifiable(_messages[jobId] ?? <ChatMessage>[]));
@@ -76,11 +78,16 @@ class ChatRepository {
     required String jobId,
     required String text,
   }) async {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) {
+      _notifyStreamError('Mesej kosong tidak dihantar.');
+      return;
+    }
     try {
       await _dio.post<void>(
         '/chats/$jobId/messages',
         data: <String, dynamic>{
-          'content': text,
+          'content': trimmed,
         },
         options: await _authorizedOptions(),
       );
@@ -117,14 +124,15 @@ class ChatRepository {
       controller.add(List<ChatMessage>.unmodifiable(messages));
     } on DioException catch (error) {
       await _handleError(error);
-      rethrow;
+      _notifyStreamError(resolveErrorMessage(error));
     }
   }
 
   Future<Options> _authorizedOptions() async {
     final token = await _secureStorage.read(key: AuthRepository.tokenStorageKey);
     if (token == null || token.isEmpty) {
-      throw StateError('Token tidak ditemui. Sila log masuk semula.');
+      await _handleMissingToken();
+      return Options();
     }
     return Options(headers: <String, String>{'Authorization': 'Bearer $token'});
   }
@@ -133,5 +141,36 @@ class ChatRepository {
     if (error.response?.statusCode == 401) {
       await authRepository.logout();
     }
+  }
+
+  Future<void> _handleMissingToken() async {
+    notificationService.messengerKey.currentState?.showSnackBar(
+      const SnackBar(content: Text('Sesi tamat. Sila log masuk semula.')),
+    );
+    await authRepository.logout();
+    authRefreshNotifier.value = DateTime.now();
+    appRouter.go('/login');
+  }
+
+  void _notifyStreamError(Object error) {
+    final message = error is DioException
+        ? resolveErrorMessage(error)
+        : error.toString().isEmpty
+            ? 'Ralat chat tidak diketahui.'
+            : error.toString();
+    notificationService.messengerKey.currentState?.showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  String resolveErrorMessage(DioException error) {
+    final data = error.response?.data;
+    if (data is Map<String, dynamic>) {
+      final msg = data['message'];
+      if (msg is String && msg.isNotEmpty) {
+        return msg;
+      }
+    }
+    return error.message ?? 'Ralat chat.';
   }
 }

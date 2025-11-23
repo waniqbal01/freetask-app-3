@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../core/notifications/notification_service.dart';
+import '../../core/router.dart';
 import '../../models/job.dart';
 import '../../services/http_client.dart';
 import '../auth/auth_repository.dart';
@@ -156,6 +158,10 @@ class JobsRepository {
   }
 
   Future<List<Job>> getAllJobs() async {
+    final currentUser = await authRepository.getCurrentUser();
+    if (currentUser == null || currentUser.role.toUpperCase() != 'ADMIN') {
+      throw StateError('Hanya admin boleh melihat semua job.');
+    }
     return _fetchJobs(<String, dynamic>{'filter': 'all'});
   }
 
@@ -200,9 +206,19 @@ class JobsRepository {
   Future<Options> _authorizedOptions() async {
     final token = await _secureStorage.read(key: AuthRepository.tokenStorageKey);
     if (token == null || token.isEmpty) {
-      throw StateError('Token tidak ditemui. Sila log masuk semula.');
+      await _handleMissingToken();
+      return Options();
     }
     return Options(headers: <String, String>{'Authorization': 'Bearer $token'});
+  }
+
+  Future<void> _handleMissingToken() async {
+    notificationService.messengerKey.currentState?.showSnackBar(
+      const SnackBar(content: Text('Sesi tamat. Sila log masuk semula.')),
+    );
+    await authRepository.logout();
+    authRefreshNotifier.value = DateTime.now();
+    appRouter.go('/login');
   }
 
   Future<void> _handleDioError(DioException error) async {

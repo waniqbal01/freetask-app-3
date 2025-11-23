@@ -10,7 +10,7 @@ cd freetask-api
 cp .env.example .env
 npm install
 npx prisma migrate dev
-npm run seed
+SEED_FORCE=true npm run seed
 npm run start:dev
 ```
 
@@ -36,7 +36,8 @@ flutter pub get
 ```
 
 The backend runs on port **4000** by default. Flutter will pick sensible defaults
-per platform, but you can override them using `API_BASE_URL`:
+per platform, but you can override them at runtime via **Tukar API Server** in the
+app (or by using `--dart-define=API_BASE_URL` at build time):
 
 * **Android emulator** (default: `http://10.0.2.2:4000`)
 
