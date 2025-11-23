@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { Request } from 'express';
 import { mkdirSync, existsSync } from 'fs';
 import { extname, join, basename } from 'path';
@@ -6,6 +10,7 @@ import { extname, join, basename } from 'path';
 @Injectable()
 export class UploadsService {
   private readonly uploadsDir = join(process.cwd(), 'uploads');
+  private warnedMissingBaseUrl = false;
 
   ensureUploadsDir() {
     if (!existsSync(this.uploadsDir)) {
@@ -30,16 +35,51 @@ export class UploadsService {
   }
 
   buildFileUrl(request: Request, filename: string) {
+    const configuredBase = process.env.PUBLIC_BASE_URL?.trim();
+    if (configuredBase) {
+      const normalized = UploadsService.normalizeBaseUrl(configuredBase);
+      const requestHost = request.get('host');
+      if (requestHost && !UploadsService.hostMatches(normalized, requestHost)) {
+        throw new BadRequestException(
+          'PUBLIC_BASE_URL is enforced and does not match the incoming host.',
+        );
+      }
+      return `${normalized}/uploads/${filename}`;
+    }
+
     const forwardedProto = request.get('x-forwarded-proto');
     const forwardedHost = request.get('x-forwarded-host');
-    const configuredBase = process.env.PUBLIC_BASE_URL?.trim();
-
     const host = forwardedHost || request.get('host');
     const protocol = forwardedProto || request.protocol;
-    const origin = configuredBase || `${protocol}://${host}`;
 
-    const sanitizedOrigin = origin.endsWith('/') ? origin.slice(0, -1) : origin;
+    if (!host) {
+      throw new InternalServerErrorException('Unable to determine request host for upload URL');
+    }
+
+    if (!this.warnedMissingBaseUrl && process.env.NODE_ENV !== 'production') {
+      this.warnedMissingBaseUrl = true;
+      // eslint-disable-next-line no-console
+      console.warn(
+        '⚠️  PUBLIC_BASE_URL not set; falling back to request host headers. Set PUBLIC_BASE_URL to avoid forged URLs.',
+      );
+    }
+
+    const origin = `${protocol}://${host}`;
+    const sanitizedOrigin = UploadsService.normalizeBaseUrl(origin);
     return `${sanitizedOrigin}/uploads/${filename}`;
+  }
+
+  static normalizeBaseUrl(origin: string) {
+    return origin.endsWith('/') ? origin.slice(0, -1) : origin;
+  }
+
+  static hostMatches(baseUrl: string, requestHost: string) {
+    try {
+      const parsed = new URL(baseUrl);
+      return parsed.host === requestHost;
+    } catch (_) {
+      return false;
+    }
   }
 
   static isAllowedMimeType(mimeType?: string | null) {

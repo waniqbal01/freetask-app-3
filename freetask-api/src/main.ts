@@ -33,6 +33,13 @@ async function bootstrap() {
       'http://10.0.2.2:4000',
     ];
 
+    const devFallbackPatterns = [
+      /^http:\/\/localhost(?::\d+)?$/,
+      /^http:\/\/127\.0\.0\.1(?::\d+)?$/,
+      /^http:\/\/10\.0\.2\.2(?::\d+)?$/,
+      /^http:\/\/192\.168\.\d+\.\d+(?::\d+)?$/,
+    ];
+
     if (isProduction && configuredOrigins.length === 0) {
       throw new Error('ALLOWED_ORIGINS must be configured in production');
     }
@@ -44,7 +51,14 @@ async function bootstrap() {
     app.enableCors({
       origin: (origin, cb) => {
         if (!origin) return cb(null, true);
-        if (allowedOrigins.includes(origin)) return cb(null, true);
+        const normalizedOrigin = origin.replace(/\/$/, '');
+        if (allowedOrigins.includes(normalizedOrigin)) return cb(null, true);
+        if (
+          configuredOrigins.length === 0 &&
+          devFallbackPatterns.some((pattern) => pattern.test(normalizedOrigin))
+        ) {
+          return cb(null, true);
+        }
         return cb(new Error(`CORS blocked origin: ${origin}`), false);
       },
       credentials: true,

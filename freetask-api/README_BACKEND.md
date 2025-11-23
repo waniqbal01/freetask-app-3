@@ -13,8 +13,10 @@ cp .env.example .env
 ```bash
 npm install
 ```
-3. Update `.env` with your database connection and JWT secret if needed. The default
-   `ALLOWED_ORIGINS` covers local web/desktop testing.
+3. Update `.env` with your database connection, JWT secret, and `PUBLIC_BASE_URL`
+   (e.g. `http://localhost:4000` for local dev, `http://192.168.x.x:4000` for LAN
+   devices, or your production domain). The default `ALLOWED_ORIGINS` covers local
+   web/desktop testing.
 4. Apply Prisma migrations:
 ```bash
 npx prisma migrate dev
@@ -34,8 +36,12 @@ Environment summary:
 - `JWT_SECRET` – secret for signing tokens
 - `JWT_EXPIRES_IN` – expiry duration (e.g. `7d`)
 - `ALLOWED_ORIGINS` – comma-separated list of allowed CORS origins (dev falls back to
-  common localhost URLs if empty)
+  common localhost/lan URLs if empty, including `http://192.168.*.*` and emulator
+  hosts such as `http://10.0.2.2:*`)
 - `PORT` – defaults to `4000`
+- `PUBLIC_BASE_URL` – required in production to build absolute upload URLs (set to
+  your API origin, e.g. `https://api.example.com`)
+- `SEED_FORCE` – set to `true` to allow seeding (dev auto-seeds an empty DB once)
 
 Demo credentials from the seed script:
 
@@ -46,6 +52,9 @@ Demo credentials from the seed script:
 Swagger docs are served at `/api` (e.g. `http://localhost:4000/api` locally or
 `https://<your-domain>/api` in production). Ensure the `./uploads` folder is
 persisted or mounted in deployments so uploaded files remain available.
+
+See [`../PRODUCTION_CHECKLIST.md`](../PRODUCTION_CHECKLIST.md) before deploying
+to production (required envs, proxy headers, uploads volume, and seed guidance).
 
 ## Platform base URLs & CORS
 

@@ -2,20 +2,20 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../core/notifications/notification_service.dart';
 import '../../core/router.dart';
+import '../../core/storage/storage.dart';
 import '../../models/job.dart';
 import '../../services/http_client.dart';
 import '../auth/auth_repository.dart';
 
 class JobsRepository {
-  JobsRepository({FlutterSecureStorage? secureStorage, Dio? dio})
-      : _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+  JobsRepository({AppStorage? storage, Dio? dio})
+      : _storage = storage ?? appStorage,
         _dio = dio ?? HttpClient().dio;
 
-  final FlutterSecureStorage _secureStorage;
+  final AppStorage _storage;
   final Dio _dio;
 
   Future<Job> createOrder(
@@ -204,7 +204,7 @@ class JobsRepository {
   }
 
   Future<Options> _authorizedOptions() async {
-    final token = await _secureStorage.read(key: AuthRepository.tokenStorageKey);
+    final token = await _storage.read(AuthRepository.tokenStorageKey);
     if (token == null || token.isEmpty) {
       await _handleMissingToken();
       return Options();

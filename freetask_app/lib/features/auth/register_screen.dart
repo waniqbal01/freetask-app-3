@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mime/mime.dart';
 
 import '../../core/notifications/notification_service.dart';
 import '../../core/utils/error_utils.dart';
@@ -161,9 +162,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _handlePickAvatar() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.image);
-    final path = result?.files.single.path;
-    if (path == null) {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
+    final file = result?.files.single;
+    if (file == null) {
+      return;
+    }
+
+    final mimeType = lookupMimeType(file.name, headerBytes: file.bytes) ?? '';
+    if (!UploadService.allowedMimeTypes.contains(mimeType)) {
+      if (mounted) {
+        showErrorSnackBar(context, 'Hanya imej JPEG/PNG/GIF atau dokumen diterima.');
+      }
+      return;
+    }
+
+    if (file.size > UploadService.maxFileBytes) {
+      if (mounted) {
+        showErrorSnackBar(context, 'Fail melebihi had 5MB. Pilih fail yang lebih kecil.');
+      }
+      return;
+    }
+
+    final path = file.path;
+    if (path == null || path.isEmpty) {
+      if (mounted) {
+        showErrorSnackBar(
+          context,
+          'Platform ini tidak menyokong muat naik fail terus. Cuba dari peranti mudah alih.',
+        );
+      }
       return;
     }
 
