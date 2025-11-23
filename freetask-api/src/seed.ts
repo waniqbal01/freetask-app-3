@@ -88,7 +88,7 @@ async function main() {
 
   if (!force && !allowDevAutoSeed) {
     const message =
-      '❌ Seed blocked: database already has data. Set SEED_FORCE=true to rerun. Use SEED_RESET=true only when you are sure data can be wiped.';
+      '❌ Seed blocked: database already has data. Re-run with SEED_FORCE=true npm run seed, or SEED_RESET=true npm run seed to wipe demo tables first.';
     console.error(message);
     throw new Error(message);
   }

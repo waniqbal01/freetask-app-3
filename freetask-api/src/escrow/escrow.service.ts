@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, UserRole } from '@prisma/client';
+import { JobStatus, Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 const ESCROW_STATUS = ['PENDING', 'HELD', 'RELEASED', 'REFUNDED'] as const;
@@ -24,22 +24,20 @@ export class EscrowService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getForUser(jobId: number, userId: number, role: UserRole) {
-    const job = await this.prisma.job.findUnique({ where: { id: jobId } });
-    if (!job) {
-      throw new NotFoundException('Job not found');
-    }
+    const { job, escrow } = await this.ensureEscrow(jobId);
 
     if (role !== UserRole.ADMIN && job.clientId !== userId && job.freelancerId !== userId) {
       throw new ForbiddenException('You are not allowed to view this escrow record');
     }
 
-    const escrow = await this.ensureEscrow(job.id, job.amount ?? null);
     return this.serializeEscrow(escrow);
   }
 
   async hold(jobId: number, role: UserRole) {
     this.ensureAdmin(role);
-    const escrow = await this.ensureEscrow(jobId);
+    const { job, escrow } = await this.ensureEscrow(jobId);
+
+    this.ensureHoldAllowed(job.status);
 
     if (escrow.status !== 'PENDING') {
       throw new ConflictException('Escrow can only be held from the PENDING state');
@@ -51,7 +49,9 @@ export class EscrowService {
 
   async release(jobId: number, role: UserRole) {
     this.ensureAdmin(role);
-    const escrow = await this.ensureEscrow(jobId);
+    const { job, escrow } = await this.ensureEscrow(jobId);
+
+    this.ensureReleaseOrRefundAllowed(job.status, 'release');
 
     if (escrow.status !== 'HELD') {
       throw new ConflictException('Escrow must be HELD before it can be released');
@@ -63,7 +63,9 @@ export class EscrowService {
 
   async refund(jobId: number, role: UserRole) {
     this.ensureAdmin(role);
-    const escrow = await this.ensureEscrow(jobId);
+    const { job, escrow } = await this.ensureEscrow(jobId);
+
+    this.ensureReleaseOrRefundAllowed(job.status, 'refund');
 
     if (escrow.status !== 'HELD') {
       throw new ConflictException('Escrow must be HELD before it can be refunded');
@@ -79,7 +81,23 @@ export class EscrowService {
     }
   }
 
-  private async ensureEscrow(jobId: number, amount?: Prisma.Decimal | null) {
+  private ensureHoldAllowed(status: JobStatus) {
+    if (![JobStatus.ACCEPTED, JobStatus.IN_PROGRESS].includes(status)) {
+      throw new ConflictException('Escrow hold requires job to be ACCEPTED or IN_PROGRESS');
+    }
+  }
+
+  private ensureReleaseOrRefundAllowed(status: JobStatus, action: 'release' | 'refund') {
+    if (![JobStatus.COMPLETED, JobStatus.DISPUTED].includes(status)) {
+      const message =
+        action === 'release'
+          ? 'Escrow can only be released when the job is COMPLETED or DISPUTED'
+          : 'Escrow can only be refunded when the job is COMPLETED or DISPUTED';
+      throw new ConflictException(message);
+    }
+  }
+
+  private async ensureEscrow(jobId: number) {
     const job = await this.prisma.job.findUnique({ where: { id: jobId } });
     if (!job) {
       throw new NotFoundException('Job not found');
@@ -93,12 +111,12 @@ export class EscrowService {
     `;
 
     if (existing) {
-      return existing;
+      return { job, escrow: existing };
     }
 
     await this.prisma.$executeRaw`
       INSERT INTO "Escrow" ("jobId", status, amount, "createdAt", "updatedAt")
-      VALUES (${jobId}, 'PENDING', ${amount ?? job.amount ?? null}, NOW(), NOW())
+      VALUES (${jobId}, 'PENDING', ${job.amount ?? null}, NOW(), NOW())
       ON CONFLICT ("jobId") DO NOTHING
     `;
 
@@ -113,7 +131,7 @@ export class EscrowService {
       throw new NotFoundException('Escrow record could not be created');
     }
 
-    return created;
+    return { job, escrow: created };
   }
 
   private async updateStatus(escrowId: number, status: EscrowStatus) {

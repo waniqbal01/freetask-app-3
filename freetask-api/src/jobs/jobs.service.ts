@@ -54,20 +54,33 @@ export class JobsService {
     userId: number,
     role: UserRole,
     filter?: 'client' | 'freelancer' | 'all',
+    pagination?: { limit?: number; offset?: number },
   ) {
+    if (filter === 'all' && role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only admins can view all jobs');
+    }
+
+    const normalizedFilter =
+      filter ?? (role === UserRole.CLIENT ? 'client' : role === UserRole.FREELANCER ? 'freelancer' : 'all');
+
     const where: Prisma.JobWhereInput =
-      filter === 'client'
+      normalizedFilter === 'client'
         ? { clientId: userId }
-        : filter === 'freelancer'
+        : normalizedFilter === 'freelancer'
         ? { freelancerId: userId }
-        : role === UserRole.ADMIN && filter === 'all'
+        : role === UserRole.ADMIN
         ? {}
         : { OR: [{ clientId: userId }, { freelancerId: userId }] };
+
+    const take = Math.min(Math.max(pagination?.limit ?? 20, 1), 50);
+    const skip = Math.max(pagination?.offset ?? 0, 0);
 
     const jobs = await this.prisma.job.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       include: this.jobInclude,
+      take,
+      skip,
     });
 
     return jobs.map((job) => this.withFlatFields(job));

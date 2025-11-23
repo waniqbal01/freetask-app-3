@@ -13,7 +13,13 @@ flutter pub get
 - **iOS simulator**: `flutter run -d ios`
 - **Web (Chrome)**: `flutter run -d chrome`
 
-The app will default to `http://10.0.2.2:4000` on Android emulators and `http://localhost:4000` elsewhere. You can override it at runtime without rebuilding.
+Default API base URLs:
+
+- **Android emulator:** `http://10.0.2.2:4000`
+- **Flutter web/desktop:** `http://localhost:4000`
+- **iOS simulator:** `http://127.0.0.1:4000` (or your LAN IP)
+
+You can override these at runtime without rebuilding, or via `--dart-define=API_BASE_URL=<url>` when launching.
 
 ### Changing API base URL at runtime
 
@@ -53,6 +59,8 @@ Ensure the backend mounts/persists the `./uploads` folder (volume or host direct
 - Admin: `admin@example.com` / `Password123!`
 - Clients: `client1@example.com`, `client2@example.com` / `Password123!`
 - Freelancers: `freelancer1@example.com`, `freelancer2@example.com` / `Password123!`
+
+Tip: the login screen also links to **Tukar API Server** so testers can quickly set the correct base URL before using these demo accounts.
 
 ### Troubleshooting
 

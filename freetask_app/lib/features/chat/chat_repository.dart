@@ -65,9 +65,9 @@ class ChatRepository {
       () => StreamController<List<ChatMessage>>.broadcast(),
     );
     unawaited(
-      _loadMessages(jobId).catchError((Object error, StackTrace _) {
+      _loadMessages(jobId).catchError((Object error, StackTrace stackTrace) {
         _notifyStreamError(error);
-        controller.add(List<ChatMessage>.unmodifiable(_messages[jobId] ?? <ChatMessage>[]));
+        controller.addError(error, stackTrace);
       }),
     );
     controller
@@ -107,6 +107,10 @@ class ChatRepository {
     }
   }
 
+  Future<void> reloadMessages(String jobId) {
+    return _loadMessages(jobId);
+  }
+
   Future<void> _loadMessages(String jobId) async {
     try {
       final response = await _retryRequest(() async {
@@ -130,6 +134,7 @@ class ChatRepository {
     } on DioException catch (error) {
       await _handleError(error);
       _notifyStreamError('Rangkaian terputus. Tap untuk cuba lagi.');
+      rethrow;
     }
   }
 

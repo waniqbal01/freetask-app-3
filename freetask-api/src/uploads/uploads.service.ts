@@ -6,6 +6,7 @@ import {
 import { Request } from 'express';
 import { mkdirSync, existsSync } from 'fs';
 import { extname, join, basename } from 'path';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class UploadsService {
@@ -27,11 +28,17 @@ export class UploadsService {
   }
 
   buildFileName(originalName: string) {
-    const sanitizedName = UploadsService.sanitizeBaseName(originalName);
-    const fileExt = UploadsService.sanitizeExtension(extname(originalName));
-    const timestamp = Date.now();
+    if (originalName.includes('/') || originalName.includes('\\')) {
+      throw new BadRequestException('Invalid filename.');
+    }
 
-    return `${sanitizedName}-${timestamp}${fileExt}`;
+    const fileExt = UploadsService.sanitizeExtension(extname(originalName));
+    if (!UploadsService.isAllowedExtension(fileExt)) {
+      throw new BadRequestException('Jenis fail tidak dibenarkan. Hanya gambar/PDF/DOC.');
+    }
+
+    const uuid = randomUUID();
+    return `${uuid}${fileExt}`;
   }
 
   buildFileUrl(request: Request, filename: string) {

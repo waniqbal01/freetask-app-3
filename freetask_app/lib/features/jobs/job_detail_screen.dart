@@ -11,6 +11,7 @@ import '../../widgets/section_card.dart';
 import '../auth/auth_repository.dart';
 import '../escrow/escrow_repository.dart';
 import 'jobs_repository.dart';
+import 'job_transition_rules.dart';
 import 'widgets/job_status_badge.dart';
 
 bool resolveClientViewMode({bool? navigationFlag, String? role}) {
@@ -111,7 +112,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       if (!mounted) return;
       setState(() {
         _escrow = null;
-        _escrowError = error.message;
+        final unavailable =
+            error.statusCode == 403 || error.statusCode == 404 ? 'Escrow tidak tersedia untuk job ini.' : error.message;
+        _escrowError = unavailable;
       });
     } on DioException catch (error) {
       if (!mounted) return;
@@ -184,10 +187,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     try {
       final updatedJob = await action();
       if (!mounted) return;
-      setState(() {
-        _isProcessing = false;
-      });
-
       if (updatedJob != null) {
         setState(() {
           _job = updatedJob;
@@ -198,25 +197,36 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       }
     } on JobStatusConflict catch (error) {
       if (!mounted) return;
-      setState(() {
-        _isProcessing = false;
-      });
       showErrorSnackBar(context, error.message);
     } on DioException catch (error) {
       if (!mounted) return;
-      setState(() {
-        _isProcessing = false;
-      });
       showErrorSnackBar(context, resolveDioErrorMessage(error));
     } catch (error) {
       if (!mounted) return;
-      setState(() {
-        _isProcessing = false;
-      });
       showErrorSnackBar(context, 'Ralat melaksanakan tindakan: $error');
     } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
       await _fetchJob();
     }
+  }
+
+  Future<void> _guardedJobAction({
+    required bool allowed,
+    required Future<Job?> Function() action,
+    required String successMessage,
+    String blockedMessage = 'Status semasa tidak membenarkan tindakan ini.',
+  }) async {
+    if (!allowed) {
+      if (!mounted) return;
+      showErrorSnackBar(context, blockedMessage);
+      return;
+    }
+
+    await _handleAction(action, successMessage);
   }
 
   Future<void> _handleEscrowAction(
@@ -233,7 +243,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       final updated = await action();
       if (!mounted) return;
       setState(() {
-        _isEscrowProcessing = false;
         _escrow = updated ?? _escrow;
       });
       ScaffoldMessenger.of(context).showSnackBar(
@@ -242,24 +251,26 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     } on EscrowUnavailable catch (error) {
       if (!mounted) return;
       setState(() {
-        _isEscrowProcessing = false;
         _escrowError = error.message;
       });
     } on DioException catch (error) {
       if (!mounted) return;
       setState(() {
-        _isEscrowProcessing = false;
         _escrowError = resolveDioErrorMessage(error);
       });
       showErrorSnackBar(context, resolveDioErrorMessage(error));
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _isEscrowProcessing = false;
         _escrowError = 'Ralat escrow: $error';
       });
       showErrorSnackBar(context, 'Ralat escrow: $error');
     } finally {
+      if (mounted) {
+        setState(() {
+          _isEscrowProcessing = false;
+        });
+      }
       await _fetchEscrow();
     }
   }
@@ -354,86 +365,76 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final role = _userRole!.toUpperCase();
     final isJobClient = _userId != null && job.clientId == _userId;
     final isJobFreelancer = _userId != null && job.freelancerId == _userId;
+    final status = job.status;
     final actions = <Widget>[];
 
     if (role == 'FREELANCER' && isJobFreelancer) {
-      if (job.status == JobStatus.pending) {
-        actions.addAll([
+      final canAccept = canFreelancerAccept(status);
+      final canReject = canFreelancerReject(status);
+      final canStart = canFreelancerStart(status);
+      final canComplete = canFreelancerComplete(status);
+      final canDispute = canRaiseDispute(status);
+
+      if (canReject) {
+        actions.add(
           FTButton(
             label: 'Reject',
             isLoading: _isProcessing,
-            onPressed: () => _handleAction(
-              () => jobsRepository.rejectJob(job.id),
-              'Job telah ditolak dan dikemas kini.',
+            onPressed: () => _guardedJobAction(
+              allowed: canReject,
+              action: () => jobsRepository.rejectJob(job.id),
+              successMessage: 'Job telah ditolak dan dikemas kini.',
             ),
             expanded: false,
             size: FTButtonSize.small,
           ),
-          const SizedBox(width: AppSpacing.s8),
+        );
+      }
+
+      if (canAccept) {
+        if (actions.isNotEmpty) {
+          actions.add(const SizedBox(width: AppSpacing.s8));
+        }
+        actions.add(
           FTButton(
             label: 'Accept',
             isLoading: _isProcessing,
-            onPressed: () => _handleAction(
-              () => jobsRepository.acceptJob(job.id),
-              'Job diterima. Anda boleh mulakan apabila bersedia.',
+            onPressed: () => _guardedJobAction(
+              allowed: canAccept,
+              action: () => jobsRepository.acceptJob(job.id),
+              successMessage: 'Job diterima. Anda boleh mulakan apabila bersedia.',
             ),
             expanded: false,
             size: FTButtonSize.small,
           ),
-        ]);
-      } else if (job.status == JobStatus.accepted) {
+        );
+      }
+
+      if (canStart) {
         actions.add(
           FTButton(
             label: 'Start',
             isLoading: _isProcessing,
-            onPressed: () => _handleAction(
-              () => jobsRepository.startJob(job.id),
-              'Job dimulakan! Status kini In Progress.',
+            onPressed: () => _guardedJobAction(
+              allowed: canStart,
+              action: () => jobsRepository.startJob(job.id),
+              successMessage: 'Job dimulakan! Status kini In Progress.',
             ),
             expanded: false,
             size: FTButtonSize.small,
           ),
         );
-      } else if (job.status == JobStatus.inProgress) {
-        actions.addAll([
+      }
+
+      if (canComplete) {
+        actions.add(
           FTButton(
             label: 'Complete',
             isLoading: _isProcessing,
-            onPressed: () => _handleAction(
-              () => jobsRepository.markCompleted(job.id),
-              'Job ditandakan selesai. Status kini Completed.',
-            ),
-            expanded: false,
-            size: FTButtonSize.small,
-          ),
-          const SizedBox(width: AppSpacing.s8),
-          FTButton(
-            label: 'Dispute',
-            isLoading: _isProcessing,
-            onPressed: () async {
-              final reason = await _promptDisputeReason();
-              if (reason == null) return;
-              await _handleAction(
-                () => jobsRepository.disputeJob(job.id, reason),
-                'Dispute dihantar.',
-              );
-            },
-            expanded: false,
-            size: FTButtonSize.small,
-          ),
-        ]);
-      }
-    }
-
-    if (role == 'CLIENT' && isJobClient) {
-      if ({JobStatus.pending, JobStatus.accepted, JobStatus.inProgress}.contains(job.status)) {
-        actions.add(
-          FTButton(
-            label: 'Batalkan',
-            isLoading: _isProcessing,
-            onPressed: () => _handleAction(
-              () => jobsRepository.cancelJob(job.id),
-              'Job dibatalkan.',
+            onPressed: () => _guardedJobAction(
+              allowed: canComplete,
+              action: () => jobsRepository.markCompleted(job.id),
+              successMessage: 'Job ditandakan selesai. Status kini Completed.',
             ),
             expanded: false,
             size: FTButtonSize.small,
@@ -441,7 +442,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         );
       }
 
-      if (job.status == JobStatus.inProgress || job.status == JobStatus.completed) {
+      if (canDispute) {
         if (actions.isNotEmpty) {
           actions.add(const SizedBox(width: AppSpacing.s8));
         }
@@ -452,9 +453,54 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             onPressed: () async {
               final reason = await _promptDisputeReason();
               if (reason == null) return;
-              await _handleAction(
-                () => jobsRepository.disputeJob(job.id, reason),
-                'Dispute dihantar.',
+              await _guardedJobAction(
+                allowed: canDispute,
+                action: () => jobsRepository.disputeJob(job.id, reason),
+                successMessage: 'Dispute dihantar.',
+              );
+            },
+            expanded: false,
+            size: FTButtonSize.small,
+          ),
+        );
+      }
+    }
+
+    if (role == 'CLIENT' && isJobClient) {
+      final canCancel = canClientCancel(status);
+      final canDispute = canRaiseDispute(status);
+
+      if (canCancel) {
+        actions.add(
+          FTButton(
+            label: 'Batalkan',
+            isLoading: _isProcessing,
+            onPressed: () => _guardedJobAction(
+              allowed: canCancel,
+              action: () => jobsRepository.cancelJob(job.id),
+              successMessage: 'Job dibatalkan.',
+            ),
+            expanded: false,
+            size: FTButtonSize.small,
+          ),
+        );
+      }
+
+      if (canDispute) {
+        if (actions.isNotEmpty) {
+          actions.add(const SizedBox(width: AppSpacing.s8));
+        }
+        actions.add(
+          FTButton(
+            label: 'Dispute',
+            isLoading: _isProcessing,
+            onPressed: () async {
+              final reason = await _promptDisputeReason();
+              if (reason == null) return;
+              await _guardedJobAction(
+                allowed: canDispute,
+                action: () => jobsRepository.disputeJob(job.id, reason),
+                successMessage: 'Dispute dihantar.',
               );
             },
             expanded: false,
@@ -472,9 +518,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final record = _escrow;
     final statusLabel = _escrowStatusLabel(record?.status);
     final statusColor = _escrowStatusColor(record?.status);
+    final bool isEscrowUnavailable = _escrowError != null;
+    final bool showActions = isAdmin && !isEscrowUnavailable && !_isEscrowLoading;
     final List<Widget> actions = <Widget>[];
 
-    if (isAdmin && _escrowError == null && !_isEscrowLoading) {
+    if (showActions) {
       if (record?.status == EscrowStatus.pending) {
         actions.add(
           FTButton(
@@ -560,9 +608,35 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           if (_escrowError != null)
             Padding(
               padding: const EdgeInsets.only(top: AppSpacing.s8),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.s10),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: AppRadius.smallRadius,
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.lock_outline, color: Colors.orange, size: 18),
+                    const SizedBox(width: AppSpacing.s8),
+                    Expanded(
+                      child: Text(
+                        _escrowError!,
+                        style: textTheme.bodyMedium?.copyWith(color: Colors.orange.shade800),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (_escrowError == null && !isAdmin)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.s8),
               child: Text(
-                _escrowError!,
-                style: textTheme.bodyMedium?.copyWith(color: Colors.redAccent),
+                'Escrow actions hanya untuk admin.',
+                style: textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
               ),
             ),
           if (actions.isNotEmpty) ...[

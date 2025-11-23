@@ -1,8 +1,10 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { ChatsService } from './chats.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { GetUser } from '../auth/get-user.decorator';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { UserRole } from '@prisma/client';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('chats')
 @UseGuards(JwtAuthGuard)
@@ -10,21 +12,35 @@ export class ChatsController {
   constructor(private readonly chatsService: ChatsService) {}
 
   @Get()
-  listThreads(@GetUser('userId') userId: number) {
-    return this.chatsService.listThreads(userId);
+  @Throttle(15, 60)
+  listThreads(
+    @GetUser('userId') userId: number,
+    @GetUser('role') role: UserRole,
+    @Query('limit') limit?: number,
+    @Query('offset') offset?: number,
+  ) {
+    return this.chatsService.listThreads(userId, role, { limit, offset });
   }
 
   @Get(':jobId/messages')
-  listMessages(@Param('jobId', ParseIntPipe) jobId: number, @GetUser('userId') userId: number) {
-    return this.chatsService.listMessages(jobId, userId);
+  @Throttle(25, 60)
+  listMessages(
+    @Param('jobId', ParseIntPipe) jobId: number,
+    @GetUser('userId') userId: number,
+    @GetUser('role') role: UserRole,
+    @Query('limit') limit?: number,
+    @Query('offset') offset?: number,
+  ) {
+    return this.chatsService.listMessages(jobId, userId, role, { limit, offset });
   }
 
   @Post(':jobId/messages')
   sendMessage(
     @Param('jobId', ParseIntPipe) jobId: number,
     @GetUser('userId') userId: number,
+    @GetUser('role') role: UserRole,
     @Body() dto: CreateMessageDto,
   ) {
-    return this.chatsService.postMessage(jobId, userId, dto);
+    return this.chatsService.postMessage(jobId, userId, role, dto);
   }
 }

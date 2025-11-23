@@ -1,4 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { ChatMessageDto } from './dto/chat-message.dto';
@@ -8,11 +9,21 @@ import { ChatThreadDto } from './dto/chat-thread.dto';
 export class ChatsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listThreads(userId: number): Promise<ChatThreadDto[]> {
+  async listThreads(
+    userId: number,
+    role: UserRole,
+    pagination?: { limit?: number; offset?: number },
+  ): Promise<ChatThreadDto[]> {
+    const take = Math.min(Math.max(pagination?.limit ?? 20, 1), 50);
+    const skip = Math.max(pagination?.offset ?? 0, 0);
+
     const jobs = await this.prisma.job.findMany({
-      where: {
-        OR: [{ clientId: userId }, { freelancerId: userId }],
-      },
+      where:
+        role === UserRole.ADMIN
+          ? {}
+          : {
+              OR: [{ clientId: userId }, { freelancerId: userId }],
+            },
       include: {
         client: {
           select: { id: true, name: true },
@@ -22,6 +33,8 @@ export class ChatsService {
         },
       },
       orderBy: { updatedAt: 'desc' },
+      take,
+      skip,
     });
 
     return jobs.map((job) => {
@@ -35,8 +48,15 @@ export class ChatsService {
     });
   }
 
-  async listMessages(jobId: number, userId: number): Promise<ChatMessageDto[]> {
-    await this.ensureJobParticipant(jobId, userId);
+  async listMessages(
+    jobId: number,
+    userId: number,
+    role: UserRole,
+    pagination?: { limit?: number; offset?: number },
+  ): Promise<ChatMessageDto[]> {
+    await this.ensureJobParticipant(jobId, userId, role);
+    const take = Math.min(Math.max(pagination?.limit ?? 50, 1), 100);
+    const skip = Math.max(pagination?.offset ?? 0, 0);
     const messages = await this.prisma.chatMessage.findMany({
       where: { jobId },
       orderBy: { createdAt: 'asc' },
@@ -45,6 +65,8 @@ export class ChatsService {
           select: { id: true, name: true },
         },
       },
+      take,
+      skip,
     });
 
     return messages.map(
@@ -60,8 +82,13 @@ export class ChatsService {
     );
   }
 
-  async postMessage(jobId: number, userId: number, dto: CreateMessageDto): Promise<ChatMessageDto> {
-    await this.ensureJobParticipant(jobId, userId);
+  async postMessage(
+    jobId: number,
+    userId: number,
+    role: UserRole,
+    dto: CreateMessageDto,
+  ): Promise<ChatMessageDto> {
+    await this.ensureJobParticipant(jobId, userId, role);
     const message = await this.prisma.$transaction(async (tx) => {
       const createdMessage = await tx.chatMessage.create({
         data: {
@@ -94,12 +121,12 @@ export class ChatsService {
     } satisfies ChatMessageDto;
   }
 
-  private async ensureJobParticipant(jobId: number, userId: number) {
+  private async ensureJobParticipant(jobId: number, userId: number, role: UserRole) {
     const job = await this.prisma.job.findUnique({ where: { id: jobId } });
     if (!job) {
       throw new NotFoundException('Job not found');
     }
-    if (job.clientId !== userId && job.freelancerId !== userId) {
+    if (role !== UserRole.ADMIN && job.clientId !== userId && job.freelancerId !== userId) {
       throw new ForbiddenException('You are not part of this job');
     }
   }

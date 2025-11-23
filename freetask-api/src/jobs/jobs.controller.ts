@@ -16,6 +16,7 @@ import { UpdateJobStatusDto } from './dto/update-job-status.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { GetUser } from '../auth/get-user.decorator';
 import { UserRole } from '@prisma/client';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('jobs')
 @UseGuards(JwtAuthGuard)
@@ -32,12 +33,15 @@ export class JobsController {
   }
 
   @Get()
+  @Throttle(20, 60)
   findAll(
     @GetUser('userId') userId: number,
     @GetUser('role') role: UserRole,
     @Query('filter') filter?: 'client' | 'freelancer' | 'all',
+    @Query('limit') limit?: number,
+    @Query('offset') offset?: number,
   ) {
-    return this.jobsService.findAllForUser(userId, role, filter);
+    return this.jobsService.findAllForUser(userId, role, filter, { limit, offset });
   }
 
   @Get(':id')
