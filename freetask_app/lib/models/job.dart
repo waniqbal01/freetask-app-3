@@ -23,19 +23,27 @@ class Job {
   });
 
   factory Job.fromJson(Map<String, dynamic> json) {
+    final serviceObj = json['service'];
+    final clientObj = json['client'];
+    final freelancerObj = json['freelancer'];
+
     return Job(
       id: json['id']?.toString() ?? '',
       clientId: json['client_id']?.toString() ??
           json['clientId']?.toString() ??
+          clientObj?['id']?.toString() ??
           '',
       freelancerId: json['freelancer_id']?.toString() ??
           json['freelancerId']?.toString() ??
+          freelancerObj?['id']?.toString() ??
           '',
       serviceId: json['service_id']?.toString() ??
           json['serviceId']?.toString() ??
+          serviceObj?['id']?.toString() ??
           '',
-      serviceTitle: json['service_title']?.toString() ??
-          json['serviceTitle']?.toString() ??
+      serviceTitle: json['serviceTitle']?.toString() ??
+          json['service_title']?.toString() ??
+          serviceObj?['title']?.toString() ??
           'Servis ${json['service_id']?.toString() ?? json['serviceId']?.toString() ?? ''}',
       amount: _parseAmount(json['amount']),
       status: _parseStatus(json['status']),

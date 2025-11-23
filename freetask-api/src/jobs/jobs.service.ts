@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -28,7 +29,7 @@ export class JobsService {
     const amount =
       dto.amount !== undefined ? new Prisma.Decimal(dto.amount) : service.price;
 
-    return this.prisma.job.create({
+    const job = await this.prisma.job.create({
       data: {
         title: dto.title ?? service.title,
         description: dto.description,
@@ -39,6 +40,8 @@ export class JobsService {
       },
       include: this.jobInclude,
     });
+
+    return this.withFlatFields(job);
   }
 
   async findAllForUser(
@@ -52,11 +55,13 @@ export class JobsService {
         ? { freelancerId: userId }
         : { OR: [{ clientId: userId }, { freelancerId: userId }] };
 
-    return this.prisma.job.findMany({
+    const jobs = await this.prisma.job.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       include: this.jobInclude,
     });
+
+    return jobs.map((job) => this.withFlatFields(job));
   }
 
   async findOneForUser(id: number, userId: number) {
@@ -70,7 +75,7 @@ export class JobsService {
     if (!job) {
       throw new NotFoundException('Job not found');
     }
-    return job;
+    return this.withFlatFields(job);
   }
 
   async acceptJob(id: number, userId: number) {
@@ -141,21 +146,23 @@ export class JobsService {
 
     const allowedNextStates = transitions[current] ?? [];
     if (!allowedNextStates.includes(next)) {
-      throw new ForbiddenException(
-        `Cannot change job status from ${current} to ${next}`,
+      throw new ConflictException(
+        `Invalid status transition: ${current} -> ${next}`,
       );
     }
   }
 
   private applyStatusUpdate(id: number, status: JobStatus, disputeReason?: string) {
-    return this.prisma.job.update({
-      where: { id },
-      data: {
-        status,
-        disputeReason: disputeReason ?? null,
-      },
-      include: this.jobInclude,
-    });
+    return this.prisma.job
+      .update({
+        where: { id },
+        data: {
+          status,
+          disputeReason: disputeReason ?? null,
+        },
+        include: this.jobInclude,
+      })
+      .then((job) => this.withFlatFields(job));
   }
 
   private async ensureJobForFreelancer(id: number, userId: number) {
@@ -203,5 +210,22 @@ export class JobsService {
         select: { id: true, name: true },
       },
     } as const;
+  }
+
+  private withFlatFields<
+    T extends {
+      service?: { id: number; title: string } | null;
+      client?: { id: number; name: string } | null;
+      freelancer?: { id: number; name: string } | null;
+      clientId?: number;
+      freelancerId?: number;
+    },
+  >(job: T) {
+    return {
+      ...job,
+      serviceTitle: job.service?.title ?? null,
+      clientId: job.client?.id ?? job.clientId ?? null,
+      freelancerId: job.freelancer?.id ?? job.freelancerId ?? null,
+    };
   }
 }

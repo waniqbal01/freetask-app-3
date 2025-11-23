@@ -12,3 +12,12 @@ Flutter client for the FreeTask marketplace.
 
 No other mock repositories should be added; new data flows should be wired to
 the backend first.
+
+## API base URLs
+
+- **Android emulator:** `http://10.0.2.2:3000`
+- **iOS simulator:** `http://localhost:3000`
+- **Web/Desktop:** `http://localhost:3000`
+
+Protected endpoints (jobs, chats, reviews, uploads) require a Bearer token set
+via the app's authentication flow.

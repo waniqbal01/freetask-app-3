@@ -16,13 +16,19 @@ export class ReviewsController {
 
   @Get()
   findAll(
-    @Query('serviceId') serviceId?: number,
-    @Query('freelancerId') freelancerId?: number,
+    @Query('jobId') jobId?: string,
+    @Query('serviceId') serviceId?: string,
+    @Query('freelancerId') freelancerId?: string,
   ) {
-    return this.reviewsService.findMany(
-      serviceId ? Number(serviceId) : undefined,
-      freelancerId ? Number(freelancerId) : undefined,
-    );
+    const parsedJobId = jobId ? Number(jobId) : undefined;
+    const parsedServiceId = serviceId ? Number(serviceId) : undefined;
+    const parsedFreelancerId = freelancerId ? Number(freelancerId) : undefined;
+
+    return this.reviewsService.findMany({
+      jobId: Number.isFinite(parsedJobId) ? parsedJobId : undefined,
+      serviceId: Number.isFinite(parsedServiceId) ? parsedServiceId : undefined,
+      freelancerId: Number.isFinite(parsedFreelancerId) ? parsedFreelancerId : undefined,
+    });
   }
 
   @Get('mine')

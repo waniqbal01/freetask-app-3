@@ -41,10 +41,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     switch (status) {
       case JobStatus.pending:
         return 'Booked';
+      case JobStatus.accepted:
+        return 'Accepted';
       case JobStatus.inProgress:
         return 'In Progress';
       case JobStatus.completed:
         return 'Completed';
+      case JobStatus.cancelled:
+        return 'Cancelled';
       case JobStatus.rejected:
         return 'Rejected';
       case JobStatus.disputed:
@@ -57,10 +61,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     switch (status) {
       case JobStatus.pending:
         return scheme.secondary;
+      case JobStatus.accepted:
+        return scheme.primary;
       case JobStatus.inProgress:
         return scheme.primary;
       case JobStatus.completed:
         return Colors.green;
+      case JobStatus.cancelled:
+        return Colors.orange;
       case JobStatus.rejected:
         return Colors.redAccent;
       case JobStatus.disputed:

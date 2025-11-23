@@ -7,7 +7,9 @@ import '../../core/utils/error_utils.dart';
 import '../../core/widgets/ft_button.dart';
 import '../../core/widgets/loading_overlay.dart';
 import '../../models/job.dart';
+import '../../models/user.dart';
 import '../../theme/app_theme.dart';
+import '../auth/auth_repository.dart';
 import '../reviews/review_dialog.dart';
 import '../reviews/reviews_repository.dart';
 import 'jobs_repository.dart';
@@ -29,12 +31,26 @@ class _JobListScreenState extends State<JobListScreen> {
   String? _clientErrorMessage;
   String? _freelancerErrorMessage;
   bool _isProcessing = false;
+  AppUser? _currentUser;
 
   @override
   void initState() {
     super.initState();
+    _loadCurrentUser();
     _primeReviews();
     _loadJobs();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    try {
+      final user = await authRepository.getCurrentUser();
+      if (!mounted) return;
+      setState(() {
+        _currentUser = user;
+      });
+    } catch (_) {
+      // Ignore user fetch failures for now; UI will remain in guest mode.
+    }
   }
 
   Future<void> _loadJobs() async {
@@ -162,6 +178,14 @@ class _JobListScreenState extends State<JobListScreen> {
           ),
         );
       }
+    } on JobStatusConflict catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isProcessing = false;
+      });
+      showErrorSnackBar(context, error.message);
     } on DioException catch (error) {
       if (!mounted) {
         return;
@@ -516,7 +540,10 @@ class _JobListScreenState extends State<JobListScreen> {
       );
     }
 
-    if (isClientView && job.status == JobStatus.completed) {
+    final isClient = _currentUser?.role.toUpperCase() == 'CLIENT';
+    final isJobOwner = _currentUser?.id == job.clientId;
+
+    if (isClientView && job.status == JobStatus.completed && isClient && isJobOwner) {
       return Align(
         alignment: Alignment.centerRight,
         child: alreadyReviewed

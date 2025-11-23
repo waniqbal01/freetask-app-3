@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../../features/auth/auth_repository.dart';
 import '../../services/http_client.dart';
 
 class Review {
@@ -39,9 +41,12 @@ class Review {
 }
 
 class ReviewsRepository {
-  ReviewsRepository({Dio? dio}) : _dio = dio ?? HttpClient().dio;
+  ReviewsRepository({Dio? dio, FlutterSecureStorage? secureStorage})
+      : _dio = dio ?? HttpClient().dio,
+        _storage = secureStorage ?? const FlutterSecureStorage();
 
   final Dio _dio;
+  final FlutterSecureStorage _storage;
   final Set<int> _submittedJobIds = <int>{};
 
   bool hasSubmittedReview(String jobId) {
@@ -57,6 +62,7 @@ class ReviewsRepository {
     required int rating,
     String? comment,
   }) async {
+    final token = await _requireAuthToken();
     final sanitizedComment = (comment?.trim().isEmpty ?? true) ? null : comment!.trim();
     final response = await _dio.post<Map<String, dynamic>>(
       '/reviews',
@@ -65,6 +71,7 @@ class ReviewsRepository {
         'rating': rating,
         if (sanitizedComment != null) 'comment': sanitizedComment,
       },
+      options: Options(headers: <String, String>{'Authorization': 'Bearer $token'}),
     );
     final review = Review.fromJson(response.data ?? <String, dynamic>{});
     _submittedJobIds.add(review.jobId);
@@ -72,9 +79,11 @@ class ReviewsRepository {
   }
 
   Future<List<Review>> getReviewsForJob(int jobId) async {
+    final token = await _requireAuthToken();
     final response = await _dio.get<List<dynamic>>(
       '/reviews',
       queryParameters: <String, dynamic>{'jobId': jobId},
+      options: Options(headers: <String, String>{'Authorization': 'Bearer $token'}),
     );
     final data = response.data ?? <dynamic>[];
     final reviews = data
@@ -86,7 +95,11 @@ class ReviewsRepository {
   }
 
   Future<List<Review>> getMyReviews() async {
-    final response = await _dio.get<List<dynamic>>('/reviews/mine');
+    final token = await _requireAuthToken();
+    final response = await _dio.get<List<dynamic>>(
+      '/reviews/mine',
+      options: Options(headers: <String, String>{'Authorization': 'Bearer $token'}),
+    );
     final data = response.data ?? <dynamic>[];
     final reviews = data
         .whereType<Map<String, dynamic>>()
@@ -101,6 +114,22 @@ class ReviewsRepository {
       _submittedJobIds.add(review.jobId);
     }
   }
+
+  Future<String> _requireAuthToken() async {
+    final token = await _storage.read(key: AuthRepository.tokenStorageKey);
+    if (token == null || token.isEmpty) {
+      throw const AuthRequiredException('Sila log masuk untuk buat/lihat review');
+    }
+    return token;
+  }
 }
 
 final reviewsRepository = ReviewsRepository();
+
+class AuthRequiredException implements Exception {
+  const AuthRequiredException(this.message);
+  final String message;
+
+  @override
+  String toString() => message;
+}
