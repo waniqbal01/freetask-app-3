@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/widgets/ft_button.dart';
 import '../../core/widgets/loading_overlay.dart';
-import '../payments/escrow_service.dart';
+import '../escrow/escrow_repository.dart';
 import 'jobs_repository.dart';
 import '../../core/utils/error_utils.dart';
 import '../../theme/app_theme.dart';
@@ -92,7 +92,7 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
         serviceTitle: _title.isEmpty ? _summary['serviceTitle']?.toString() : _title,
       );
       try {
-        await escrowService.hold(job.id);
+        await escrowRepository.hold(job.id);
 
         if (!mounted) {
           return;

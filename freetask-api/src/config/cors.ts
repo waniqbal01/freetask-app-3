@@ -19,6 +19,13 @@ export function getAllowedOrigins(
     return configuredOrigins;
   }
 
+  if (isProduction) {
+    const message =
+      'ALLOWED_ORIGINS is required in production. Set a comma-separated list of allowed origins to start the API server.';
+    logger.error(message);
+    throw new Error(message);
+  }
+
   const publicBase = env.PUBLIC_BASE_URL?.trim();
   if (publicBase) {
     const normalizedBase = normalizeOrigin(publicBase);
@@ -30,11 +37,7 @@ export function getAllowedOrigins(
 
   const warningMessage =
     '⚠️  ALLOWED_ORIGINS missing. Falling back to localhost/loopback patterns. Set ALLOWED_ORIGINS or PUBLIC_BASE_URL to lock down CORS.';
-  if (isProduction) {
-    logger.error(`🚫 ${warningMessage}`);
-  } else {
-    logger.warn(warningMessage);
-  }
+  logger.warn(warningMessage);
 
   return [
     'http://localhost:4000',

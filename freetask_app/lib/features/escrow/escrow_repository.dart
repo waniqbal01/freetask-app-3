@@ -79,8 +79,8 @@ class EscrowUnavailable implements Exception {
   String toString() => message;
 }
 
-class EscrowService {
-  EscrowService({Dio? dio, AppStorage? storage})
+class EscrowRepository {
+  EscrowRepository({Dio? dio, AppStorage? storage})
       : _dio = dio ?? HttpClient().dio,
         _storage = storage ?? appStorage;
 
@@ -155,4 +155,4 @@ class EscrowService {
   }
 }
 
-final escrowService = EscrowService();
+final escrowRepository = EscrowRepository();

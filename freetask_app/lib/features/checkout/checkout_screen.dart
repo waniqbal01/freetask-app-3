@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
-import '../payments/escrow_service.dart';
+import '../escrow/escrow_repository.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/section_card.dart';
 
@@ -100,7 +100,7 @@ class CheckoutScreen extends StatelessWidget {
                       }
 
                       try {
-                        await escrowService.hold(jobId);
+                        await escrowRepository.hold(jobId);
 
                         if (!context.mounted) return;
 

@@ -46,10 +46,6 @@ async function bootstrap() {
         if (allowAllDevFallbacks && devFallbackPatterns.some((pattern) => pattern.test(normalizedOrigin))) {
           return cb(null, true);
         }
-        if (configuredOrigins.length === 0 && isProduction) {
-          logger.warn(`CORS fallback: allowing ${normalizedOrigin} because ALLOWED_ORIGINS is not set.`);
-          return cb(null, true);
-        }
         return cb(new Error(`CORS blocked origin: ${origin}`), false);
       },
       credentials: true,
