@@ -114,11 +114,13 @@ async function main() {
   const freelancers = await Promise.all([
     upsertUser('freelancer1@example.com', 'Freelancer One', password, UserRole.FREELANCER),
     upsertUser('freelancer2@example.com', 'Freelancer Two', password, UserRole.FREELANCER),
+    upsertUser('freelancer@example.com', 'Freelancer QA', password, UserRole.FREELANCER),
   ]);
 
   const clients = await Promise.all([
     upsertUser('client1@example.com', 'Client One', password, UserRole.CLIENT),
     upsertUser('client2@example.com', 'Client Two', password, UserRole.CLIENT),
+    upsertUser('client@example.com', 'Client QA', password, UserRole.CLIENT),
   ]);
 
   const admin = await upsertUser('admin@example.com', 'Admin User', password, UserRole.ADMIN);

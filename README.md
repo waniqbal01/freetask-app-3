@@ -3,9 +3,18 @@
 This repository contains the Flutter project scaffold for the **FreeTask App** and the
 NestJS API powering it.
 
+## 🚀 Quickstart (5 langkah)
+
+1. `cp freetask-api/.env.example freetask-api/.env`
+2. `cd freetask-api && npm install`
+3. `npx prisma migrate dev`
+4. `npm run seed` (guna `SEED_FORCE=true` atau `SEED_RESET=true npm run seed` untuk reseed pantas)
+5. Jalankan API `npm run start:dev` **dan** Flutter app `cd ../freetask_app && flutter pub get && flutter run`
+
 ## ⚠️ Production Requirements (mandatory)
 
 - Set `ALLOWED_ORIGINS` in production; the API fails fast if it is empty.
+- When `NODE_ENV=production`, `ALLOWED_ORIGINS` **must** be set or the API will exit at startup.
 - Set `PUBLIC_BASE_URL` to your API origin; upload responses return relative `/uploads/<file>` paths and require JWT to fetch.
 - Set `TRUST_PROXY=true` when running behind ingress/reverse-proxy so forwarded headers are trusted for URL validation.
 
@@ -21,6 +30,11 @@ npm run seed
 npm run start:dev
 ```
 
+Reseed flags:
+
+- `SEED_FORCE=true npm run seed` — paksa tambah rekod walaupun DB ada data.
+- `SEED_RESET=true npm run seed` — padam data demo dahulu sebelum masukkan semula (destruktif, untuk dev sahaja).
+
 **Do not skip envs in production** – set `ALLOWED_ORIGINS`/`PUBLIC_BASE_URL` so the
 API can emit correct URLs and allow only intended origins. The server now fails fast
 when `ALLOWED_ORIGINS` is empty in production.
@@ -33,7 +47,7 @@ Copy/paste starter envs:
   DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/freetask?schema=public
   JWT_SECRET=CHANGE_ME_SUPER_SECRET
   PUBLIC_BASE_URL=http://localhost:4000
-  ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://10.0.2.2:3000,http://localhost:4000,http://127.0.0.1:4000
+  ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://10.0.2.2:4000,http://localhost:4000,http://127.0.0.1:4000
   ```
 
 - **Staging (LAN/IP testing)**
@@ -55,11 +69,12 @@ when running in Docker or on a host machine. `/uploads/**` URLs require JWT head
 upload responses return relative paths (e.g. `/uploads/<file>`) that the Flutter app
 requests with Authorization.
 
-Demo logins from the seed:
+Demo logins from the seed (role → email / password):
 
 - Admin: `admin@example.com` / `Password123!`
-- Clients: `client1@example.com`, `client2@example.com` (password `Password123!`)
-- Freelancers: `freelancer1@example.com`, `freelancer2@example.com` (password `Password123!`)
+- Client: `client@example.com` / `Password123!`
+- Freelancer: `freelancer@example.com` / `Password123!`
+- Extras for multi-user flows: `client1@example.com`, `client2@example.com`, `freelancer1@example.com`, `freelancer2@example.com` (password `Password123!` for all)
 
 ## Flutter client quickstart
 

@@ -26,8 +26,10 @@ enum JobStatus {
 enum EscrowStatus {
   PENDING
   HELD
+  DISPUTED
   RELEASED
   REFUNDED
+  CANCELLED
 }
 
 model User {

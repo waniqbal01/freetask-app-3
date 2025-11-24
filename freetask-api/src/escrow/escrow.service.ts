@@ -2,13 +2,11 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { JobStatus, Prisma, UserRole } from '@prisma/client';
+import { EscrowStatus, Job, JobStatus, Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-
-const ESCROW_STATUS = ['PENDING', 'HELD', 'RELEASED', 'REFUNDED'] as const;
-type EscrowStatus = (typeof ESCROW_STATUS)[number];
 
 type EscrowRecord = {
   id: number;
@@ -21,6 +19,8 @@ type EscrowRecord = {
 
 @Injectable()
 export class EscrowService {
+  private readonly logger = new Logger(EscrowService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async getForUser(jobId: number, userId: number, role: UserRole) {
@@ -39,11 +39,11 @@ export class EscrowService {
 
     this.ensureHoldAllowed(job.status);
 
-    if (escrow.status !== 'PENDING') {
+    if (escrow.status !== EscrowStatus.PENDING) {
       throw new ConflictException('Escrow can only be held from the PENDING state');
     }
 
-    const updated = await this.updateStatus(escrow.id, 'HELD');
+    const updated = await this.updateStatus(escrow.id, EscrowStatus.HELD);
     return this.serializeEscrow(updated);
   }
 
@@ -53,11 +53,11 @@ export class EscrowService {
 
     this.ensureReleaseOrRefundAllowed(job.status, 'release');
 
-    if (escrow.status !== 'HELD') {
+    if (escrow.status !== EscrowStatus.HELD) {
       throw new ConflictException('Escrow must be HELD before it can be released');
     }
 
-    const updated = await this.updateStatus(escrow.id, 'RELEASED');
+    const updated = await this.updateStatus(escrow.id, EscrowStatus.RELEASED);
     return this.serializeEscrow(updated);
   }
 
@@ -67,12 +67,33 @@ export class EscrowService {
 
     this.ensureReleaseOrRefundAllowed(job.status, 'refund');
 
-    if (escrow.status !== 'HELD') {
+    if (escrow.status !== EscrowStatus.HELD) {
       throw new ConflictException('Escrow must be HELD before it can be refunded');
     }
 
-    const updated = await this.updateStatus(escrow.id, 'REFUNDED');
+    const updated = await this.updateStatus(escrow.id, EscrowStatus.REFUNDED);
     return this.serializeEscrow(updated);
+  }
+
+  async syncOnJobStatus(
+    tx: Prisma.TransactionClient,
+    job: Pick<Job, 'id' | 'status' | 'amount'>,
+    escrow: EscrowRecord,
+  ) {
+    const desiredStatus = this.resolveStatusForJob(job.status, escrow);
+
+    if (!desiredStatus || desiredStatus === escrow.status) {
+      return escrow;
+    }
+
+    this.logger.log(`Syncing escrow ${escrow.id} for job ${job.id} → ${desiredStatus}`);
+
+    const updated = await tx.escrow.update({
+      where: { id: escrow.id },
+      data: { status: desiredStatus },
+    });
+
+    return updated as EscrowRecord;
   }
 
   private ensureAdmin(role: UserRole) {
@@ -107,6 +128,41 @@ export class EscrowService {
       throw new ConflictException(
         `Escrow cannot be ${humanAction} when job status is ${status.toString().toUpperCase()}`,
       );
+    }
+  }
+
+  private resolveStatusForJob(status: JobStatus, escrow: EscrowRecord): EscrowStatus | null {
+    switch (status) {
+      case JobStatus.COMPLETED: {
+        if ([EscrowStatus.REFUNDED, EscrowStatus.CANCELLED].includes(escrow.status)) {
+          throw new ConflictException('Escrow already refunded/cancelled; cannot release after completion');
+        }
+        if (escrow.status === EscrowStatus.RELEASED) {
+          return null;
+        }
+        return EscrowStatus.RELEASED;
+      }
+      case JobStatus.CANCELLED:
+      case JobStatus.REJECTED: {
+        if (escrow.status === EscrowStatus.RELEASED) {
+          throw new ConflictException('Escrow already released; cannot refund cancelled job');
+        }
+        if ([EscrowStatus.REFUNDED, EscrowStatus.CANCELLED].includes(escrow.status)) {
+          return null;
+        }
+        return escrow.amount ? EscrowStatus.REFUNDED : EscrowStatus.CANCELLED;
+      }
+      case JobStatus.DISPUTED: {
+        if ([EscrowStatus.RELEASED, EscrowStatus.REFUNDED].includes(escrow.status)) {
+          throw new ConflictException('Escrow already closed; cannot dispute');
+        }
+        if (escrow.status === EscrowStatus.DISPUTED) {
+          return null;
+        }
+        return EscrowStatus.DISPUTED;
+      }
+      default:
+        return null;
     }
   }
 

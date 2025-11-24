@@ -7,7 +7,7 @@ import '../../services/http_client.dart';
 import '../auth/auth_repository.dart';
 import 'escrow_policy.dart';
 
-enum EscrowStatus { pending, held, released, refunded }
+enum EscrowStatus { pending, held, disputed, released, refunded, cancelled }
 
 class EscrowRecord {
   EscrowRecord({
@@ -44,10 +44,14 @@ class EscrowRecord {
         return EscrowStatus.pending;
       case 'HELD':
         return EscrowStatus.held;
+      case 'DISPUTED':
+        return EscrowStatus.disputed;
       case 'RELEASED':
         return EscrowStatus.released;
       case 'REFUNDED':
         return EscrowStatus.refunded;
+      case 'CANCELLED':
+        return EscrowStatus.cancelled;
       default:
         return EscrowStatus.pending;
     }

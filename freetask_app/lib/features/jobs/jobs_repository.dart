@@ -177,12 +177,17 @@ class JobsRepository {
     return _fetchJobs(_buildQuery(<String, dynamic>{'filter': 'freelancer'}, limit: limit, offset: offset));
   }
 
-  Future<List<Job>> getAllJobs({String? limit, String? offset}) async {
+  Future<List<Job>> getAllJobs({String? limit, String? offset, String? filter}) async {
     final currentUser = await authRepository.getCurrentUser();
     if (currentUser == null || currentUser.role.toUpperCase() != 'ADMIN') {
       throw StateError('Hanya admin boleh melihat semua job.');
     }
-    return _fetchJobs(_buildQuery(<String, dynamic>{'filter': 'all'}, limit: limit, offset: offset));
+    final Map<String, dynamic> params = <String, dynamic>{};
+    if (filter != null) {
+      params['filter'] = filter;
+    }
+    final baseParams = params.isEmpty ? <String, dynamic>{'filter': 'all'} : params;
+    return _fetchJobs(_buildQuery(baseParams, limit: limit, offset: offset));
   }
 
   Future<Job?> getJobById(String jobId) async {
