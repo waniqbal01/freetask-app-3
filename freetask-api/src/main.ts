@@ -27,14 +27,16 @@ async function bootstrap() {
     const isProduction = process.env.NODE_ENV === 'production';
     const configuredOrigins = getAllowedOrigins(logger, isProduction);
 
+    if (isProduction && configuredOrigins.length === 0) {
+      throw new Error('ALLOWED_ORIGINS must be configured in production for CORS');
+    }
+
     const devFallbackPatterns = [
       /^http:\/\/localhost(?::\d+)?$/,
       /^http:\/\/127\.0\.0\.1(?::\d+)?$/,
       /^http:\/\/10\.0\.2\.2(?::\d+)?$/,
       /^http:\/\/192\.168\.\d+\.\d+(?::\d+)?$/,
     ];
-
-    const allowAllDevFallbacks = configuredOrigins.length === 0 && !isProduction;
 
     app.enableCors({
       origin: (origin, cb) => {
@@ -43,7 +45,16 @@ async function bootstrap() {
         if (configuredOrigins.includes(normalizedOrigin) || configuredOrigins.includes('*')) {
           return cb(null, true);
         }
-        if (allowAllDevFallbacks && devFallbackPatterns.some((pattern) => pattern.test(normalizedOrigin))) {
+        if (!isProduction && configuredOrigins.length === 0) {
+          if (devFallbackPatterns.some((pattern) => pattern.test(normalizedOrigin))) {
+            return cb(null, true);
+          }
+        }
+        if (isProduction && configuredOrigins.length === 0) {
+          logger.error(`CORS blocked origin ${origin} because ALLOWED_ORIGINS is empty in production`);
+          return cb(new Error(`CORS blocked origin: ${origin}`), false);
+        }
+        if (devFallbackPatterns.some((pattern) => pattern.test(normalizedOrigin))) {
           return cb(null, true);
         }
         return cb(new Error(`CORS blocked origin: ${origin}`), false);

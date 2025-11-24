@@ -22,12 +22,12 @@ export class CreateJobDto {
 
   @IsString()
   @IsNotEmpty()
-  @MinLength(5)
+  @MinLength(10)
   description: string;
 
   @Type(() => Number)
   @IsNotEmpty()
   @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0.01)
+  @Min(1)
   amount: number;
 }

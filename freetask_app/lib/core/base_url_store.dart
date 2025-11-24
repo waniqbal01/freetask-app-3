@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'env.dart';
 import 'storage/storage.dart';
 
@@ -23,5 +25,36 @@ class BaseUrlStore {
       return;
     }
     await _storage.write(_key, normalized);
+  }
+}
+
+class BaseUrlManager {
+  BaseUrlManager({AppStorage? storage}) : _store = BaseUrlStore(storage: storage);
+
+  final BaseUrlStore _store;
+  String? _cached;
+  Completer<String>? _loading;
+
+  Future<String> getBaseUrl() async {
+    if (_cached != null) return _cached!;
+    if (_loading != null) return _loading!.future;
+
+    _loading = Completer<String>();
+    try {
+      _cached = await _store.readBaseUrl();
+      _loading!.complete(_cached);
+    } catch (error, stack) {
+      _loading!.completeError(error, stack);
+      rethrow;
+    } finally {
+      _loading = null;
+    }
+    return _cached!;
+  }
+
+  Future<String> setBaseUrl(String? value) async {
+    await _store.saveBaseUrl(value);
+    _cached = await _store.readBaseUrl();
+    return _cached!;
   }
 }

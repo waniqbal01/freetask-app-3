@@ -82,18 +82,31 @@ export class EscrowService {
   }
 
   private ensureHoldAllowed(status: JobStatus) {
-    if (![JobStatus.ACCEPTED, JobStatus.IN_PROGRESS].includes(status)) {
-      throw new ConflictException('Escrow hold requires job to be ACCEPTED or IN_PROGRESS');
+    const allowedStatuses = [JobStatus.PENDING, JobStatus.ACCEPTED, JobStatus.IN_PROGRESS];
+    if (!allowedStatuses.includes(status)) {
+      throw new ConflictException(
+        `Escrow hold not allowed when job status is ${status.toString().toUpperCase()}`,
+      );
     }
   }
 
   private ensureReleaseOrRefundAllowed(status: JobStatus, action: 'release' | 'refund') {
-    if (![JobStatus.COMPLETED, JobStatus.DISPUTED].includes(status)) {
-      const message =
-        action === 'release'
-          ? 'Escrow can only be released when the job is COMPLETED or DISPUTED'
-          : 'Escrow can only be refunded when the job is COMPLETED or DISPUTED';
-      throw new ConflictException(message);
+    const releaseAllowed = [JobStatus.COMPLETED, JobStatus.DISPUTED];
+    const refundAllowed = [
+      JobStatus.COMPLETED,
+      JobStatus.DISPUTED,
+      JobStatus.CANCELLED,
+      JobStatus.REJECTED,
+      JobStatus.ACCEPTED,
+    ];
+
+    const allowedSet = action === 'release' ? releaseAllowed : refundAllowed;
+
+    if (!allowedSet.includes(status)) {
+      const humanAction = action === 'release' ? 'released' : 'refunded';
+      throw new ConflictException(
+        `Escrow cannot be ${humanAction} when job status is ${status.toString().toUpperCase()}`,
+      );
     }
   }
 

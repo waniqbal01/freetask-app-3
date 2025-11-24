@@ -16,9 +16,9 @@ npm install
 3. Update `.env` with your database connection, JWT secret, and `PUBLIC_BASE_URL`
    (e.g. `http://localhost:4000` for local dev, `http://192.168.x.x:4000` for LAN
    devices, or your production domain). The default `ALLOWED_ORIGINS` covers local
-   web/desktop testing. In production, set `PUBLIC_BASE_URL` and `ALLOWED_ORIGINS`
-   explicitly; the server now boots with warnings when they are missing but will
-   still block unknown origins.
+   web/desktop testing. **In production, `ALLOWED_ORIGINS` is required – the server
+   fails fast if it is empty.** Set `PUBLIC_BASE_URL` to your API origin to enforce
+   upload link generation.
 4. Apply Prisma migrations:
 ```bash
 npx prisma migrate dev
@@ -49,8 +49,8 @@ Environment summary:
 - `JWT_REFRESH_EXPIRES_IN` – refresh token lifetime (default `14d`)
 - `ALLOWED_ORIGINS` – comma-separated list of allowed CORS origins (dev falls back to
   common localhost/lan URLs if empty, including `http://192.168.*.*` and emulator
-  hosts such as `http://10.0.2.2:*`). **Required in production unless
-  `PUBLIC_BASE_URL` is set.**
+  hosts such as `http://10.0.2.2:*`). **Required in production – the app will exit
+  if empty.**
 - `PORT` – defaults to `4000`
 - `PUBLIC_BASE_URL` – required in production to build absolute upload URLs (set to
   your API origin, e.g. `https://api.example.com`)
@@ -77,15 +77,16 @@ to production (required envs, proxy headers, uploads volume, and seed guidance).
 ## Platform base URLs & CORS
 
 - **Android emulator:** `http://10.0.2.2:4000`
-- **iOS simulator:** `http://localhost:4000`
-- **Web/Desktop:** `http://localhost:4000`
+- **iOS simulator:** `http://localhost:4000` or `http://127.0.0.1:4000`
+- **Web/Desktop:** `http://localhost:4000` (web clients often originate from
+  `http://localhost:3000` or `http://localhost:5173`)
 
 Ensure these origins (or your chosen ones) appear in `ALLOWED_ORIGINS` inside `.env`.
 If `ALLOWED_ORIGINS` is empty during local development, the server will auto-allow
 `http://localhost:4000`, `http://127.0.0.1:4000`, `http://localhost:3000`,
-`http://localhost:5173`, and `http://10.0.2.2:4000` for quick testing. In production,
-the server will still boot when `ALLOWED_ORIGINS` is empty but will block unknown
-origins and warn loudly—set `ALLOWED_ORIGINS` (or `PUBLIC_BASE_URL`) to avoid this.
+`http://localhost:5173`, and `http://10.0.2.2:4000` for quick testing. **In
+production the server will exit when `ALLOWED_ORIGINS` is empty** to avoid
+unintentional permissive CORS.
 
 When `PUBLIC_BASE_URL` is set, the upload URL host is enforced. Disable enforcement via
 `PUBLIC_BASE_URL_STRICT=false` or set `TRUST_PROXY=true` to respect `X-Forwarded-Host`

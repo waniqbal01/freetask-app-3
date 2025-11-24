@@ -16,8 +16,10 @@ the backend first.
 ## API base URLs
 
 - **Android emulator:** `http://10.0.2.2:4000`
-- **iOS simulator:** `http://localhost:4000`
-- **Web/Desktop:** `http://localhost:4000`
+- **iOS simulator:** `http://localhost:4000` or `http://127.0.0.1:4000`
+- **Web/Desktop:** `http://localhost:4000` (origins like `http://localhost:3000` or
+  `http://localhost:5173` must be whitelisted on the API)
+- **LAN devices:** use your machine IP, e.g. `http://192.168.x.x:4000`
 
 Override by passing `--dart-define=API_BASE_URL=<url>` to `flutter run` or
 `flutter build`. If the define is omitted, the defaults above are used per

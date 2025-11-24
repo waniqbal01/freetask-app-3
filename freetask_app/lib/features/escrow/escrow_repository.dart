@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 
 import '../../core/notifications/notification_service.dart';
 import '../../core/storage/storage.dart';
@@ -131,6 +132,18 @@ class EscrowRepository {
       notificationService.pushLocal('Escrow', notificationMessage);
       return record;
     } on DioException catch (error) {
+      if (error.response?.statusCode == 409) {
+        final message = error.response?.data is Map
+            ? (error.response?.data['message']?.toString() ?? '')
+            : error.response?.statusMessage;
+        final friendly = message?.isNotEmpty == true
+            ? message!
+            : 'Tindakan escrow tidak dibenarkan untuk status semasa.';
+        notificationService.messengerKey.currentState?.showSnackBar(
+          SnackBar(content: Text(friendly)),
+        );
+        throw EscrowUnavailable(friendly, statusCode: error.response?.statusCode);
+      }
       if (_isUnavailable(error)) {
         throw EscrowUnavailable(
           'Escrow belum tersedia / tiada akses.',

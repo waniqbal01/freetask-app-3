@@ -16,8 +16,8 @@ npm run start:dev
 ```
 
 **Do not skip envs in production** – set `ALLOWED_ORIGINS`/`PUBLIC_BASE_URL` so the
-API can emit correct URLs and allow only intended origins. The server now warns when
-these are missing but will still block unknown origins.
+API can emit correct URLs and allow only intended origins. The server now fails fast
+when `ALLOWED_ORIGINS` is empty in production.
 
 Copy/paste starter envs:
 
@@ -75,6 +75,12 @@ app (or by using `--dart-define=API_BASE_URL` at build time):
   flutter run -d emulator-5554 --dart-define=API_BASE_URL=http://10.0.2.2:4000
   ```
 
+* **iOS simulator / macOS dev** (default: `http://localhost:4000` or `http://127.0.0.1:4000`)
+
+  ```bash
+  flutter run -d ios --dart-define=API_BASE_URL=http://localhost:4000
+  ```
+
 * **Web / Chrome** (default: `http://localhost:4000`)
 
   ```bash
@@ -83,6 +89,8 @@ app (or by using `--dart-define=API_BASE_URL` at build time):
 
 For web/desktop testing, ensure your browser origin (e.g. `http://localhost:3000` or
 `http://localhost:5173`) appears in `ALLOWED_ORIGINS` when running the API in production.
+Use your LAN IP (e.g. `http://192.168.x.x:4000`) for physical devices and include it
+in both `PUBLIC_BASE_URL` and `ALLOWED_ORIGINS`.
 
 ## Readiness checklist (RED → GREEN)
 

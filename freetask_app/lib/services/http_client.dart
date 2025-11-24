@@ -18,89 +18,26 @@ class HttpClient {
 
   HttpClient._({AppStorage? storage})
       : _storage = storage ?? appStorage,
-        _baseUrlStore = BaseUrlStore(storage: storage),
-        dio = Dio(
-          BaseOptions(
-            baseUrl: Env.defaultApiBaseUrl,
-            connectTimeout: const Duration(seconds: 10),
-            receiveTimeout: const Duration(seconds: 20),
-          ),
-        ),
-        _refreshDio = Dio(
-          BaseOptions(
-            baseUrl: Env.defaultApiBaseUrl,
-            connectTimeout: const Duration(seconds: 10),
-            receiveTimeout: const Duration(seconds: 20),
-          ),
-        ) {
-    _baseUrlFuture = _baseUrlStore.readBaseUrl();
-    _baseUrlFuture.then((base) {
-      dio.options.baseUrl = base;
-      _refreshDio.options.baseUrl = base;
+        _baseUrlManager = BaseUrlManager(storage: storage) {
+    dio = _createDio(Env.defaultApiBaseUrl);
+    _refreshDio = _createDio(Env.defaultApiBaseUrl);
+    _attachInterceptors();
+    _baseUrlFuture = _baseUrlManager.getBaseUrl();
+    _baseUrlFuture!.then((value) {
+      _currentBaseUrl = value;
+      _applyBaseUrl(value);
     });
-
-    dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (RequestOptions options, RequestInterceptorHandler handler) async {
-          final resolvedBase = await _baseUrlFuture;
-          options.baseUrl = resolvedBase;
-          options.extra['__baseUrl'] = resolvedBase;
-
-          final isPublicServicesGet = _isPublicRequest(options);
-          final token = await _readTokenWithMigration();
-          if (token != null && token.isNotEmpty) {
-            options.headers['Authorization'] = 'Bearer $token';
-          } else if (isPublicServicesGet) {
-            // Allow unauthenticated access to public services endpoints.
-          }
-          handler.next(options);
-        },
-        onError: (DioException error, ErrorInterceptorHandler handler) async {
-          final status = error.response?.statusCode ?? 0;
-
-          if (status == 401) {
-            if (await _shouldAttemptRefresh(error.requestOptions)) {
-              final refreshed = await _refreshAccessToken();
-              if (refreshed) {
-                try {
-                  final stableBaseUrl =
-                      error.requestOptions.extra['__baseUrl']?.toString() ?? error.requestOptions.baseUrl;
-                  final retryOptions = error.requestOptions
-                    ..headers['Authorization'] =
-                        'Bearer ${await _storage.read(AuthRepository.tokenStorageKey)}'
-                    ..extra['__retriedAfterRefresh'] = true
-                    ..baseUrl = stableBaseUrl;
-
-                  final retryResponse = await dio.fetch<dynamic>(retryOptions);
-                  return handler.resolve(retryResponse);
-                } on DioException catch (retryError) {
-                  return handler.next(retryError);
-                }
-              }
-            }
-
-            if (!_isAuthEndpoint(error.requestOptions)) {
-              await _handleSessionExpired();
-            }
-          } else if (status == 403) {
-            _showForbiddenMessage();
-          }
-
-          handler.next(error);
-        },
-      ),
-    );
   }
 
   Future<void> updateBaseUrl(String value) async {
-    await _baseUrlStore.saveBaseUrl(value);
-    _baseUrlFuture = _baseUrlStore.readBaseUrl();
-    dio.options.baseUrl = await _baseUrlFuture;
-    _refreshDio.options.baseUrl = dio.options.baseUrl;
+    final resolved = await _baseUrlManager.setBaseUrl(value);
+    _currentBaseUrl = resolved;
+    await _swapClients(resolved);
   }
 
   Future<String> currentBaseUrl() async {
-    return await _baseUrlFuture;
+    _currentBaseUrl ??= await _baseUrlManager.getBaseUrl();
+    return _currentBaseUrl!;
   }
 
   Future<void> _clearStoredTokens() async {
@@ -185,8 +122,8 @@ class HttpClient {
     final completer = Completer<bool>();
     _refreshing = completer.future;
     try {
-      final refreshBase = await _baseUrlFuture;
-      _refreshDio.options.baseUrl = refreshBase;
+      final refreshBase = await _baseUrlManager.getBaseUrl();
+      _applyBaseUrl(refreshBase, skipSwap: true);
       final response = await _refreshDio.post<Map<String, dynamic>>(
         '/auth/refresh',
         data: <String, dynamic>{'refreshToken': refreshToken},
@@ -214,12 +151,129 @@ class HttpClient {
     return completer.future;
   }
 
+  void _attachInterceptors() {
+    dio.interceptors.clear();
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (RequestOptions options, RequestInterceptorHandler handler) async {
+          _trackRequest(options);
+          final resolvedBase = await _baseUrlManager.getBaseUrl();
+          _currentBaseUrl = resolvedBase;
+          options.baseUrl = resolvedBase;
+          options.extra['__baseUrl'] = resolvedBase;
+
+          final isPublicServicesGet = _isPublicRequest(options);
+          final token = await _readTokenWithMigration();
+          if (token != null && token.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer $token';
+          } else if (isPublicServicesGet) {
+            // Allow unauthenticated access to public services endpoints.
+          }
+          handler.next(options);
+        },
+        onResponse: (response, handler) {
+          _clearTrackedToken(response.requestOptions.cancelToken);
+          handler.next(response);
+        },
+        onError: (DioException error, ErrorInterceptorHandler handler) async {
+          _clearTrackedToken(error.requestOptions.cancelToken);
+          final status = error.response?.statusCode ?? 0;
+
+          if (status == 401) {
+            if (await _shouldAttemptRefresh(error.requestOptions)) {
+              final refreshed = await _refreshAccessToken();
+              if (refreshed) {
+                try {
+                  final latestBase = await _baseUrlManager.getBaseUrl();
+                  _applyBaseUrl(latestBase, skipSwap: true);
+                  final retryOptions = error.requestOptions
+                    ..headers['Authorization'] =
+                        'Bearer ${await _storage.read(AuthRepository.tokenStorageKey)}'
+                    ..extra['__retriedAfterRefresh'] = true
+                    ..baseUrl = latestBase
+                    ..cancelToken = CancelToken();
+
+                  final retryResponse = await dio.fetch<dynamic>(retryOptions);
+                  return handler.resolve(retryResponse);
+                } on DioException catch (retryError) {
+                  return handler.next(retryError);
+                }
+              }
+            }
+
+            if (!_isAuthEndpoint(error.requestOptions)) {
+              await _handleSessionExpired();
+            }
+          } else if (status == 403) {
+            _showForbiddenMessage();
+          }
+
+          handler.next(error);
+        },
+      ),
+    );
+  }
+
+  Dio _createDio(String baseUrl) {
+    return Dio(
+      BaseOptions(
+        baseUrl: baseUrl,
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 20),
+      ),
+    );
+  }
+
+  void _applyBaseUrl(String baseUrl, {bool skipSwap = false}) {
+    _currentBaseUrl = baseUrl;
+    dio.options.baseUrl = baseUrl;
+    _refreshDio.options.baseUrl = baseUrl;
+    if (!skipSwap) {
+      _baseUrlFuture = Future.value(baseUrl);
+    }
+  }
+
+  Future<void> _swapClients(String baseUrl) async {
+    _cancelInflight();
+    try {
+      await dio.close(force: true);
+      await _refreshDio.close(force: true);
+    } catch (_) {
+      // ignore close errors
+    }
+    dio = _createDio(baseUrl);
+    _refreshDio = _createDio(baseUrl);
+    _attachInterceptors();
+  }
+
+  void _cancelInflight() {
+    for (final token in _inflightTokens.toList()) {
+      if (!token.isCancelled) {
+        token.cancel('Base URL changed');
+      }
+    }
+    _inflightTokens.clear();
+  }
+
+  void _trackRequest(RequestOptions options) {
+    final token = options.cancelToken ?? CancelToken();
+    options.cancelToken = token;
+    _inflightTokens.add(token);
+  }
+
+  void _clearTrackedToken(CancelToken? token) {
+    if (token == null) return;
+    _inflightTokens.removeWhere((tracked) => identical(tracked, token));
+  }
+
   static HttpClient? _instance;
-  late Future<String> _baseUrlFuture;
-  final BaseUrlStore _baseUrlStore;
+  final BaseUrlManager _baseUrlManager;
+  Future<String>? _baseUrlFuture;
   final AppStorage _storage;
-  final Dio dio;
-  final Dio _refreshDio;
+  late Dio dio;
+  late Dio _refreshDio;
   Future<bool>? _refreshing;
+  String? _currentBaseUrl;
   bool _sessionHandled = false;
+  final List<CancelToken> _inflightTokens = <CancelToken>[];
 }
