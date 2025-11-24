@@ -19,6 +19,7 @@ import '../models/job.dart';
 import '../features/auth/auth_repository.dart';
 import 'notifications/notification_service.dart';
 import 'storage/storage.dart';
+import 'utils/query_utils.dart';
 
 final authRefreshNotifier = ValueNotifier<DateTime>(DateTime.now());
 final AppStorage _storage = appStorage;
@@ -134,7 +135,12 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/chats',
       builder: (BuildContext context, GoRouterState state) {
-        return const ChatListScreen();
+        final limit = parsePositiveInt(state.uri.queryParameters['limit']);
+        final offset = parsePositiveInt(state.uri.queryParameters['offset']);
+        return ChatListScreen(
+          limitQuery: limit?.toString(),
+          offsetQuery: offset?.toString(),
+        );
       },
     ),
     GoRoute(
@@ -147,7 +153,12 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/jobs',
       builder: (BuildContext context, GoRouterState state) {
-        return const JobListScreen();
+        final limit = parsePositiveInt(state.uri.queryParameters['limit']);
+        final offset = parsePositiveInt(state.uri.queryParameters['offset']);
+        return JobListScreen(
+          limitQuery: limit?.toString(),
+          offsetQuery: offset?.toString(),
+        );
       },
     ),
     GoRoute(

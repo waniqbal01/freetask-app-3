@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import '../../core/notifications/notification_service.dart';
 import '../../core/utils/api_error_handler.dart';
 import '../../core/router.dart';
 import '../../core/storage/storage.dart';
+import '../../core/utils/query_utils.dart';
 import '../../services/http_client.dart';
 import '../auth/auth_repository.dart';
 import 'chat_models.dart';
@@ -21,6 +23,11 @@ final chatRepositoryProvider = Provider<ChatRepository>((Ref ref) {
 final chatThreadsProvider = FutureProvider<List<ChatThread>>((Ref ref) async {
   final repository = ref.watch(chatRepositoryProvider);
   return repository.fetchThreads();
+});
+
+final chatThreadsProviderWithQuery = FutureProvider.family<List<ChatThread>, ({String? limit, String? offset})>((Ref ref, query) async {
+  final repository = ref.watch(chatRepositoryProvider);
+  return repository.fetchThreads(limit: query.limit, offset: query.offset);
 });
 
 final chatMessagesProvider = StreamProvider.family<List<ChatMessage>, String>(
@@ -41,17 +48,26 @@ class ChatRepository {
   final Map<String, StreamController<List<ChatMessage>>> _controllers =
       <String, StreamController<List<ChatMessage>>>{};
 
-  Future<List<ChatThread>> fetchThreads() async {
+  Future<List<ChatThread>> fetchThreads({String? limit, String? offset}) async {
+    final paginationQuery = _buildPagination(limit: limit, offset: offset);
     try {
       final response = await _dio.get<List<dynamic>>(
         '/chats',
+        queryParameters: paginationQuery.isEmpty ? null : paginationQuery,
         options: await _authorizedOptions(),
       );
       final data = response.data ?? <dynamic>[];
-      _threads = data
+      final threads = data
           .whereType<Map<String, dynamic>>()
           .map(ChatThread.fromJson)
-          .toList(growable: false);
+          .toList(growable: true);
+      threads.sort(
+        (ChatThread a, ChatThread b) =>
+            (b.lastAt ?? DateTime.fromMillisecondsSinceEpoch(0)).compareTo(
+          a.lastAt ?? DateTime.fromMillisecondsSinceEpoch(0),
+        ),
+      );
+      _threads = List<ChatThread>.unmodifiable(threads);
       return _threads;
     } on DioException catch (error) {
       await _handleError(error);
@@ -136,6 +152,19 @@ class ChatRepository {
       _notifyStreamError('Rangkaian terputus. Tap untuk cuba lagi.');
       rethrow;
     }
+  }
+
+  Map<String, dynamic> _buildPagination({String? limit, String? offset}) {
+    final parsedLimit = parsePositiveInt(limit);
+    final parsedOffset = parsePositiveInt(offset);
+    final query = <String, dynamic>{};
+    if (parsedLimit != null) {
+      query['limit'] = min(parsedLimit, 50);
+    }
+    if (parsedOffset != null) {
+      query['offset'] = parsedOffset;
+    }
+    return query;
   }
 
   Future<T> _retryRequest<T>(Future<T> Function() action) async {

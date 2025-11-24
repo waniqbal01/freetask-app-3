@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { mkdirSync, existsSync, createReadStream, statSync } from 'fs';
@@ -11,6 +12,7 @@ import { randomUUID } from 'crypto';
 @Injectable()
 export class UploadsService {
   private readonly uploadsDir = normalize(join(process.cwd(), process.env.UPLOAD_DIR ?? 'uploads'));
+  private readonly logger = new Logger(UploadsService.name);
 
   ensureUploadsDir() {
     if (!existsSync(this.uploadsDir)) {
@@ -40,7 +42,7 @@ export class UploadsService {
     return `${uuid}${fileExt}`;
   }
 
-  getFileStream(rawFilename: string) {
+  async getFileStream(rawFilename: string) {
     const safeFilename = this.sanitizeRequestedFile(rawFilename);
     const normalizedPath = this.buildSafePath(safeFilename);
 
@@ -54,12 +56,27 @@ export class UploadsService {
     }
 
     const fileExt = extname(normalizedPath).toLowerCase();
-    const mimeType = UploadsService.mimeTypeFromExtension(fileExt);
+    const expectedMime = UploadsService.mimeTypeFromExtension(fileExt);
+    const sniffedMime = await this.detectMimeType(normalizedPath);
+    const isMismatch =
+      !!sniffedMime &&
+      !!expectedMime &&
+      sniffedMime.toLowerCase() !== expectedMime.toLowerCase();
+    const isSuspicious = isMismatch || !UploadsService.isAllowedMimeType(sniffedMime ?? expectedMime);
+
+    if (isMismatch) {
+      this.logger.warn(`MIME mismatch for ${safeFilename}: detected ${sniffedMime}, expected ${expectedMime}`);
+    }
+
+    const mimeType = isSuspicious
+      ? 'application/octet-stream'
+      : sniffedMime || expectedMime || 'application/octet-stream';
 
     return {
       stream: createReadStream(normalizedPath),
-      mimeType: mimeType ?? 'application/octet-stream',
+      mimeType,
       filename: basename(normalizedPath),
+      asAttachment: isSuspicious,
     };
   }
 
@@ -158,5 +175,16 @@ export class UploadsService {
       return normalized ? `.${normalized}` : '';
     }
     return normalized;
+  }
+
+  private async detectMimeType(path: string) {
+    try {
+      const { fileTypeFromFile } = await import('file-type');
+      const result = await fileTypeFromFile(path);
+      return result?.mime ?? null;
+    } catch (error) {
+      this.logger.warn(`Failed to sniff mime type for ${path}: ${error}`);
+      return null;
+    }
   }
 }

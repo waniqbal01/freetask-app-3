@@ -31,6 +31,14 @@ export class ChatsService {
         freelancer: {
           select: { id: true, name: true },
         },
+        messages: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            content: true,
+            createdAt: true,
+          },
+        },
       },
       orderBy: { updatedAt: 'desc' },
       take,
@@ -44,6 +52,8 @@ export class ChatsService {
         id: job.id,
         jobTitle: job.title,
         participantName,
+        lastMessage: job.messages[0]?.content ?? null,
+        lastAt: job.messages[0]?.createdAt ?? job.updatedAt,
       } satisfies ChatThreadDto;
     });
   }
@@ -55,7 +65,7 @@ export class ChatsService {
     pagination?: { limit?: number; offset?: number },
   ): Promise<ChatMessageDto[]> {
     await this.ensureJobParticipant(jobId, userId, role);
-    const take = Math.min(Math.max(pagination?.limit ?? 50, 1), 100);
+    const take = Math.min(Math.max(pagination?.limit ?? 50, 1), 50);
     const skip = Math.max(pagination?.offset ?? 0, 0);
     const messages = await this.prisma.chatMessage.findMany({
       where: { jobId },

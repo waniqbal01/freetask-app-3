@@ -11,6 +11,7 @@ describe('ChatsService', () => {
     freelancerId: 20,
     client: { id: 10, name: 'Client A' },
     freelancer: { id: 20, name: 'Freelancer A' },
+    messages: [],
   };
 
   let prisma: jest.Mocked<Pick<PrismaService, 'job' | 'chatMessage' | '$transaction'>>;
@@ -70,6 +71,9 @@ describe('ChatsService', () => {
       updatedAt: new Date('2024-01-03T00:00:00Z'),
       client: { id: 20, name: 'Client B' },
       freelancer: { id: 10, name: 'Freelancer B' },
+      messages: [
+        { content: 'Latest', createdAt: new Date('2024-01-03T00:00:00Z') },
+      ],
     };
 
     (prisma.job.findMany as jest.Mock)
@@ -78,10 +82,16 @@ describe('ChatsService', () => {
         {
           ...baseJob,
           updatedAt: new Date('2024-01-04T00:00:00Z'),
+          messages: [
+            { content: 'Ping', createdAt: new Date('2024-01-04T00:00:00Z') },
+          ],
         },
         newerJob,
       ]);
-    (prisma.job.findUnique as jest.Mock).mockResolvedValue({ ...baseJob, updatedAt: new Date('2024-01-02T00:00:00Z') });
+    (prisma.job.findUnique as jest.Mock).mockResolvedValue({
+      ...baseJob,
+      updatedAt: new Date('2024-01-02T00:00:00Z'),
+    });
     (prisma.chatMessage.create as jest.Mock).mockResolvedValue({
       id: 99,
       jobId: baseJob.id,
@@ -93,11 +103,14 @@ describe('ChatsService', () => {
 
     const initialOrder = await service.listThreads(baseJob.clientId);
     expect(initialOrder.map((thread) => thread.id)).toEqual([2, 1]);
+    expect(initialOrder[0].lastMessage).toBe('Latest');
+    expect(initialOrder[0].lastAt?.toISOString()).toBe('2024-01-03T00:00:00.000Z');
 
     await service.postMessage(baseJob.id, baseJob.clientId, { content: 'Ping' });
 
     const reordered = await service.listThreads(baseJob.clientId);
     expect(reordered.map((thread) => thread.id)).toEqual([1, 2]);
+    expect(reordered[0].lastMessage).toBe('Ping');
   });
 
   it('keeps order stable when no updates occur', async () => {
@@ -110,6 +123,11 @@ describe('ChatsService', () => {
       include: {
         client: { select: { id: true, name: true } },
         freelancer: { select: { id: true, name: true } },
+        messages: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { content: true, createdAt: true },
+        },
       },
       orderBy: { updatedAt: 'desc' },
     });

@@ -5,6 +5,7 @@ import { GetUser } from '../auth/get-user.decorator';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UserRole } from '@prisma/client';
 import { Throttle } from '@nestjs/throttler';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 
 @Controller('chats')
 @UseGuards(JwtAuthGuard)
@@ -16,10 +17,9 @@ export class ChatsController {
   listThreads(
     @GetUser('userId') userId: number,
     @GetUser('role') role: UserRole,
-    @Query('limit') limit?: number,
-    @Query('offset') offset?: number,
+    @Query() query?: PaginationQueryDto,
   ) {
-    return this.chatsService.listThreads(userId, role, { limit, offset });
+    return this.chatsService.listThreads(userId, role, { limit: query?.limit, offset: query?.offset });
   }
 
   @Get(':jobId/messages')
@@ -28,10 +28,9 @@ export class ChatsController {
     @Param('jobId', ParseIntPipe) jobId: number,
     @GetUser('userId') userId: number,
     @GetUser('role') role: UserRole,
-    @Query('limit') limit?: number,
-    @Query('offset') offset?: number,
+    @Query() query?: PaginationQueryDto,
   ) {
-    return this.chatsService.listMessages(jobId, userId, role, { limit, offset });
+    return this.chatsService.listMessages(jobId, userId, role, { limit: query?.limit, offset: query?.offset });
   }
 
   @Post(':jobId/messages')

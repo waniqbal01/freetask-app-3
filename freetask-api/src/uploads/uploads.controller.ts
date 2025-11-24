@@ -77,10 +77,11 @@ export class UploadsController {
   }
 
   @Get(':filename')
-  downloadFile(@Param('filename') filename: string, @Res({ passthrough: true }) res: Response) {
-    const { stream, mimeType, filename: safeName } = this.uploadsService.getFileStream(filename);
+  async downloadFile(@Param('filename') filename: string, @Res({ passthrough: true }) res: Response) {
+    const { stream, mimeType, filename: safeName, asAttachment } = await this.uploadsService.getFileStream(filename);
     res.setHeader('Content-Type', mimeType);
-    res.setHeader('Content-Disposition', `inline; filename="${safeName}"`);
+    const dispositionType = asAttachment ? 'attachment' : 'inline';
+    res.setHeader('Content-Disposition', `${dispositionType}; filename="${safeName}"`);
     return new StreamableFile(stream);
   }
 }

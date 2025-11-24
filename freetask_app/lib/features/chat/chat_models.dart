@@ -3,6 +3,8 @@ class ChatThread {
     required this.id,
     required this.jobTitle,
     required this.participantName,
+    this.lastMessage,
+    this.lastAt,
   });
 
   factory ChatThread.fromJson(Map<String, dynamic> json) {
@@ -14,12 +16,19 @@ class ChatThread {
       participantName: json['participant_name']?.toString() ??
           json['participantName']?.toString() ??
           '',
+      lastMessage: json['last_message']?.toString() ??
+          json['lastMessage']?.toString(),
+      lastAt: DateTime.tryParse(
+        json['lastAt']?.toString() ?? json['last_at']?.toString() ?? '',
+      ),
     );
   }
 
   final String id;
   final String jobTitle;
   final String participantName;
+  final String? lastMessage;
+  final DateTime? lastAt;
 }
 
 class ChatMessage {

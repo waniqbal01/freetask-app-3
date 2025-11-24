@@ -17,7 +17,10 @@ import 'widgets/job_card_skeleton.dart';
 import 'widgets/job_status_badge.dart';
 
 class JobListScreen extends StatefulWidget {
-  const JobListScreen({super.key});
+  const JobListScreen({super.key, this.limitQuery, this.offsetQuery});
+
+  final String? limitQuery;
+  final String? offsetQuery;
 
   @override
   State<JobListScreen> createState() => _JobListScreenState();
@@ -80,7 +83,10 @@ class _JobListScreenState extends State<JobListScreen> {
     });
 
     try {
-      final jobs = await jobsRepository.getClientJobs();
+      final jobs = await jobsRepository.getClientJobs(
+        limit: widget.limitQuery,
+        offset: widget.offsetQuery,
+      );
       if (!mounted) return;
       setState(() {
         _clientJobs
@@ -117,7 +123,10 @@ class _JobListScreenState extends State<JobListScreen> {
     });
 
     try {
-      final jobs = await jobsRepository.getFreelancerJobs();
+      final jobs = await jobsRepository.getFreelancerJobs(
+        limit: widget.limitQuery,
+        offset: widget.offsetQuery,
+      );
       if (!mounted) return;
       setState(() {
         _freelancerJobs
