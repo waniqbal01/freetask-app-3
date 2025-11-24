@@ -122,6 +122,11 @@ class JobsRepository {
       );
       return response.data != null ? Job.fromJson(response.data!) : null;
     } on DioException catch (error) {
+      if (error.response?.statusCode == 403) {
+        throw JobStatusConflict(
+          'Client tidak dibenarkan dispute. Sila hubungi support.',
+        );
+      }
       await _handleStatusError(error);
       rethrow;
     }
