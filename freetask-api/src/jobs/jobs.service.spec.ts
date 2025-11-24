@@ -76,7 +76,7 @@ describe('JobsService', () => {
       status: JobStatus.CANCELLED,
     });
 
-    const result = await service.cancelJob(baseJob.id, baseJob.clientId);
+    const result = await service.cancelJob(baseJob.id, baseJob.clientId, UserRole.CLIENT);
 
     expect(prisma.job.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -95,5 +95,33 @@ describe('JobsService', () => {
         status: JobStatus.ACCEPTED,
       }),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('blocks clients from freelancer-only actions', async () => {
+    (prisma.job.findUnique as jest.Mock).mockResolvedValue(baseJob);
+
+    await expect(service.acceptJob(baseJob.id, baseJob.clientId, UserRole.CLIENT)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    await expect(service.startJob(baseJob.id, baseJob.clientId, UserRole.CLIENT)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    await expect(service.rejectJob(baseJob.id, baseJob.clientId, UserRole.CLIENT)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+  });
+
+  it('prevents freelancers from cancelling or disputing as clients', async () => {
+    (prisma.job.findUnique as jest.Mock).mockResolvedValue(baseJob);
+
+    await expect(service.cancelJob(baseJob.id, baseJob.freelancerId, UserRole.FREELANCER)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+
+    await expect(
+      service.disputeJob(baseJob.id, baseJob.clientId, UserRole.CLIENT, {
+        reason: 'Not satisfied',
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });

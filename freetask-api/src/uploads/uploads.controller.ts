@@ -14,7 +14,6 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { Request } from 'express';
 import { extname } from 'path';
 import { UploadsService } from './uploads.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -69,12 +68,12 @@ export class UploadsController {
       }),
     }),
   )
-  uploadFile(@UploadedFile() file: Express.Multer.File, @Req() request: Request) {
+  uploadFile(@UploadedFile() file: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('Tiada fail dihantar');
     }
 
-    return { url: this.uploadsService.buildFileUrl(request, file.filename) };
+    return this.uploadsService.buildUploadResponse(file.filename);
   }
 
   @Get(':filename')

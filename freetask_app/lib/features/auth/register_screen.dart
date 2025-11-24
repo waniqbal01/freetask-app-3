@@ -9,6 +9,7 @@ import '../../core/utils/error_utils.dart';
 import '../../services/upload_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/section_card.dart';
+import '../../widgets/authorized_image.dart';
 import 'auth_redirect.dart';
 import 'auth_repository.dart';
 import '../users/users_repository.dart';
@@ -39,6 +40,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isUploadingAvatar = false;
   String? _errorMessage;
   String? _selectedAvatarPath;
+  String? _uploadedAvatarUrl;
 
   @override
   void initState() {
@@ -200,6 +202,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() {
       _selectedAvatarPath = path;
       _avatarController.text = path.split(RegExp(r'[\\/]')).last;
+      _uploadedAvatarUrl = null;
     });
 
     if (mounted) {
@@ -221,8 +224,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      final url = await uploadService.uploadFile(path);
-      await usersRepository.updateProfile(avatarUrl: url);
+      final uploadResult = await uploadService.uploadFile(path);
+      await usersRepository.updateProfile(avatarUrl: uploadResult.url);
+      setState(() {
+        _uploadedAvatarUrl = uploadResult.url;
+      });
       if (mounted) {
         showErrorSnackBar(
           context,
@@ -433,6 +439,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       ),
                               ),
                             ),
+                            if (_uploadedAvatarUrl != null) ...[
+                              const SizedBox(height: AppSpacing.s8),
+                              Text(
+                                'Pratonton avatar:',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelMedium
+                                    ?.copyWith(color: AppColors.neutral500),
+                              ),
+                              const SizedBox(height: AppSpacing.s8),
+                              Row(
+                                children: [
+                                  AuthorizedImage(
+                                    url: _uploadedAvatarUrl!,
+                                    width: 72,
+                                    height: 72,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ],
+                              ),
+                            ],
                             if (isFreelancer) ...[
                               const SizedBox(height: AppSpacing.s16),
                               TextFormField(

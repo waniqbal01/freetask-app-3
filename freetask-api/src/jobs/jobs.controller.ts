@@ -17,13 +17,16 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { GetUser } from '../auth/get-user.decorator';
 import { UserRole } from '@prisma/client';
 import { Throttle } from '@nestjs/throttler';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 
 @Controller('jobs')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class JobsController {
   constructor(private readonly jobsService: JobsService) {}
 
   @Post()
+  @Roles(UserRole.CLIENT)
   create(
     @GetUser('userId') userId: number,
     @GetUser('role') role: UserRole,
@@ -54,6 +57,7 @@ export class JobsController {
   }
 
   @Patch(':id/status')
+  @Roles(UserRole.FREELANCER)
   updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @GetUser('userId') userId: number,
@@ -64,39 +68,63 @@ export class JobsController {
   }
 
   @Patch(':id/accept')
-  accept(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
-    return this.jobsService.acceptJob(id, userId);
+  @Roles(UserRole.FREELANCER)
+  accept(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('userId') userId: number,
+    @GetUser('role') role: UserRole,
+  ) {
+    return this.jobsService.acceptJob(id, userId, role);
   }
 
   @Patch(':id/start')
-  start(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
-    return this.jobsService.startJob(id, userId);
+  @Roles(UserRole.FREELANCER)
+  start(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('userId') userId: number,
+    @GetUser('role') role: UserRole,
+  ) {
+    return this.jobsService.startJob(id, userId, role);
   }
 
   @Patch(':id/reject')
-  reject(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
-    return this.jobsService.rejectJob(id, userId);
+  @Roles(UserRole.FREELANCER)
+  reject(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('userId') userId: number,
+    @GetUser('role') role: UserRole,
+  ) {
+    return this.jobsService.rejectJob(id, userId, role);
   }
 
   @Patch(':id/cancel')
+  @Roles(UserRole.CLIENT)
   cancel(
     @Param('id', ParseIntPipe) id: number,
     @GetUser('userId') userId: number,
+    @GetUser('role') role: UserRole,
   ) {
-    return this.jobsService.cancelJob(id, userId);
+    return this.jobsService.cancelJob(id, userId, role);
   }
 
   @Patch(':id/complete')
-  complete(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
-    return this.jobsService.completeJob(id, userId);
+  @Roles(UserRole.FREELANCER)
+  complete(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('userId') userId: number,
+    @GetUser('role') role: UserRole,
+  ) {
+    return this.jobsService.completeJob(id, userId, role);
   }
 
   @Patch(':id/dispute')
+  @Roles(UserRole.FREELANCER)
   dispute(
     @Param('id', ParseIntPipe) id: number,
     @GetUser('userId') userId: number,
+    @GetUser('role') role: UserRole,
     @Body() dto: DisputeJobDto,
   ) {
-    return this.jobsService.disputeJob(id, userId, dto);
+    return this.jobsService.disputeJob(id, userId, role, dto);
   }
 }

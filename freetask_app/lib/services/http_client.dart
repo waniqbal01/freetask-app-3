@@ -41,7 +41,6 @@ class HttpClient {
   }
 
   Future<void> _clearStoredTokens() async {
-    _sessionHandled = false;
     await _storage.delete(AuthRepository.tokenStorageKey);
     await _storage.delete(AuthRepository.legacyTokenStorageKey);
     await _storage.delete(AuthRepository.refreshTokenStorageKey);
@@ -164,10 +163,11 @@ class HttpClient {
 
           final isPublicServicesGet = _isPublicRequest(options);
           final token = await _readTokenWithMigration();
-          if (token != null && token.isNotEmpty) {
+          if (token != null && token.isNotEmpty && !isPublicServicesGet) {
+            _sessionHandled = false;
             options.headers['Authorization'] = 'Bearer $token';
-          } else if (isPublicServicesGet) {
-            // Allow unauthenticated access to public services endpoints.
+          } else if (isPublicServicesGet && options.headers.containsKey('Authorization')) {
+            options.headers.remove('Authorization');
           }
           handler.next(options);
         },
@@ -177,9 +177,28 @@ class HttpClient {
         },
         onError: (DioException error, ErrorInterceptorHandler handler) async {
           _clearTrackedToken(error.requestOptions.cancelToken);
-          final status = error.response?.statusCode ?? 0;
+          var status = error.response?.statusCode ?? 0;
+          final isPublicRequest = _isPublicRequest(error.requestOptions);
 
           if (status == 401) {
+            if (isPublicRequest && error.requestOptions.extra['__retriedWithoutAuth'] != true) {
+              await _clearStoredTokens();
+              final retryOptions = error.requestOptions
+                ..headers.remove('Authorization')
+                ..extra['__retriedWithoutAuth'] = true
+                ..cancelToken = CancelToken();
+
+              try {
+                final latestBase = await _baseUrlManager.getBaseUrl();
+                retryOptions.baseUrl = latestBase;
+                final retryResponse = await dio.fetch<dynamic>(retryOptions);
+                return handler.resolve(retryResponse);
+              } on DioException catch (retryError) {
+                error = retryError;
+                status = retryError.response?.statusCode ?? status;
+              }
+            }
+
             if (await _shouldAttemptRefresh(error.requestOptions)) {
               final refreshed = await _refreshAccessToken();
               if (refreshed) {

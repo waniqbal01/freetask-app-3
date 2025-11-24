@@ -254,12 +254,27 @@ class JobsRepository {
   }
 
   Future<void> _handleStatusError(DioException error) async {
-    await handleApiError(error);
     final statusCode = error.response?.statusCode;
+    if (statusCode == 401) {
+      await handleApiError(error);
+      return;
+    }
+
+    if (statusCode == 403) {
+      throw JobStatusConflict('Akses tidak dibenarkan untuk role anda.');
+    }
+
     if (statusCode == 409) {
       final message = _extractErrorMessage(error);
-      throw JobStatusConflict(message);
+      final fallback = 'Status job tidak membenarkan tindakan ini.';
+      throw JobStatusConflict(message.isEmpty ? fallback : message);
     }
+
+    if (statusCode == 400) {
+      final message = _extractErrorMessage(error);
+      throw JobStatusConflict(message.isEmpty ? 'Permintaan tidak sah.' : message);
+    }
+
     await _handleDioError(error);
   }
 

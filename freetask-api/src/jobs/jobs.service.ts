@@ -104,43 +104,43 @@ export class JobsService {
     return this.withFlatFields(job);
   }
 
-  async acceptJob(id: number, userId: number) {
+  async acceptJob(id: number, userId: number, role: UserRole) {
+    this.ensureRole(role, [UserRole.FREELANCER]);
     const job = await this.ensureJobForFreelancer(id, userId);
     this.ensureValidTransition(job.status, JobStatus.ACCEPTED);
     return this.applyStatusUpdate(id, JobStatus.ACCEPTED);
   }
 
-  async startJob(id: number, userId: number) {
+  async startJob(id: number, userId: number, role: UserRole) {
+    this.ensureRole(role, [UserRole.FREELANCER]);
     const job = await this.ensureJobForFreelancer(id, userId);
     this.ensureValidTransition(job.status, JobStatus.IN_PROGRESS);
     return this.applyStatusUpdate(id, JobStatus.IN_PROGRESS);
   }
 
-  async rejectJob(id: number, userId: number) {
+  async rejectJob(id: number, userId: number, role: UserRole) {
+    this.ensureRole(role, [UserRole.FREELANCER]);
     const job = await this.ensureJobForFreelancer(id, userId);
     this.ensureValidTransition(job.status, JobStatus.REJECTED);
     return this.applyStatusUpdate(id, JobStatus.REJECTED);
   }
 
-  async cancelJob(id: number, userId: number) {
+  async cancelJob(id: number, userId: number, role: UserRole) {
+    this.ensureRole(role, [UserRole.CLIENT]);
     const job = await this.ensureJobForClient(id, userId);
     this.ensureValidTransition(job.status, JobStatus.CANCELLED);
     return this.applyStatusUpdate(id, JobStatus.CANCELLED);
   }
 
-  async completeJob(id: number, userId: number) {
-    const job = await this.prisma.job.findUnique({ where: { id } });
-    if (!job) {
-      throw new NotFoundException('Job not found');
-    }
-    if (job.freelancerId !== userId) {
-      throw new ForbiddenException('Only freelancer can complete this job.');
-    }
+  async completeJob(id: number, userId: number, role: UserRole) {
+    this.ensureRole(role, [UserRole.FREELANCER]);
+    const job = await this.ensureJobForFreelancer(id, userId);
     this.ensureValidTransition(job.status, JobStatus.COMPLETED);
     return this.applyStatusUpdate(id, JobStatus.COMPLETED);
   }
 
-  async disputeJob(id: number, userId: number, dto: DisputeJobDto) {
+  async disputeJob(id: number, userId: number, role: UserRole, dto: DisputeJobDto) {
+    this.ensureRole(role, [UserRole.FREELANCER]);
     const job = await this.ensureJobParticipant(id, userId);
     this.ensureValidTransition(job.status, JobStatus.DISPUTED);
     const trimmedReason = dto.reason?.trim() ?? '';
@@ -158,9 +158,7 @@ export class JobsService {
     role: UserRole,
     dto: UpdateJobStatusDto,
   ) {
-    if (role !== UserRole.FREELANCER) {
-      throw new ForbiddenException('Only freelancers can update job status');
-    }
+    this.ensureRole(role, [UserRole.FREELANCER]);
 
     if (dto.status === JobStatus.CANCELLED) {
       throw new ForbiddenException('Freelancers cannot cancel jobs');
@@ -189,6 +187,12 @@ export class JobsService {
     const allowedNextStates = transitions[current] ?? [];
     if (!allowedNextStates.includes(next)) {
       throw new ConflictException('Invalid status transition');
+    }
+  }
+
+  private ensureRole(role: UserRole, allowed: UserRole[]) {
+    if (!allowed.includes(role)) {
+      throw new ForbiddenException('Role tidak dibenarkan untuk tindakan ini.');
     }
   }
 

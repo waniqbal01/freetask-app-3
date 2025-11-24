@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:mime/mime.dart';
 import 'package:path/path.dart' as p;
 
@@ -17,7 +17,7 @@ class UploadService {
   final Dio _dio;
   final AppStorage _storage;
 
-  Future<String> uploadFile(String filePath) async {
+  Future<UploadResult> uploadFile(String filePath) async {
     await _validateFile(filePath);
     final fileName = p.basename(filePath);
     final formData = FormData.fromMap(<String, dynamic>{
@@ -43,12 +43,38 @@ class UploadService {
 
     final data = response.data;
     final url = data?['url']?.toString();
+    final key = data?['key']?.toString();
 
     if (url == null || url.isEmpty) {
       throw StateError('URL muat naik tidak sah.');
     }
 
-    return url;
+    return UploadResult(
+      key: key ?? fileName,
+      url: _normalizePath(url),
+    );
+  }
+
+  Future<String> resolveAuthorizedUrl(String url) async {
+    final normalizedPath = _normalizePath(url);
+    if (normalizedPath.startsWith('http')) {
+      return normalizedPath;
+    }
+
+    final base = await HttpClient().currentBaseUrl();
+    return _joinBaseAndPath(base, normalizedPath);
+  }
+
+  Future<Response<Uint8List>> downloadWithAuth(String url) async {
+    final targetUrl = await resolveAuthorizedUrl(url);
+    final headers = await authorizationHeader();
+    return _dio.get<Uint8List>(
+      targetUrl,
+      options: Options(
+        responseType: ResponseType.bytes,
+        headers: headers.isEmpty ? null : headers,
+      ),
+    );
   }
 
   Future<void> _validateFile(String filePath) async {
@@ -80,9 +106,36 @@ class UploadService {
 
   static const String _authTokenKey = 'auth_token';
   static const String _legacyAccessTokenKey = 'access_token';
+
+  Future<Map<String, String>> authorizationHeader() async {
+    final token = await _storage.read(_authTokenKey) ?? await _storage.read(_legacyAccessTokenKey);
+    if (token == null || token.isEmpty) {
+      return <String, String>{};
+    }
+    return <String, String>{'Authorization': 'Bearer $token'};
+  }
+
+  String _normalizePath(String url) {
+    if (url.startsWith('http')) {
+      return url;
+    }
+    return url.startsWith('/') ? url : '/$url';
+  }
+
+  String _joinBaseAndPath(String base, String path) {
+    final sanitizedBase = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
+    return '$sanitizedBase$path';
+  }
 }
 
 final uploadService = UploadService();
+
+class UploadResult {
+  UploadResult({required this.key, required this.url});
+
+  final String key;
+  final String url;
+}
 
 class ValidationException implements Exception {
   const ValidationException(this.message);

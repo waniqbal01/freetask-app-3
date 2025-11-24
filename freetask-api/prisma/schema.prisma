@@ -70,7 +70,7 @@ model Job {
   updatedAt      DateTime    @updatedAt
   title          String
   description    String
-  amount         Decimal?    @db.Decimal(10, 2)
+  amount         Decimal     @db.Decimal(10, 2)
   status         JobStatus   @default(PENDING)
   disputeReason  String?     @default(null)
   service        Service     @relation(fields: [serviceId], references: [id])
