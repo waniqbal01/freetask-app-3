@@ -147,7 +147,7 @@ export class JobsService {
   }
 
   async disputeJob(id: number, userId: number, role: UserRole, dto: DisputeJobDto) {
-    this.ensureRole(role, [UserRole.FREELANCER]);
+    this.ensureRole(role, [UserRole.FREELANCER, UserRole.CLIENT]);
     const job = await this.ensureJobParticipant(id, userId);
     this.ensureValidTransition(job.status, JobStatus.DISPUTED);
     const trimmedReason = dto.reason?.trim() ?? '';

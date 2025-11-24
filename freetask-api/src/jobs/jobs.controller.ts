@@ -120,7 +120,7 @@ export class JobsController {
   }
 
   @Patch(':id/dispute')
-  @Roles(UserRole.FREELANCER)
+  @Roles(UserRole.FREELANCER, UserRole.CLIENT)
   dispute(
     @Param('id', ParseIntPipe) id: number,
     @GetUser('userId') userId: number,
