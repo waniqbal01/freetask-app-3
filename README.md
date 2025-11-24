@@ -3,6 +3,12 @@
 This repository contains the Flutter project scaffold for the **FreeTask App** and the
 NestJS API powering it.
 
+## ⚠️ Production Requirements (mandatory)
+
+- Set `ALLOWED_ORIGINS` in production; the API fails fast if it is empty.
+- Set `PUBLIC_BASE_URL` to your API origin; upload responses return relative `/uploads/<file>` paths and require JWT to fetch.
+- Set `TRUST_PROXY=true` when running behind ingress/reverse-proxy so forwarded headers are trusted for URL validation.
+
 ## Backend quickstart (NestJS + Prisma/Postgres)
 
 ```bash
@@ -45,8 +51,9 @@ Copy/paste starter envs:
   ```
 
 Persist uploads between restarts by mounting/volume-binding the `./uploads` folder
-when running in Docker or on a host machine. `/uploads/**` URLs are public by design
-for this MVP and limited to safe file types/5MB size.
+when running in Docker or on a host machine. `/uploads/**` URLs require JWT headers;
+upload responses return relative paths (e.g. `/uploads/<file>`) that the Flutter app
+requests with Authorization.
 
 Demo logins from the seed:
 

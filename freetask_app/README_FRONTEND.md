@@ -60,6 +60,12 @@ Ensure the backend mounts/persists the `./uploads` folder (volume or host direct
 - Clients: `client1@example.com`, `client2@example.com` / `Password123!`
 - Freelancers: `freelancer1@example.com`, `freelancer2@example.com` / `Password123!`
 
+#### Role-based guidance
+
+- **CLIENT**: create orders from service detail → manage/cancel their own jobs only.
+- **FREELANCER**: accept/start/complete/dispute jobs assigned to them; cannot cancel client jobs.
+- **ADMIN**: read-only for most flows unless specific admin endpoints are exposed.
+
 Tip: the login screen also links to **Tukar API Server** so testers can quickly set the correct base URL before using these demo accounts.
 
 ### Troubleshooting

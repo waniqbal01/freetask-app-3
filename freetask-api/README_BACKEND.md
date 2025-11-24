@@ -1,5 +1,13 @@
 # Freetask API
 
+## ⚠️ Production Requirements (mandatory)
+
+- `ALLOWED_ORIGINS` **must** be set in production; the server now fails fast when empty.
+- `PUBLIC_BASE_URL` should point to your API origin; upload responses return relative paths and still require JWT for retrieval.
+- `TRUST_PROXY=true` when running behind ingress/reverse-proxy so forwarded headers are trusted.
+
+If `ALLOWED_ORIGINS` is empty in production the API will exit. Missing `PUBLIC_BASE_URL` in production prevents safe upload link generation.
+
 ## Prerequisites
 - Node.js 18+
 - PostgreSQL database
@@ -17,8 +25,8 @@ npm install
    (e.g. `http://localhost:4000` for local dev, `http://192.168.x.x:4000` for LAN
    devices, or your production domain). The default `ALLOWED_ORIGINS` covers local
    web/desktop testing. **In production, `ALLOWED_ORIGINS` is required – the server
-   fails fast if it is empty.** Set `PUBLIC_BASE_URL` to your API origin to enforce
-   upload link generation.
+   fails fast if it is empty.** Set `PUBLIC_BASE_URL` to your API origin (uploads
+   still return relative URLs and need Authorization headers to download).
 4. Apply Prisma migrations:
 ```bash
 npx prisma migrate dev
@@ -36,7 +44,8 @@ npm run start:dev
 
 ## Production env checklist
 
-- `PUBLIC_BASE_URL` – set to your API origin; used to build absolute upload URLs.
+- `PUBLIC_BASE_URL` – set to your API origin; used to build upload URLs (responses
+  return relative `/uploads/<file>` paths; downloads require Authorization headers).
 - `ALLOWED_ORIGINS` – explicit list of allowed frontends (e.g. admin + app domains).
 - `TRUST_PROXY=true` – enable when running behind ingress/reverse-proxy so forwarded
   headers are trusted.
@@ -136,7 +145,9 @@ between restarts.
     invalid transitions return `409` with a clear message.
 - Uploads are fetched via authenticated `GET /uploads/:filename` (JWT required). Static
   directory serving is disabled; only files within the configured `UPLOAD_DIR` that pass
-  the allowlist (jpeg/png/gif/pdf/doc/docx, max 5MB) can be retrieved.
+  the allowlist (jpeg/png/gif/pdf/doc/docx, max 5MB) can be retrieved. Upload responses
+  return the storage key plus a relative path (e.g. `/uploads/<file>`), never a public
+  absolute URL.
 
 Seeding tips:
 - If the database already has data, rerun with `SEED_FORCE=true`. Keep `SEED_RESET=false`
