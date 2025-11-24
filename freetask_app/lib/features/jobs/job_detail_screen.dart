@@ -10,6 +10,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/section_card.dart';
 import '../auth/auth_repository.dart';
 import '../escrow/escrow_repository.dart';
+import 'job_constants.dart';
 import 'jobs_repository.dart';
 import 'job_transition_rules.dart';
 import 'widgets/job_status_badge.dart';
@@ -283,32 +284,49 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final reason = await showDialog<String>(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Nyatakan sebab dispute'),
-          content: TextField(
-            controller: controller,
-            decoration: const InputDecoration(
-              hintText: 'Contoh: Kerja tidak memenuhi skop.',
-            ),
-            maxLines: 3,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Batal'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-              child: const Text('Hantar'),
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            final trimmed = controller.text.trim();
+            final isValid = trimmed.length >= jobMinDisputeReasonLen;
+            final helper = '${trimmed.length}/$jobMinDisputeReasonLen aksara';
+
+            return AlertDialog(
+              title: const Text('Nyatakan sebab dispute'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: controller,
+                    decoration: InputDecoration(
+                      hintText: 'Contoh: Kerja tidak memenuhi skop.',
+                      errorText: controller.text.isEmpty || isValid
+                          ? null
+                          : 'Minimum $jobMinDisputeReasonLen aksara diperlukan.',
+                      helperText: helper,
+                    ),
+                    maxLines: 3,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Batal'),
+                ),
+                FilledButton(
+                  onPressed:
+                      isValid ? () => Navigator.of(context).pop(trimmed) : null,
+                  child: const Text('Hantar'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
     controller.dispose();
-    if (reason == null || reason.isEmpty) {
-      return null;
-    }
     return reason;
   }
 
@@ -365,6 +383,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     if (_isUserLoading || _userRole == null) {
       return const <Widget>[];
     }
+    final textTheme = Theme.of(context).textTheme;
     final role = _userRole!.toUpperCase();
     final isJobClient = _userId != null && job.clientId == _userId;
     final isJobFreelancer = _userId != null && job.freelancerId == _userId;
@@ -490,26 +509,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       }
 
       if (canDispute) {
-        if (actions.isNotEmpty) {
-          actions.add(const SizedBox(width: AppSpacing.s8));
-        }
-        actions.add(
-          FTButton(
-            label: 'Dispute',
-            isLoading: _isProcessing,
-            onPressed: () async {
-              final reason = await _promptDisputeReason();
-              if (reason == null) return;
-              await _guardedJobAction(
-                allowed: canDispute,
-                action: () => jobsRepository.disputeJob(job.id, reason),
-                successMessage: 'Dispute dihantar.',
-              );
-            },
-            expanded: false,
-            size: FTButtonSize.small,
-          ),
-        );
+        actions.add(Text(
+          'Hanya freelancer boleh buat dispute.',
+          style: textTheme.bodySmall?.copyWith(color: Colors.grey.shade700),
+        ));
       }
     }
 

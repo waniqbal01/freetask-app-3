@@ -52,6 +52,8 @@ Backend env snippets to copy into `.env`:
   ALLOWED_ORIGINS=https://app.freetask.my,https://admin.freetask.my
   ```
 
+> When the backend runs with `NODE_ENV=production`, `ALLOWED_ORIGINS` **must** be set or the server will fail fast. Include every frontend/admin origin that should be allowed (see examples above).
+
 Ensure the backend mounts/persists the `./uploads` folder (volume or host directory) so uploaded avatars/documents survive restarts.
 
 ### Demo credentials (from seed)
