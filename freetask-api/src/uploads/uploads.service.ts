@@ -2,15 +2,16 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { mkdirSync, existsSync } from 'fs';
-import { extname, join, basename } from 'path';
+import { mkdirSync, existsSync, createReadStream, statSync } from 'fs';
+import { extname, join, basename, normalize, sep } from 'path';
 import { randomUUID } from 'crypto';
 
 @Injectable()
 export class UploadsService {
-  private readonly uploadsDir = join(process.cwd(), 'uploads');
+  private readonly uploadsDir = normalize(join(process.cwd(), process.env.UPLOAD_DIR ?? 'uploads'));
   private warnedMissingBaseUrl = false;
 
   ensureUploadsDir() {
@@ -39,6 +40,29 @@ export class UploadsService {
 
     const uuid = randomUUID();
     return `${uuid}${fileExt}`;
+  }
+
+  getFileStream(rawFilename: string) {
+    const safeFilename = this.sanitizeRequestedFile(rawFilename);
+    const normalizedPath = this.buildSafePath(safeFilename);
+
+    if (!existsSync(normalizedPath)) {
+      throw new NotFoundException('File not found');
+    }
+
+    const fileStat = statSync(normalizedPath);
+    if (!fileStat.isFile()) {
+      throw new NotFoundException('File not found');
+    }
+
+    const fileExt = extname(normalizedPath).toLowerCase();
+    const mimeType = UploadsService.mimeTypeFromExtension(fileExt);
+
+    return {
+      stream: createReadStream(normalizedPath),
+      mimeType: mimeType ?? 'application/octet-stream',
+      filename: basename(normalizedPath),
+    };
   }
 
   buildFileUrl(request: Request, filename: string) {
@@ -87,6 +111,33 @@ export class UploadsService {
     return `${sanitizedOrigin}/uploads/${filename}`;
   }
 
+  private sanitizeRequestedFile(rawFilename: string) {
+    if (!rawFilename) {
+      throw new BadRequestException('Filename is required');
+    }
+
+    const decoded = decodeURIComponent(rawFilename);
+    const normalized = decoded.replace(/\\+/g, '/');
+    if (normalized.includes('..')) {
+      throw new BadRequestException('Invalid file path');
+    }
+
+    const base = basename(normalized);
+    if (!base || base === '.' || base === '..') {
+      throw new BadRequestException('Invalid file path');
+    }
+
+    return base;
+  }
+
+  private buildSafePath(filename: string) {
+    const targetPath = normalize(join(this.uploadsDir, filename));
+    if (!targetPath.startsWith(this.uploadsDir + sep)) {
+      throw new BadRequestException('Invalid file path');
+    }
+    return targetPath;
+  }
+
   static normalizeBaseUrl(origin: string) {
     return origin.endsWith('/') ? origin.slice(0, -1) : origin;
   }
@@ -115,6 +166,20 @@ export class UploadsService {
     ];
 
     return allowed.includes(mimeType.toLowerCase());
+  }
+
+  static mimeTypeFromExtension(extension: string) {
+    const map: Record<string, string> = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.pdf': 'application/pdf',
+      '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    };
+
+    return map[extension.toLowerCase()];
   }
 
   static isLocalHost(host: string) {

@@ -1,11 +1,16 @@
 import {
   BadRequestException,
   Controller,
+  Get,
+  Param,
   Post,
   UploadedFile,
   UseGuards,
   UseInterceptors,
   Req,
+  Res,
+  UseFilters,
+  StreamableFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -13,9 +18,12 @@ import { Request } from 'express';
 import { extname } from 'path';
 import { UploadsService } from './uploads.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Response } from 'express';
+import { UploadsMulterExceptionFilter } from './uploads.filter';
 
 @Controller('uploads')
 @UseGuards(JwtAuthGuard)
+@UseFilters(UploadsMulterExceptionFilter)
 export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) {}
 
@@ -49,17 +57,31 @@ export class UploadsController {
       },
       storage: diskStorage({
         destination: (_req, _file, cb) => {
-          this.uploadsService.ensureUploadsDir();
-          cb(null, this.uploadsService.getUploadsDir());
+          const uploadsService = this.uploadsService;
+          uploadsService.ensureUploadsDir();
+          cb(null, uploadsService.getUploadsDir());
         },
         filename: (_req, file, cb) => {
-          const filename = this.uploadsService.buildFileName(file.originalname);
+          const uploadsService = this.uploadsService;
+          const filename = uploadsService.buildFileName(file.originalname);
           cb(null, filename);
         },
       }),
     }),
   )
   uploadFile(@UploadedFile() file: Express.Multer.File, @Req() request: Request) {
+    if (!file) {
+      throw new BadRequestException('Tiada fail dihantar');
+    }
+
     return { url: this.uploadsService.buildFileUrl(request, file.filename) };
+  }
+
+  @Get(':filename')
+  downloadFile(@Param('filename') filename: string, @Res({ passthrough: true }) res: Response) {
+    const { stream, mimeType, filename: safeName } = this.uploadsService.getFileStream(filename);
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Disposition', `inline; filename="${safeName}"`);
+    return new StreamableFile(stream);
   }
 }
