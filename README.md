@@ -100,6 +100,7 @@ in both `PUBLIC_BASE_URL` and `ALLOWED_ORIGINS`.
 - [x] API base URL configurable per platform via `--dart-define=API_BASE_URL`.
 - [x] CORS honours explicit `ALLOWED_ORIGINS` (required in production).
 - [x] Job creation payload requires amount/description with safe Decimal casting.
+- [x] Job creation enforces minimum description length (10 characters) and amount (RM1.00) across API + Flutter constants.
 - [x] Uploads constrained by size/MIME with sanitized filenames.
 - [x] Global rate limiter enabled (30 req/min default) beyond auth.
 - [x] Login screen documents seed credentials for quick QA.
@@ -113,7 +114,7 @@ Auth
 
 Jobs
 
-1. Create job from Flutter (client) with title/description/amount – succeeds.
+1. Create job from Flutter (client) with title/description/amount at or above the minimums (10 characters, RM1.00) – succeeds; shorter description or lower amount should be blocked by UI or return 400 with clear message.
 2. As freelancer, accept → start → complete; client cannot call complete.
 3. Invalid transitions (e.g. complete from `PENDING`) return conflict messages.
 
