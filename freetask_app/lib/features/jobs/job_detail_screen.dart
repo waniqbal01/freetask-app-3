@@ -516,10 +516,27 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       }
 
       if (canDispute) {
-        actions.add(Text(
-          'Hanya freelancer boleh buat dispute.',
-          style: textTheme.bodySmall?.copyWith(color: Colors.grey.shade700),
-        ));
+        if (actions.isNotEmpty) {
+          actions.add(const SizedBox(width: AppSpacing.s8));
+        }
+        actions.add(
+          FTButton(
+            label: 'Dispute',
+            isLoading: _isProcessing,
+            onPressed: () async {
+              final reason = await _promptDisputeReason();
+              if (reason == null) return;
+              await _guardedJobAction(
+                allowed: canDispute,
+                action: () => jobsRepository.disputeJob(job.id, reason),
+                successMessage: 'Dispute dihantar.',
+              );
+            },
+            expanded: false,
+            size: FTButtonSize.small,
+            type: FTButtonType.secondary,
+          ),
+        );
       }
     }
 
