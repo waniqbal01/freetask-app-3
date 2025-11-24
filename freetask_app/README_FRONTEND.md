@@ -33,7 +33,7 @@ Add your frontend origin to the API `ALLOWED_ORIGINS` if running the backend in 
 
 - Flutter web dev: `http://localhost:3000`
 - Vite/other web dev: `http://localhost:5173`
-- Android emulator webviews: `http://10.0.2.2:3000`
+- Android emulator webviews: `http://10.0.2.2:4000`
 - iOS simulator/LAN: `http://127.0.0.1:4000` or `http://<your-ip>:4000`
 
 Backend env snippets to copy into `.env`:
@@ -42,7 +42,7 @@ Backend env snippets to copy into `.env`:
 
   ```env
   PUBLIC_BASE_URL=http://localhost:4000
-  ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://10.0.2.2:3000,http://localhost:4000,http://127.0.0.1:4000
+  ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://10.0.2.2:4000,http://localhost:4000,http://127.0.0.1:4000
   ```
 
 - **Production web:**
@@ -63,8 +63,9 @@ Ensure the backend mounts/persists the `./uploads` folder (volume or host direct
 ### Demo credentials (from seed)
 
 - Admin: `admin@example.com` / `Password123!`
-- Clients: `client1@example.com`, `client2@example.com` / `Password123!`
-- Freelancers: `freelancer1@example.com`, `freelancer2@example.com` / `Password123!`
+- Client: `client@example.com` / `Password123!`
+- Freelancer: `freelancer@example.com` / `Password123!`
+- Extras: `client1@example.com`, `client2@example.com`, `freelancer1@example.com`, `freelancer2@example.com` / `Password123!`
 
 #### Role-based guidance
 

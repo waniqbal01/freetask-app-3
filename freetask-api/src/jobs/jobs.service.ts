@@ -11,10 +11,14 @@ import { CreateJobDto } from './dto/create-job.dto';
 import { DisputeJobDto } from './dto/dispute-job.dto';
 import { UpdateJobStatusDto } from './dto/update-job-status.dto';
 import { JOB_MIN_DISPUTE_REASON_LEN } from './constants';
+import { EscrowService } from '../escrow/escrow.service';
 
 @Injectable()
 export class JobsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly escrowService: EscrowService,
+  ) {}
 
   async create(userId: number, role: UserRole, dto: CreateJobDto) {
     if (role !== UserRole.CLIENT) {
@@ -57,12 +61,15 @@ export class JobsService {
     filter?: 'client' | 'freelancer' | 'all',
     pagination?: { limit?: number; offset?: number },
   ) {
-    if (filter === 'all' && role !== UserRole.ADMIN) {
+    const effectiveFilter = role === UserRole.ADMIN && !filter ? 'all' : filter;
+
+    if (effectiveFilter === 'all' && role !== UserRole.ADMIN) {
       throw new ForbiddenException('Only admins can view all jobs');
     }
 
     const normalizedFilter =
-      filter ?? (role === UserRole.CLIENT ? 'client' : role === UserRole.FREELANCER ? 'freelancer' : 'all');
+      effectiveFilter ??
+      (role === UserRole.CLIENT ? 'client' : role === UserRole.FREELANCER ? 'freelancer' : 'all');
 
     const where: Prisma.JobWhereInput =
       normalizedFilter === 'client'
@@ -197,16 +204,23 @@ export class JobsService {
   }
 
   private applyStatusUpdate(id: number, status: JobStatus, disputeReason?: string) {
-    return this.prisma.job
-      .update({
+    return this.prisma.$transaction(async (tx) => {
+      const job = await tx.job.update({
         where: { id },
         data: {
           status,
           disputeReason: disputeReason ?? null,
         },
         include: this.jobInclude,
-      })
-      .then((job) => this.withFlatFields(job));
+      });
+
+      const escrow = await tx.escrow.findUnique({ where: { jobId: job.id } });
+      if (escrow) {
+        await this.escrowService.syncOnJobStatus(tx, job, escrow);
+      }
+
+      return this.withFlatFields(job);
+    });
   }
 
   private async createEscrowRecord(jobId: number, amount?: Prisma.Decimal | null) {

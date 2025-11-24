@@ -42,11 +42,19 @@ npm run seed
 npm run start:dev
 ```
 
+Seed credentials (role → email / password):
+
+- Admin: `admin@example.com` / `Password123!`
+- Client: `client@example.com` / `Password123!`
+- Freelancer: `freelancer@example.com` / `Password123!`
+- Extra demo accounts: `client1@example.com`, `client2@example.com`, `freelancer1@example.com`, `freelancer2@example.com` (all `Password123!`)
+
 ## Production env checklist
 
 - `PUBLIC_BASE_URL` – set to your API origin; used to build upload URLs (responses
   return relative `/uploads/<file>` paths; downloads require Authorization headers).
 - `ALLOWED_ORIGINS` – explicit list of allowed frontends (e.g. admin + app domains).
+- `NODE_ENV` – when set to `production`, `ALLOWED_ORIGINS` must be populated or the API will exit at startup.
 - `TRUST_PROXY=true` – enable when running behind ingress/reverse-proxy so forwarded
   headers are trusted.
 
@@ -110,7 +118,7 @@ between restarts.
 
   ```env
   PUBLIC_BASE_URL=http://localhost:4000
-  ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://10.0.2.2:3000,http://localhost:4000,http://127.0.0.1:4000
+  ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://10.0.2.2:4000,http://localhost:4000,http://127.0.0.1:4000
   ```
 
 - **Staging / LAN**

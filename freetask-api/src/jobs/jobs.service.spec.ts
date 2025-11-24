@@ -2,6 +2,7 @@ import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { JobStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { JobsService } from './jobs.service';
+import { EscrowService } from '../escrow/escrow.service';
 
 const baseJob = {
   id: 1,
@@ -21,18 +22,38 @@ const jobIncludeResult = {
 };
 
 describe('JobsService', () => {
-  let prisma: jest.Mocked<Pick<PrismaService, 'job'>>;
+  let prisma: jest.Mocked<Pick<PrismaService, 'job' | '$transaction'>> & {
+    escrow: { findUnique: jest.Mock };
+  };
+  let escrowService: jest.Mocked<Pick<EscrowService, 'syncOnJobStatus'>>;
   let service: JobsService;
+  let txJobUpdate: jest.Mock;
+  let txEscrowUpdate: jest.Mock;
 
   beforeEach(() => {
+    txJobUpdate = jest.fn();
+    txEscrowUpdate = jest.fn();
     prisma = {
       job: {
         findUnique: jest.fn(),
         update: jest.fn(),
       },
-    } as unknown as jest.Mocked<Pick<PrismaService, 'job'>>;
+      escrow: { findUnique: jest.fn() },
+      $transaction: jest.fn(async (cb: any) =>
+        cb({
+          job: { update: txJobUpdate },
+          escrow: { findUnique: prisma.escrow.findUnique, update: txEscrowUpdate },
+        } as any),
+      ),
+    } as unknown as jest.Mocked<Pick<PrismaService, 'job' | '$transaction'>> & {
+      escrow: { findUnique: jest.Mock };
+    };
 
-    service = new JobsService(prisma as unknown as PrismaService);
+    escrowService = {
+      syncOnJobStatus: jest.fn(),
+    } as unknown as jest.Mocked<Pick<EscrowService, 'syncOnJobStatus'>>;
+
+    service = new JobsService(prisma as unknown as PrismaService, escrowService);
   });
 
   it('prevents freelancers from cancelling jobs through updateStatus', async () => {
@@ -43,12 +64,12 @@ describe('JobsService', () => {
         status: JobStatus.CANCELLED,
       }),
     ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(prisma.job.update).not.toHaveBeenCalled();
+    expect(txJobUpdate).not.toHaveBeenCalled();
   });
 
   it('allows freelancers to move through valid transitions', async () => {
     (prisma.job.findUnique as jest.Mock).mockResolvedValue(baseJob);
-    (prisma.job.update as jest.Mock).mockResolvedValue({
+    txJobUpdate.mockResolvedValue({
       ...jobIncludeResult,
       status: JobStatus.ACCEPTED,
     });
@@ -60,7 +81,7 @@ describe('JobsService', () => {
       { status: JobStatus.ACCEPTED },
     );
 
-    expect(prisma.job.update).toHaveBeenCalledWith(
+    expect(txJobUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: baseJob.id },
         data: { status: JobStatus.ACCEPTED, disputeReason: null },
@@ -71,14 +92,14 @@ describe('JobsService', () => {
 
   it('keeps client cancellation flow intact', async () => {
     (prisma.job.findUnique as jest.Mock).mockResolvedValue(baseJob);
-    (prisma.job.update as jest.Mock).mockResolvedValue({
+    txJobUpdate.mockResolvedValue({
       ...jobIncludeResult,
       status: JobStatus.CANCELLED,
     });
 
     const result = await service.cancelJob(baseJob.id, baseJob.clientId, UserRole.CLIENT);
 
-    expect(prisma.job.update).toHaveBeenCalledWith(
+    expect(txJobUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: baseJob.id },
         data: { status: JobStatus.CANCELLED, disputeReason: null },
@@ -123,5 +144,33 @@ describe('JobsService', () => {
         reason: 'Not satisfied',
       }),
     ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('syncs escrow when completing a job', async () => {
+    (prisma.job.findUnique as jest.Mock).mockResolvedValue({ ...baseJob, status: JobStatus.IN_PROGRESS });
+    txJobUpdate.mockResolvedValue({ ...jobIncludeResult, status: JobStatus.COMPLETED });
+    prisma.escrow.findUnique.mockResolvedValue({ id: 2, jobId: baseJob.id, status: 'HELD' });
+
+    await service.completeJob(baseJob.id, baseJob.freelancerId, UserRole.FREELANCER);
+
+    expect(escrowService.syncOnJobStatus).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ id: baseJob.id, status: JobStatus.COMPLETED }),
+      expect.objectContaining({ id: 2, status: 'HELD' }),
+    );
+  });
+
+  it('syncs escrow when cancelling a job', async () => {
+    (prisma.job.findUnique as jest.Mock).mockResolvedValue(baseJob);
+    txJobUpdate.mockResolvedValue({ ...jobIncludeResult, status: JobStatus.CANCELLED });
+    prisma.escrow.findUnique.mockResolvedValue({ id: 3, jobId: baseJob.id, status: 'PENDING' });
+
+    await service.cancelJob(baseJob.id, baseJob.clientId, UserRole.CLIENT);
+
+    expect(escrowService.syncOnJobStatus).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ id: baseJob.id, status: JobStatus.CANCELLED }),
+      expect.objectContaining({ id: 3, status: 'PENDING' }),
+    );
   });
 });

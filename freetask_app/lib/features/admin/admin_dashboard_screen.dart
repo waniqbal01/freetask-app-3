@@ -5,6 +5,7 @@ import '../../models/job.dart';
 import '../jobs/jobs_repository.dart';
 import '../escrow/escrow_repository.dart';
 import '../../core/utils/error_utils.dart';
+import '../auth/auth_repository.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -36,7 +37,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Future<List<Job>> _fetchJobs() async {
-    final jobs = await jobsRepository.getAllJobs();
+    final user = await authRepository.getCurrentUser();
+    if (user == null || user.role.toUpperCase() != 'ADMIN') {
+      if (mounted) {
+        showErrorSnackBar(context, 'Admin only');
+      }
+      return <Job>[];
+    }
+
+    final jobs = await jobsRepository.getAllJobs(filter: 'all');
     await _hydrateEscrow(jobs);
     return jobs;
   }
@@ -132,10 +141,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return 'Pending';
       case EscrowStatus.held:
         return 'Held';
+      case EscrowStatus.disputed:
+        return 'Disputed';
       case EscrowStatus.released:
         return 'Released';
       case EscrowStatus.refunded:
         return 'Refunded';
+      case EscrowStatus.cancelled:
+        return 'Cancelled';
     }
   }
 
@@ -145,10 +158,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return Colors.blueGrey;
       case EscrowStatus.held:
         return Colors.orange;
+      case EscrowStatus.disputed:
+        return Colors.deepOrange;
       case EscrowStatus.released:
         return Colors.green;
       case EscrowStatus.refunded:
         return Colors.redAccent;
+      case EscrowStatus.cancelled:
+        return Colors.grey;
     }
   }
 

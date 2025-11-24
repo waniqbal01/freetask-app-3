@@ -354,10 +354,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         return 'Pending';
       case EscrowStatus.held:
         return 'Held';
+      case EscrowStatus.disputed:
+        return 'Disputed';
       case EscrowStatus.released:
         return 'Released';
       case EscrowStatus.refunded:
         return 'Refunded';
+      case EscrowStatus.cancelled:
+        return 'Cancelled';
       default:
         return '—';
     }
@@ -369,10 +373,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         return Colors.blueGrey;
       case EscrowStatus.held:
         return Colors.orange;
+      case EscrowStatus.disputed:
+        return Colors.deepOrange;
       case EscrowStatus.released:
         return Colors.green;
       case EscrowStatus.refunded:
         return Colors.redAccent;
+      case EscrowStatus.cancelled:
+        return Colors.grey;
       default:
         return Colors.grey;
     }
