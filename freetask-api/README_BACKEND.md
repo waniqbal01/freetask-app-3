@@ -52,6 +52,7 @@ Environment summary:
   hosts such as `http://10.0.2.2:*`). **Required in production – the app will exit
   if empty.**
 - `PORT` – defaults to `4000`
+- `UPLOAD_DIR` – folder where files are stored (default `uploads` relative to project root)
 - `PUBLIC_BASE_URL` – required in production to build absolute upload URLs (set to
   your API origin, e.g. `https://api.example.com`)
 - `PUBLIC_BASE_URL_STRICT` – keep `true` to enforce host matching, set to `false` when
@@ -133,7 +134,9 @@ between restarts.
   - `POST /escrow/:jobId/hold` → status transitions `PENDING -> HELD` (admin only).
   - `POST /escrow/:jobId/release` or `POST /escrow/:jobId/refund` require current status `HELD` (admin only);
     invalid transitions return `409` with a clear message.
-- Uploads remain publicly served from `/uploads/**` with a strict allowlist (images/PDF/DOC/DOCX) and 5MB limit.
+- Uploads are fetched via authenticated `GET /uploads/:filename` (JWT required). Static
+  directory serving is disabled; only files within the configured `UPLOAD_DIR` that pass
+  the allowlist (jpeg/png/gif/pdf/doc/docx, max 5MB) can be retrieved.
 
 Seeding tips:
 - If the database already has data, rerun with `SEED_FORCE=true`. Keep `SEED_RESET=false`

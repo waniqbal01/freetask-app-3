@@ -1,7 +1,6 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { join } from 'path';
 import { JwtExceptionFilter } from './common/filters/jwt-exception.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { getAllowedOrigins, normalizeOrigin } from './config/cors';
@@ -79,11 +78,6 @@ async function bootstrap() {
         transformOptions: { enableImplicitConversion: true },
       }),
     );
-
-    // ------------------------------
-    // Serve static uploaded files
-    // ------------------------------
-    app.useStaticAssets(join(process.cwd(), 'uploads'));
 
     // ------------------------------
     // Swagger documentation

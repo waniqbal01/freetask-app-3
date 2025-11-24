@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateJobDto } from './dto/create-job.dto';
 import { DisputeJobDto } from './dto/dispute-job.dto';
 import { UpdateJobStatusDto } from './dto/update-job-status.dto';
+import { JOB_MIN_DISPUTE_REASON_LEN } from './constants';
 
 @Injectable()
 export class JobsService {
@@ -128,7 +129,13 @@ export class JobsService {
   }
 
   async completeJob(id: number, userId: number) {
-    const job = await this.ensureJobForFreelancer(id, userId);
+    const job = await this.prisma.job.findUnique({ where: { id } });
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+    if (job.freelancerId !== userId) {
+      throw new ForbiddenException('Only freelancer can complete this job.');
+    }
     this.ensureValidTransition(job.status, JobStatus.COMPLETED);
     return this.applyStatusUpdate(id, JobStatus.COMPLETED);
   }
@@ -136,7 +143,13 @@ export class JobsService {
   async disputeJob(id: number, userId: number, dto: DisputeJobDto) {
     const job = await this.ensureJobParticipant(id, userId);
     this.ensureValidTransition(job.status, JobStatus.DISPUTED);
-    return this.applyStatusUpdate(id, JobStatus.DISPUTED, dto.reason);
+    const trimmedReason = dto.reason?.trim() ?? '';
+    if (trimmedReason.length < JOB_MIN_DISPUTE_REASON_LEN) {
+      throw new BadRequestException(
+        `Dispute reason must be at least ${JOB_MIN_DISPUTE_REASON_LEN} characters.`,
+      );
+    }
+    return this.applyStatusUpdate(id, JobStatus.DISPUTED, trimmedReason);
   }
 
   async updateStatus(
