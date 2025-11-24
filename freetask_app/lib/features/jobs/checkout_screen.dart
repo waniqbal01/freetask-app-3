@@ -63,18 +63,18 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       return;
     }
 
-    if (description.trim().length < 5) {
+    if (description.trim().length < 10) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Penerangan perlu sekurang-kurangnya 5 aksara.'),
+          content: Text('Penerangan perlu sekurang-kurangnya 10 aksara.'),
         ),
       );
       return;
     }
 
-    if (amount < 0.01) {
+    if (amount < 1) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Jumlah minima ialah RM0.01.')),
+        const SnackBar(content: Text('Jumlah minima ialah RM1.00.')),
       );
       return;
     }

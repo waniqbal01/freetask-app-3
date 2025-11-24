@@ -253,6 +253,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       setState(() {
         _escrowError = error.message;
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
     } on DioException catch (error) {
       if (!mounted) return;
       setState(() {
@@ -519,17 +522,53 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final statusLabel = _escrowStatusLabel(record?.status);
     final statusColor = _escrowStatusColor(record?.status);
     final bool isEscrowUnavailable = _escrowError != null;
+    final jobStatus = _job?.status;
     final bool showActions = isAdmin && !isEscrowUnavailable && !_isEscrowLoading;
     final List<Widget> actions = <Widget>[];
 
+    Widget escrowButton({
+      required String label,
+      required bool enabled,
+      required VoidCallback onPressed,
+      required String disabledReason,
+    }) {
+      final button = FTButton(
+        label: label,
+        size: FTButtonSize.small,
+        expanded: false,
+        isLoading: _isEscrowProcessing,
+        onPressed: enabled ? onPressed : null,
+      );
+
+      if (enabled) return button;
+      return Tooltip(message: disabledReason, child: button);
+    }
+
+    final holdAllowedStatuses =
+        {JobStatus.pending, JobStatus.accepted, JobStatus.inProgress}.contains(jobStatus);
+    final releaseAllowedStatuses =
+        {JobStatus.completed, JobStatus.disputed}.contains(jobStatus);
+    final refundAllowedStatuses = {
+      JobStatus.cancelled,
+      JobStatus.rejected,
+      JobStatus.disputed,
+      JobStatus.completed,
+      JobStatus.accepted,
+    }.contains(jobStatus);
+
     if (showActions) {
       if (record?.status == EscrowStatus.pending) {
+        final enabled = holdAllowedStatuses && jobStatus != null;
+        final reason = jobStatus == null
+            ? 'Status job belum dimuat.'
+            : holdAllowedStatuses
+                ? 'Escrow boleh dipegang sekarang.'
+                : 'Hold hanya dibenarkan ketika job Pending/Accepted/In Progress.';
         actions.add(
-          FTButton(
+          escrowButton(
             label: 'Hold',
-            size: FTButtonSize.small,
-            expanded: false,
-            isLoading: _isEscrowProcessing,
+            enabled: enabled,
+            disabledReason: reason,
             onPressed: () => _handleEscrowAction(
               () => escrowRepository.hold(widget.jobId),
               'Dana dipegang untuk job ${widget.jobId}.',
@@ -538,23 +577,33 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         );
       }
       if (record?.status == EscrowStatus.held) {
+        final releaseEnabled = releaseAllowedStatuses && jobStatus != null;
+        final refundEnabled = refundAllowedStatuses && jobStatus != null;
+        final releaseReason = jobStatus == null
+            ? 'Status job belum dimuat.'
+            : releaseAllowedStatuses
+                ? 'Boleh dilepaskan apabila job selesai/dispute.'
+                : 'Release hanya dibenarkan selepas job selesai atau dispute.';
+        final refundReason = jobStatus == null
+            ? 'Status job belum dimuat.'
+            : refundAllowedStatuses
+                ? 'Boleh refund untuk job dibatalkan/ditolak/dispute.'
+                : 'Refund hanya dibenarkan apabila job dibatalkan, dispute, atau ditolak.';
         actions.addAll([
-          FTButton(
+          escrowButton(
             label: 'Release',
-            size: FTButtonSize.small,
-            expanded: false,
-            isLoading: _isEscrowProcessing,
+            enabled: releaseEnabled,
+            disabledReason: releaseReason,
             onPressed: () => _handleEscrowAction(
               () => escrowRepository.release(widget.jobId),
               'Dana dilepaskan.',
             ),
           ),
           const SizedBox(width: AppSpacing.s8),
-          FTButton(
+          escrowButton(
             label: 'Refund',
-            size: FTButtonSize.small,
-            expanded: false,
-            isLoading: _isEscrowProcessing,
+            enabled: refundEnabled,
+            disabledReason: refundReason,
             onPressed: () => _handleEscrowAction(
               () => escrowRepository.refund(widget.jobId),
               'Dana dipulangkan.',

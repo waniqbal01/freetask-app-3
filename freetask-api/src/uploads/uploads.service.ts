@@ -60,11 +60,21 @@ export class UploadsService {
       return `${normalized}/uploads/${filename}`;
     }
 
+    if (process.env.NODE_ENV === 'production') {
+      throw new InternalServerErrorException('PUBLIC_BASE_URL is required to generate upload URLs');
+    }
+
     if (!host) {
       throw new InternalServerErrorException('Unable to determine request host for upload URL');
     }
 
-    if (!this.warnedMissingBaseUrl && process.env.NODE_ENV !== 'production') {
+    if (!UploadsService.isLocalHost(host)) {
+      throw new BadRequestException(
+        'PUBLIC_BASE_URL tidak ditetapkan. Hanya host localhost/emulator dibenarkan untuk pautan sementara.',
+      );
+    }
+
+    if (!this.warnedMissingBaseUrl) {
       this.warnedMissingBaseUrl = true;
       // eslint-disable-next-line no-console
       console.warn(
@@ -105,6 +115,15 @@ export class UploadsService {
     ];
 
     return allowed.includes(mimeType.toLowerCase());
+  }
+
+  static isLocalHost(host: string) {
+    return (
+      /^localhost(:\d+)?$/i.test(host) ||
+      /^127\.0\.0\.1(:\d+)?$/.test(host) ||
+      /^10\.0\.2\.2(:\d+)?$/.test(host) ||
+      /^192\.168\.\d+\.\d+(:\d+)?$/.test(host)
+    );
   }
 
   static isAllowedExtension(extension: string) {
