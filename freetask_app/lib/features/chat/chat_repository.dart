@@ -167,13 +167,68 @@ class ChatRepository {
     return query;
   }
 
+  // Circuit breaker state
+  final List<DateTime> _recentFailures = <DateTime>[];
+  DateTime? _circuitBreakerCooldownUntil;
+
+  bool _isCircuitBreakerOpen() {
+    // Remove old failures (older than 60s)
+    final cutoff = DateTime.now().subtract(const Duration(seconds: 60));
+    _recentFailures.removeWhere((timestamp) => timestamp.isBefore(cutoff));
+
+    // Check if in cooldown
+    if (_circuitBreakerCooldownUntil != null) {
+      if (DateTime.now().isBefore(_circuitBreakerCooldownUntil!)) {
+        return true;
+      }
+      // Cooldown expired, reset
+      _circuitBreakerCooldownUntil = null;
+      _recentFailures.clear();
+    }
+
+    // If >10 failures in last 60s, activate cooldown
+    if (_recentFailures.length >= 10) {
+      _circuitBreakerCooldownUntil =
+          DateTime.now().add(const Duration(minutes: 5));
+      notificationService.messengerKey.currentState?.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Service unavailable. Too many failures. Please try again in 5 minutes.',
+          ),
+          duration: Duration(seconds: 10),
+        ),
+      );
+      return true;
+    }
+
+    return false;
+  }
+
+  void _recordFailure() {
+    _recentFailures.add(DateTime.now());
+  }
+
   Future<T> _retryRequest<T>(Future<T> Function() action) async {
+    // Check circuit breaker first
+    if (_isCircuitBreakerOpen()) {
+      throw DioException(
+        requestOptions: RequestOptions(path: ''),
+        message: 'Circuit breaker open: service unavailable',
+      );
+    }
+
     DioException? lastError;
     for (int attempt = 0; attempt < 3; attempt++) {
       try {
-        return await action();
+        final result = await action();
+        // Success - clear recent failures on success
+        if (_recentFailures.isNotEmpty) {
+          _recentFailures.clear();
+        }
+        return result;
       } on DioException catch (error) {
         lastError = error;
+        _recordFailure();
         if (attempt == 2) {
           rethrow;
         }

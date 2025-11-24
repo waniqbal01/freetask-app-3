@@ -34,7 +34,8 @@ export class RegisterDto {
 
   @IsOptional()
   @IsString()
-  // Accepts `avatar` from Flutter payloads and maps it to `avatarUrl` in the service layer.
+  // @deprecated Use avatarUrl instead. Kept for backward compatibility with legacy clients.
+  // This field is automatically mapped to avatarUrl via Transform decorator above.
   avatar?: string;
 
   @IsOptional()

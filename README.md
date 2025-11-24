@@ -107,16 +107,23 @@ app (or by using `--dart-define=API_BASE_URL` at build time):
   flutter run -d emulator-5554 --dart-define=API_BASE_URL=http://10.0.2.2:4000
   ```
 
-* **iOS simulator / macOS dev** (default: `http://localhost:4000` or `http://127.0.0.1:4000`)
-
-  ```bash
-  flutter run -d ios --dart-define=API_BASE_URL=http://localhost:4000
-  ```
-
 * **Web / Chrome** (default: `http://localhost:4000`)
 
   ```bash
   flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:4000
+  ```
+
+> **Web Testing Note**: Flutter web dev server uses a random port (e.g. `http://localhost:53678`).  
+> For local testing, you can either:
+> - Set `ALLOWED_ORIGINS=http://localhost:*` in `.env` (development only)
+> - OR add the exact port after running flutter (e.g., `ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:53678`)
+>
+> **For production**, always use explicit origins only. Wildcard patterns (`*`) should never be used in production.
+
+**iOS** (if simulator is running):
+
+  ```bash
+  flutter run -d ios --dart-define=API_BASE_URL=http://localhost:4000
   ```
 
 For web/desktop testing, ensure your browser origin (e.g. `http://localhost:3000` or

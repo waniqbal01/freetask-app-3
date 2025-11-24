@@ -18,7 +18,7 @@ export class JobsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly escrowService: EscrowService,
-  ) {}
+  ) { }
 
   async create(userId: number, role: UserRole, dto: CreateJobDto) {
     if (role !== UserRole.CLIENT) {
@@ -75,10 +75,10 @@ export class JobsService {
       normalizedFilter === 'client'
         ? { clientId: userId }
         : normalizedFilter === 'freelancer'
-        ? { freelancerId: userId }
-        : role === UserRole.ADMIN
-        ? {}
-        : { OR: [{ clientId: userId }, { freelancerId: userId }] };
+          ? { freelancerId: userId }
+          : role === UserRole.ADMIN
+            ? {}
+            : { OR: [{ clientId: userId }, { freelancerId: userId }] };
 
     const take = Math.min(Math.max(pagination?.limit ?? 20, 1), 50);
     const skip = Math.max(pagination?.offset ?? 0, 0);
@@ -99,12 +99,12 @@ export class JobsService {
       role === UserRole.ADMIN
         ? await this.prisma.job.findUnique({ where: { id }, include: this.jobInclude })
         : await this.prisma.job.findFirst({
-            where: {
-              id,
-              OR: [{ clientId: userId }, { freelancerId: userId }],
-            },
-            include: this.jobInclude,
-          });
+          where: {
+            id,
+            OR: [{ clientId: userId }, { freelancerId: userId }],
+          },
+          include: this.jobInclude,
+        });
     if (!job) {
       throw new NotFoundException('Job not found');
     }
@@ -205,6 +205,26 @@ export class JobsService {
 
   private applyStatusUpdate(id: number, status: JobStatus, disputeReason?: string) {
     return this.prisma.$transaction(async (tx) => {
+      // Fetch job and escrow BEFORE making any changes
+      const existingJob = await tx.job.findUnique({ where: { id } });
+      if (!existingJob) {
+        throw new NotFoundException('Job not found');
+      }
+
+      // BLOCKER #3 FIX: Validate escrow allows transition BEFORE updating job
+      const escrow = await tx.escrow.findUnique({ where: { jobId: id } });
+      if (escrow) {
+        const validationError = this.escrowService.validateJobTransition(
+          existingJob,
+          escrow,
+          status,
+        );
+        if (validationError) {
+          throw new ConflictException(validationError);
+        }
+      }
+
+      // Now safe to update job status
       const job = await tx.job.update({
         where: { id },
         data: {
@@ -214,7 +234,7 @@ export class JobsService {
         include: this.jobInclude,
       });
 
-      const escrow = await tx.escrow.findUnique({ where: { jobId: job.id } });
+      // Sync escrow status (this should no longer throw)
       if (escrow) {
         await this.escrowService.syncOnJobStatus(tx, job, escrow);
       }

@@ -21,7 +21,7 @@ type EscrowRecord = {
 export class EscrowService {
   private readonly logger = new Logger(EscrowService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async getForUser(jobId: number, userId: number, role: UserRole) {
     const { job, escrow } = await this.ensureEscrow(jobId);
@@ -134,8 +134,12 @@ export class EscrowService {
   private resolveStatusForJob(status: JobStatus, escrow: EscrowRecord): EscrowStatus | null {
     switch (status) {
       case JobStatus.COMPLETED: {
+        // Validation: Cannot complete if already refunded/cancelled
         if ([EscrowStatus.REFUNDED, EscrowStatus.CANCELLED].includes(escrow.status)) {
-          throw new ConflictException('Escrow already refunded/cancelled; cannot release after completion');
+          this.logger.warn(
+            `Job completion blocked: Escrow already ${escrow.status} for escrow ${escrow.id}`,
+          );
+          return null;
         }
         if (escrow.status === EscrowStatus.RELEASED) {
           return null;
@@ -144,8 +148,12 @@ export class EscrowService {
       }
       case JobStatus.CANCELLED:
       case JobStatus.REJECTED: {
+        // Validation: Cannot cancel/reject if already released
         if (escrow.status === EscrowStatus.RELEASED) {
-          throw new ConflictException('Escrow already released; cannot refund cancelled job');
+          this.logger.warn(
+            `Job cancellation blocked: Escrow already released for escrow ${escrow.id}`,
+          );
+          return null;
         }
         if ([EscrowStatus.REFUNDED, EscrowStatus.CANCELLED].includes(escrow.status)) {
           return null;
@@ -153,8 +161,12 @@ export class EscrowService {
         return escrow.amount ? EscrowStatus.REFUNDED : EscrowStatus.CANCELLED;
       }
       case JobStatus.DISPUTED: {
+        // Validation: Cannot dispute if already closed
         if ([EscrowStatus.RELEASED, EscrowStatus.REFUNDED].includes(escrow.status)) {
-          throw new ConflictException('Escrow already closed; cannot dispute');
+          this.logger.warn(
+            `Job dispute blocked: Escrow already closed (${escrow.status}) for escrow ${escrow.id}`,
+          );
+          return null;
         }
         if (escrow.status === EscrowStatus.DISPUTED) {
           return null;
@@ -164,6 +176,37 @@ export class EscrowService {
       default:
         return null;
     }
+  }
+
+  /**
+   * Validates if a job status transition is allowed given the current escrow state.
+   * Called BEFORE transaction to fail fast if escrow prevents the transition.
+   * @returns Validation error message if invalid, null if allowed
+   */
+  validateJobTransition(
+    job: Pick<Job, 'id' | 'status'>,
+    escrow: EscrowRecord,
+    newStatus: JobStatus,
+  ): string | null {
+    if (newStatus === JobStatus.COMPLETED) {
+      if ([EscrowStatus.REFUNDED, EscrowStatus.CANCELLED].includes(escrow.status)) {
+        return `Cannot complete job: escrow already ${escrow.status.toLowerCase()}`;
+      }
+    }
+
+    if ([JobStatus.CANCELLED, JobStatus.REJECTED].includes(newStatus)) {
+      if (escrow.status === EscrowStatus.RELEASED) {
+        return 'Cannot cancel/reject job: escrow already released to freelancer';
+      }
+    }
+
+    if (newStatus === JobStatus.DISPUTED) {
+      if ([EscrowStatus.RELEASED, EscrowStatus.REFUNDED].includes(escrow.status)) {
+        return `Cannot dispute job: escrow already ${escrow.status.toLowerCase()}`;
+      }
+    }
+
+    return null;
   }
 
   private async ensureEscrow(jobId: number) {

@@ -1,12 +1,13 @@
 import { Controller, Get } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { PrismaService } from './prisma/prisma.service';
 
-// TODO: Consider adding authentication or rate limiting in production
-// to prevent health endpoint abuse or information disclosure
+// Rate limited to prevent health endpoint abuse in production
 @Controller('health')
 export class HealthController {
   constructor(private readonly prisma: PrismaService) { }
 
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Get()
   async getHealth() {
     // Verify DB connection without exposing query details

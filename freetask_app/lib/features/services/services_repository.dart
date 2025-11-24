@@ -24,7 +24,7 @@ class ServicesRepository {
         '/services',
         queryParameters: <String, dynamic>{
           if (q != null && q.isNotEmpty) 'q': q,
-          if (_shouldSendCategory(category)) 'category': category,
+          if (category != null && category.isNotEmpty) 'category': category,
         },
         options: await _authorizedOptions(requireAuth: false),
       );
@@ -74,14 +74,6 @@ class ServicesRepository {
       await _handleDioError(error);
       rethrow;
     }
-  }
-
-  bool _shouldSendCategory(String? category) {
-    if (category == null) return false;
-    final normalized = category.trim().toLowerCase();
-    if (normalized.isEmpty) return false;
-    if (normalized == 'semua' || normalized == 'all') return false;
-    return true;
   }
 
   Future<Options> _authorizedOptions({bool requireAuth = true}) async {

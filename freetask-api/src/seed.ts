@@ -252,6 +252,21 @@ async function main() {
       WHERE "jobId" = ${jobs[7].id}
     `;
   }
+  // Add RELEASED and REFUNDED states for complete testing coverage
+  if (jobs[4]) {
+    // Job 5 (completed) → Escrow RELEASED
+    await prisma.$executeRaw`
+      UPDATE "Escrow" SET status = 'RELEASED', "updatedAt" = NOW()
+      WHERE "jobId" = ${jobs[4].id}
+    `;
+  }
+  if (jobs[5]) {
+    // Job 6 (cancelled) → Escrow REFUNDED
+    await prisma.$executeRaw`
+      UPDATE "Escrow" SET status = 'REFUNDED', "updatedAt" = NOW()
+      WHERE "jobId" = ${jobs[5].id}
+    `;
+  }
 
   await prisma.review.upsert({
     where: { jobId: jobs[4].id },
