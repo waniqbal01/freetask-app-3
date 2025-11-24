@@ -25,14 +25,31 @@ class HttpClient {
     _baseUrlFuture = _baseUrlManager.getBaseUrl();
     _baseUrlFuture!.then((value) {
       _currentBaseUrl = value;
-      _applyBaseUrl(value);
+        _applyBaseUrl(value);
     });
   }
 
   Future<void> updateBaseUrl(String value) async {
+    if (_switchingBaseFuture != null) {
+      await _switchingBaseFuture;
+    }
+
+    final messenger = notificationService.messengerKey.currentState;
+    final banner = messenger?.showSnackBar(
+      const SnackBar(content: Text('Menukar server… sila tunggu.'), duration: Duration(seconds: 2)),
+    );
+
+    _cancelInflight();
+    final completer = Completer<void>();
+    _switchingBaseFuture = completer.future;
+
     final resolved = await _baseUrlManager.setBaseUrl(value);
     _currentBaseUrl = resolved;
     await _swapClients(resolved);
+
+    completer.complete();
+    _switchingBaseFuture = null;
+    await banner?.close();
   }
 
   Future<String> currentBaseUrl() async {
@@ -58,6 +75,21 @@ class HttpClient {
     authRefreshNotifier.value = DateTime.now();
     final currentLocation = appRouter.location;
     if (currentLocation != '/login') {
+      appRouter.go('/login');
+    }
+  }
+
+  Future<void> _handleSidMissing() async {
+    if (_sessionHandled) {
+      return;
+    }
+    _sessionHandled = true;
+    notificationService.messengerKey.currentState?.showSnackBar(
+      const SnackBar(content: Text('Sesi anda tidak sah. Sila log masuk semula.')),
+    );
+    await _clearStoredTokens();
+    authRefreshNotifier.value = DateTime.now();
+    if (appRouter.location != '/login') {
       appRouter.go('/login');
     }
   }
@@ -155,6 +187,9 @@ class HttpClient {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (RequestOptions options, RequestInterceptorHandler handler) async {
+          if (_switchingBaseFuture != null) {
+            await _switchingBaseFuture;
+          }
           _trackRequest(options);
           final resolvedBase = await _baseUrlManager.getBaseUrl();
           _currentBaseUrl = resolvedBase;
@@ -181,6 +216,11 @@ class HttpClient {
           final isPublicRequest = _isPublicRequest(error.requestOptions);
 
           if (status == 401) {
+            final errorCode = _extractErrorCode(error.response);
+            if (errorCode == 'SID_MISSING') {
+              await _handleSidMissing();
+              return handler.next(error);
+            }
             if (isPublicRequest && error.requestOptions.extra['__retriedWithoutAuth'] != true) {
               await _clearStoredTokens();
               final retryOptions = error.requestOptions
@@ -285,6 +325,17 @@ class HttpClient {
     _inflightTokens.removeWhere((tracked) => identical(tracked, token));
   }
 
+  String? _extractErrorCode(Response<dynamic>? response) {
+    final data = response?.data;
+    if (data is Map<String, dynamic>) {
+      final code = data['code'];
+      if (code is String && code.isNotEmpty) {
+        return code;
+      }
+    }
+    return null;
+  }
+
   static HttpClient? _instance;
   final BaseUrlManager _baseUrlManager;
   Future<String>? _baseUrlFuture;
@@ -294,5 +345,6 @@ class HttpClient {
   Future<bool>? _refreshing;
   String? _currentBaseUrl;
   bool _sessionHandled = false;
+  Future<void>? _switchingBaseFuture;
   final List<CancelToken> _inflightTokens = <CancelToken>[];
 }

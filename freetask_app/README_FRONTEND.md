@@ -54,6 +54,10 @@ Backend env snippets to copy into `.env`:
 
 > When the backend runs with `NODE_ENV=production`, `ALLOWED_ORIGINS` **must** be set or the server will fail fast. Include every frontend/admin origin that should be allowed (see examples above).
 
+### Flutter Web CORS checklist
+
+Untuk sesi ujian Flutter Web, pastikan nilai `ALLOWED_ORIGINS` di backend menyenaraikan host pembangunan anda (contoh: `http://localhost:4000`, `http://localhost:3000`, atau port dev lain). Tanpa entri yang sepadan, permintaan web akan disekat oleh CORS.
+
 Ensure the backend mounts/persists the `./uploads` folder (volume or host directory) so uploaded avatars/documents survive restarts.
 
 ### Demo credentials (from seed)

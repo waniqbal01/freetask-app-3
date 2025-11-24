@@ -9,6 +9,7 @@ import '../../models/job.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/section_card.dart';
 import '../auth/auth_repository.dart';
+import '../escrow/escrow_policy.dart';
 import '../escrow/escrow_repository.dart';
 import 'job_constants.dart';
 import 'jobs_repository.dart';
@@ -113,9 +114,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       if (!mounted) return;
       setState(() {
         _escrow = null;
-        final unavailable =
-            error.statusCode == 403 || error.statusCode == 404 ? 'Escrow tidak tersedia untuk job ini.' : error.message;
-        _escrowError = unavailable;
+        _escrowError = error.message;
       });
     } on DioException catch (error) {
       if (!mounted) return;
@@ -520,7 +519,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   }
 
   Widget _buildEscrowSection(TextTheme textTheme) {
-    final isAdmin = _userRole?.toUpperCase() == 'ADMIN';
+    final isAdmin = canMutateEscrow(_userRole);
     final record = _escrow;
     final statusLabel = _escrowStatusLabel(record?.status);
     final statusColor = _escrowStatusColor(record?.status);

@@ -5,6 +5,7 @@ import '../../core/notifications/notification_service.dart';
 import '../../core/storage/storage.dart';
 import '../../services/http_client.dart';
 import '../auth/auth_repository.dart';
+import 'escrow_policy.dart';
 
 enum EscrowStatus { pending, held, released, refunded }
 
@@ -81,12 +82,14 @@ class EscrowUnavailable implements Exception {
 }
 
 class EscrowRepository {
-  EscrowRepository({Dio? dio, AppStorage? storage})
+  EscrowRepository({Dio? dio, AppStorage? storage, AuthRepository? auth})
       : _dio = dio ?? HttpClient().dio,
-        _storage = storage ?? appStorage;
+        _storage = storage ?? appStorage,
+        _auth = auth ?? authRepository;
 
   final Dio _dio;
   final AppStorage _storage;
+  final AuthRepository _auth;
 
   Future<EscrowRecord?> getEscrow(String jobId) async {
     try {
@@ -98,11 +101,12 @@ class EscrowRepository {
       if (data == null) return null;
       return EscrowRecord.fromJson(data);
     } on DioException catch (error) {
-      if (_isUnavailable(error)) {
-        throw EscrowUnavailable(
-          'Escrow belum tersedia / tiada akses.',
-          statusCode: error.response?.statusCode,
-        );
+      final status = error.response?.statusCode;
+      if (status == 403) {
+        throw EscrowUnavailable('Admin sahaja boleh urus escrow.', statusCode: status);
+      }
+      if (status == 404) {
+        throw EscrowUnavailable('Escrow belum dibuat lagi.', statusCode: status);
       }
       rethrow;
     }
@@ -121,6 +125,14 @@ class EscrowRepository {
   }
 
   Future<EscrowRecord?> _mutate(String path, String notificationMessage) async {
+    final role = await _resolveRole();
+    if (!canMutateEscrow(role)) {
+      const message = 'Admin sahaja boleh urus escrow.';
+      notificationService.messengerKey.currentState?.showSnackBar(
+        const SnackBar(content: Text(message)),
+      );
+      throw EscrowUnavailable(message, statusCode: 403);
+    }
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         path,
@@ -132,31 +144,35 @@ class EscrowRepository {
       notificationService.pushLocal('Escrow', notificationMessage);
       return record;
     } on DioException catch (error) {
-      if (error.response?.statusCode == 409) {
+      final status = error.response?.statusCode;
+      if (status == 409) {
         final message = error.response?.data is Map
             ? (error.response?.data['message']?.toString() ?? '')
             : error.response?.statusMessage;
         final friendly = message?.isNotEmpty == true
             ? message!
-            : 'Tindakan escrow tidak dibenarkan untuk status semasa.';
+            : 'Status escrow tidak membenarkan tindakan ini.';
         notificationService.messengerKey.currentState?.showSnackBar(
           SnackBar(content: Text(friendly)),
         );
-        throw EscrowUnavailable(friendly, statusCode: error.response?.statusCode);
+        throw EscrowUnavailable(friendly, statusCode: status);
       }
-      if (_isUnavailable(error)) {
-        throw EscrowUnavailable(
-          'Escrow belum tersedia / tiada akses.',
-          statusCode: error.response?.statusCode,
+      if (status == 403) {
+        const friendly = 'Admin sahaja boleh urus escrow.';
+        notificationService.messengerKey.currentState?.showSnackBar(
+          const SnackBar(content: Text(friendly)),
         );
+        throw EscrowUnavailable(friendly, statusCode: status);
+      }
+      if (status == 404) {
+        const friendly = 'Rekod escrow belum wujud untuk job ini.';
+        notificationService.messengerKey.currentState?.showSnackBar(
+          const SnackBar(content: Text(friendly)),
+        );
+        throw EscrowUnavailable(friendly, statusCode: status);
       }
       rethrow;
     }
-  }
-
-  bool _isUnavailable(DioException error) {
-    final status = error.response?.statusCode;
-    return status == 403 || status == 404;
   }
 
   Future<Options> _authorizedOptions() async {
@@ -165,6 +181,15 @@ class EscrowRepository {
       throw EscrowUnavailable('Token tidak ditemui. Sila log masuk semula.');
     }
     return Options(headers: <String, String>{'Authorization': 'Bearer $token'});
+  }
+
+  Future<String?> _resolveRole() async {
+    final cached = _auth.currentUser;
+    if (cached != null && cached.role.isNotEmpty) {
+      return cached.role;
+    }
+    final user = await _auth.getCurrentUser();
+    return user?.role;
   }
 }
 

@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/notifications/notification_service.dart';
 import '../../core/utils/api_error_handler.dart';
+import '../../core/utils/query_utils.dart';
 import '../../core/router.dart';
 import '../../core/storage/storage.dart';
 import '../../models/job.dart';
@@ -167,20 +169,20 @@ class JobsRepository {
     }
   }
 
-  Future<List<Job>> getClientJobs() async {
-    return _fetchJobs(<String, dynamic>{'filter': 'client'});
+  Future<List<Job>> getClientJobs({String? limit, String? offset}) async {
+    return _fetchJobs(_buildQuery(<String, dynamic>{'filter': 'client'}, limit: limit, offset: offset));
   }
 
-  Future<List<Job>> getFreelancerJobs() async {
-    return _fetchJobs(<String, dynamic>{'filter': 'freelancer'});
+  Future<List<Job>> getFreelancerJobs({String? limit, String? offset}) async {
+    return _fetchJobs(_buildQuery(<String, dynamic>{'filter': 'freelancer'}, limit: limit, offset: offset));
   }
 
-  Future<List<Job>> getAllJobs() async {
+  Future<List<Job>> getAllJobs({String? limit, String? offset}) async {
     final currentUser = await authRepository.getCurrentUser();
     if (currentUser == null || currentUser.role.toUpperCase() != 'ADMIN') {
       throw StateError('Hanya admin boleh melihat semua job.');
     }
-    return _fetchJobs(<String, dynamic>{'filter': 'all'});
+    return _fetchJobs(_buildQuery(<String, dynamic>{'filter': 'all'}, limit: limit, offset: offset));
   }
 
   Future<Job?> getJobById(String jobId) async {
@@ -219,6 +221,22 @@ class JobsRepository {
       await _handleDioError(error);
       rethrow;
     }
+  }
+
+  Map<String, dynamic> _buildQuery(
+    Map<String, dynamic> base, {
+    String? limit,
+    String? offset,
+  }) {
+    final parsedLimit = parsePositiveInt(limit);
+    final parsedOffset = parsePositiveInt(offset);
+    if (parsedLimit != null) {
+      base['limit'] = min(parsedLimit, 50);
+    }
+    if (parsedOffset != null) {
+      base['offset'] = parsedOffset;
+    }
+    return base;
   }
 
   Future<Options> _authorizedOptions() async {

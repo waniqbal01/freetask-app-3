@@ -19,6 +19,7 @@ import { UserRole } from '@prisma/client';
 import { Throttle } from '@nestjs/throttler';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { JobsQueryDto } from './dto/jobs-query.dto';
 
 @Controller('jobs')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -40,11 +41,12 @@ export class JobsController {
   findAll(
     @GetUser('userId') userId: number,
     @GetUser('role') role: UserRole,
-    @Query('filter') filter?: 'client' | 'freelancer' | 'all',
-    @Query('limit') limit?: number,
-    @Query('offset') offset?: number,
+    @Query() query?: JobsQueryDto,
   ) {
-    return this.jobsService.findAllForUser(userId, role, filter, { limit, offset });
+    return this.jobsService.findAllForUser(userId, role, query?.filter, {
+      limit: query?.limit,
+      offset: query?.offset,
+    });
   }
 
   @Get(':id')

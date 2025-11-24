@@ -15,7 +15,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: { sub: number; role: string; sid?: number }) {
     if (!payload.sid) {
-      throw new UnauthorizedException('Sesi tidak sah');
+      throw new UnauthorizedException({
+        statusCode: 401,
+        code: 'SID_MISSING',
+        message: 'Session tidak sah',
+      });
     }
 
     const session = await this.prisma.session.findUnique({ where: { id: payload.sid } });

@@ -2,17 +2,23 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/utils/error_utils.dart';
 import 'chat_models.dart';
 import 'chat_repository.dart';
 
 class ChatListScreen extends ConsumerWidget {
-  const ChatListScreen({super.key});
+  const ChatListScreen({super.key, this.limitQuery, this.offsetQuery});
+
+  final String? limitQuery;
+  final String? offsetQuery;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final threadsAsync = ref.watch(chatThreadsProvider);
+    final threadsAsync = ref.watch(
+      chatThreadsProviderWithQuery((limit: limitQuery, offset: offsetQuery)),
+    );
 
     return threadsAsync.when(
       data: (List<ChatThread> threads) {
@@ -28,7 +34,11 @@ class ChatListScreen extends ConsumerWidget {
                   const Text('Tiada perbualan lagi.'),
                   const SizedBox(height: 12),
                   ElevatedButton(
-                    onPressed: () => ref.refresh(chatThreadsProvider),
+                    onPressed: () => ref.refresh(
+                      chatThreadsProviderWithQuery(
+                        (limit: limitQuery, offset: offsetQuery),
+                      ),
+                    ),
                     child: const Text('Muat Semula'),
                   ),
                 ],
@@ -44,10 +54,33 @@ class ChatListScreen extends ConsumerWidget {
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (BuildContext context, int index) {
               final thread = threads[index];
+              final snippet = thread.lastMessage?.isNotEmpty == true
+                  ? thread.lastMessage!
+                  : 'Tiada mesej lagi.';
+              final lastAtLabel = thread.lastAt != null
+                  ? DateFormat('dd MMM, h:mm a').format(thread.lastAt!.toLocal())
+                  : '—';
               return ListTile(
                 title: Text(thread.jobTitle),
-                subtitle: Text('Pengguna: ${thread.participantName}'),
-                trailing: const Icon(Icons.chevron_right),
+                subtitle: Text(
+                  '${thread.participantName} · $snippet',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      lastAtLabel,
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: Colors.grey.shade700),
+                    ),
+                    const Icon(Icons.chevron_right),
+                  ],
+                ),
                 onTap: () {
                   context.push('/chats/${thread.id}/messages');
                 },
@@ -90,7 +123,11 @@ class ChatListScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   ElevatedButton(
-                    onPressed: () => ref.refresh(chatThreadsProvider),
+                    onPressed: () => ref.refresh(
+                      chatThreadsProviderWithQuery(
+                        (limit: limitQuery, offset: offsetQuery),
+                      ),
+                    ),
                     child: const Text('Cuba Lagi'),
                   ),
                 ],
