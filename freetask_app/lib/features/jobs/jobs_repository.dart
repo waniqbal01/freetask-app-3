@@ -15,6 +15,8 @@ import '../auth/auth_repository.dart';
 import 'job_constants.dart';
 
 class JobsRepository {
+  static const int defaultPageSize = 20;
+
   JobsRepository({AppStorage? storage, Dio? dio})
       : _storage = storage ?? appStorage,
         _dio = dio ?? HttpClient().dio;
@@ -230,12 +232,8 @@ class JobsRepository {
   }) {
     final parsedLimit = parsePositiveInt(limit);
     final parsedOffset = parsePositiveInt(offset);
-    if (parsedLimit != null) {
-      base['limit'] = min(parsedLimit, 50);
-    }
-    if (parsedOffset != null) {
-      base['offset'] = parsedOffset;
-    }
+    base['limit'] = min(parsedLimit ?? defaultPageSize, 50);
+    base['offset'] = max(parsedOffset ?? 0, 0);
     return base;
   }
 

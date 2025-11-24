@@ -3,11 +3,13 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:mime/mime.dart';
 import 'package:path/path.dart' as p;
 
 import 'http_client.dart';
 import '../core/storage/storage.dart';
+import '../core/notifications/notification_service.dart';
 
 class UploadService {
   UploadService({Dio? dio, AppStorage? storage})
@@ -57,10 +59,6 @@ class UploadService {
 
   Future<String> resolveAuthorizedUrl(String url) async {
     final normalizedPath = _normalizePath(url);
-    if (normalizedPath.startsWith('http')) {
-      return normalizedPath;
-    }
-
     final base = await HttpClient().currentBaseUrl();
     return _joinBaseAndPath(base, normalizedPath);
   }
@@ -68,13 +66,25 @@ class UploadService {
   Future<Response<Uint8List>> downloadWithAuth(String url) async {
     final targetUrl = await resolveAuthorizedUrl(url);
     final headers = await authorizationHeader();
-    return _dio.get<Uint8List>(
-      targetUrl,
-      options: Options(
-        responseType: ResponseType.bytes,
-        headers: headers.isEmpty ? null : headers,
-      ),
-    );
+    if (headers.isEmpty) {
+      _notifyUnauthorized();
+      throw const UnauthenticatedUploadException('Sila log masuk untuk memuat turun fail.');
+    }
+
+    try {
+      return await _dio.get<Uint8List>(
+        targetUrl,
+        options: Options(
+          responseType: ResponseType.bytes,
+          headers: headers,
+        ),
+      );
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 401) {
+        _notifyUnauthorized();
+      }
+      rethrow;
+    }
   }
 
   Future<void> _validateFile(String filePath) async {
@@ -117,7 +127,9 @@ class UploadService {
 
   String _normalizePath(String url) {
     if (url.startsWith('http')) {
-      return url;
+      final parsed = Uri.tryParse(url);
+      final path = parsed?.path ?? url;
+      return path.startsWith('/') ? path : '/$path';
     }
     return url.startsWith('/') ? url : '/$url';
   }
@@ -125,6 +137,12 @@ class UploadService {
   String _joinBaseAndPath(String base, String path) {
     final sanitizedBase = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
     return '$sanitizedBase$path';
+  }
+
+  void _notifyUnauthorized() {
+    notificationService.messengerKey.currentState?.showSnackBar(
+      const SnackBar(content: Text('Sesi tamat. Sila log masuk semula untuk akses fail.')),
+    );
   }
 }
 

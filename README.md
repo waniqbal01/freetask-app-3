@@ -32,8 +32,8 @@ npm run start:dev
 
 Reseed flags:
 
-- `SEED_FORCE=true npm run seed` — paksa tambah rekod walaupun DB ada data.
-- `SEED_RESET=true npm run seed` — padam data demo dahulu sebelum masukkan semula (destruktif, untuk dev sahaja).
+- `SEED_FORCE=true npm run seed` — paksa tambah rekod walaupun DB ada data. Selamat untuk menambah pengguna/perkhidmatan demo tanpa memadam data sedia ada.
+- `SEED_RESET=true npm run seed` — padam data demo dahulu sebelum masukkan semula (destruktif, untuk dev sahaja). Guna ini apabila mahu set semula akaun/escrow sebelum pengujian baharu.
 
 **Do not skip envs in production** – set `ALLOWED_ORIGINS`/`PUBLIC_BASE_URL` so the
 API can emit correct URLs and allow only intended origins. The server now fails fast
@@ -75,6 +75,7 @@ Demo logins from the seed (role → email / password):
 - Client: `client@example.com` / `Password123!`
 - Freelancer: `freelancer@example.com` / `Password123!`
 - Extras for multi-user flows: `client1@example.com`, `client2@example.com`, `freelancer1@example.com`, `freelancer2@example.com` (password `Password123!` for all)
+> Reseeding dengan `SEED_RESET=true` akan memulihkan set akaun demo di atas sebelum ujian dijalankan.
 
 ## Flutter client quickstart
 
@@ -112,7 +113,7 @@ app (or by using `--dart-define=API_BASE_URL` at build time):
 For web/desktop testing, ensure your browser origin (e.g. `http://localhost:3000` or
 `http://localhost:5173`) appears in `ALLOWED_ORIGINS` when running the API in production.
 Use your LAN IP (e.g. `http://192.168.x.x:4000`) for physical devices and include it
-in both `PUBLIC_BASE_URL` and `ALLOWED_ORIGINS`.
+in both `PUBLIC_BASE_URL` and `ALLOWED_ORIGINS`. Jika ujian dijalankan oleh QA dari mesin berbeza, semak semula senarai `ALLOWED_ORIGINS` supaya host frontend mereka tidak disekat oleh CORS.
 
 ## Readiness checklist (RED → GREEN)
 

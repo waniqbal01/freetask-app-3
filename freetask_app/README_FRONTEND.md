@@ -26,6 +26,7 @@ You can override these at runtime without rebuilding, or via `--dart-define=API_
 1. Open the app and tap **Tukar API Server** on the login screen (or **API Server** in the services list).
 2. Enter the full base URL (e.g. `http://localhost:4000`, `http://10.0.2.2:4000`, or your LAN IP such as `http://192.168.0.10:4000`).
 3. Save. The client will immediately use the new URL; clear the field to reset to the default.
+4. You can also revisit the same form under **Settings → API Server** (`/settings/api`) once signed in.
 
 ### Common origins / CORS tips
 

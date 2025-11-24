@@ -12,6 +12,8 @@ import '../../theme/app_theme.dart';
 import '../auth/auth_repository.dart';
 import '../reviews/review_dialog.dart';
 import '../reviews/reviews_repository.dart';
+import 'job_constants.dart';
+import 'job_transition_rules.dart';
 import 'jobs_repository.dart';
 import 'widgets/job_card_skeleton.dart';
 import 'widgets/job_status_badge.dart';
@@ -240,32 +242,48 @@ class _JobListScreenState extends State<JobListScreen> {
     final reason = await showDialog<String>(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Nyatakan sebab dispute'),
-          content: TextField(
-            controller: controller,
-            decoration: const InputDecoration(
-              hintText: 'Contoh: Kerja tidak memenuhi skop.',
-            ),
-            maxLines: 3,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Batal'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-              child: const Text('Hantar'),
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            final trimmed = controller.text.trim();
+            final isValid = trimmed.length >= jobMinDisputeReasonLen;
+            final helper = '${trimmed.length}/$jobMinDisputeReasonLen aksara';
+
+            return AlertDialog(
+              title: const Text('Nyatakan sebab dispute'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: controller,
+                    decoration: InputDecoration(
+                      hintText: 'Contoh: Kerja tidak memenuhi skop.',
+                      helperText: helper,
+                      errorText: controller.text.isEmpty || isValid
+                          ? null
+                          : 'Minimum $jobMinDisputeReasonLen aksara diperlukan.',
+                    ),
+                    maxLines: 3,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Batal'),
+                ),
+                FilledButton(
+                  onPressed: isValid ? () => Navigator.of(context).pop(trimmed) : null,
+                  child: const Text('Hantar'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
     controller.dispose();
-    if (reason == null || reason.isEmpty) {
-      return null;
-    }
     return reason;
   }
 
@@ -445,44 +463,57 @@ class _JobListScreenState extends State<JobListScreen> {
     final role = _currentUser?.role.toUpperCase();
     final isClientOwner = _currentUser?.id == job.clientId;
     final isFreelancerOwner = _currentUser?.id == job.freelancerId;
+    final canDispute = canRaiseDispute(job.status);
 
-    if (isClientView &&
-        role == 'CLIENT' &&
-        isClientOwner &&
-        {JobStatus.pending, JobStatus.accepted, JobStatus.inProgress}.contains(job.status)) {
-      return Align(
-        alignment: Alignment.centerRight,
-        child: Wrap(
-          spacing: AppSpacing.s8,
-          children: [
-            FTButton(
-              label: 'Batalkan',
-              isLoading: _isProcessing,
-              onPressed: () => _handleAction(
-                () => jobsRepository.cancelJob(job.id),
-                'Job dibatalkan.',
-              ),
-              expanded: false,
-              size: FTButtonSize.small,
+    if (isClientView && role == 'CLIENT' && isClientOwner) {
+      final List<Widget> actions = <Widget>[];
+      if ({JobStatus.pending, JobStatus.accepted, JobStatus.inProgress}.contains(job.status)) {
+        actions.add(
+          FTButton(
+            label: 'Batalkan',
+            isLoading: _isProcessing,
+            onPressed: () => _handleAction(
+              () => jobsRepository.cancelJob(job.id),
+              'Job dibatalkan.',
             ),
-            if (job.status == JobStatus.inProgress)
-              FTButton(
-                label: 'Dispute',
-                isLoading: _isProcessing,
-                onPressed: () async {
-                  final reason = await _promptDisputeReason();
-                  if (reason == null) return;
-                  await _handleAction(
-                    () => jobsRepository.disputeJob(job.id, reason),
-                    'Dispute dihantar.',
-                  );
-                },
-                expanded: false,
-                size: FTButtonSize.small,
-              ),
-          ],
-        ),
-      );
+            expanded: false,
+            size: FTButtonSize.small,
+          ),
+        );
+      }
+
+      if (canDispute) {
+        if (actions.isNotEmpty) {
+          actions.add(const SizedBox(width: AppSpacing.s8));
+        }
+        actions.add(
+          FTButton(
+            label: 'Dispute',
+            isLoading: _isProcessing,
+            onPressed: () async {
+              final reason = await _promptDisputeReason();
+              if (reason == null) return;
+              await _handleAction(
+                () => jobsRepository.disputeJob(job.id, reason),
+                'Dispute dihantar.',
+              );
+            },
+            expanded: false,
+            size: FTButtonSize.small,
+            type: FTButtonType.secondary,
+          ),
+        );
+      }
+
+      if (actions.isNotEmpty) {
+        return Align(
+          alignment: Alignment.centerRight,
+          child: Wrap(
+            spacing: AppSpacing.s8,
+            children: actions,
+          ),
+        );
+      }
     }
 
     if (!isClientView && job.status == JobStatus.pending) {
@@ -727,6 +758,16 @@ class _JobListScreenState extends State<JobListScreen> {
                     Tab(text: 'Client Jobs'),
                     Tab(text: 'Freelancer Jobs'),
                   ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Paparan dihadkan kepada ${JobsRepository.defaultPageSize} item setiap tab (maks 50). Nilai limit/offset disanitasi ke had API.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
                 ),
                 Expanded(
                   child: Stack(
