@@ -18,3 +18,5 @@
 - **Monitoring & logging**
   - Enable application logs and monitor for 401/403 spikes.
   - Set up backups for the database and uploaded files.
+- **Business rules**
+  - Job creation minimums aligned across API and Flutter (`description >= 10 characters`, `amount >= RM1.00`) via shared constants.

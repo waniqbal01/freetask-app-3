@@ -8,6 +8,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
+import { JOB_MIN_AMOUNT, JOB_MIN_DESC_LEN } from '../constants';
 
 export class CreateJobDto {
   @Type(() => Number)
@@ -22,12 +23,12 @@ export class CreateJobDto {
 
   @IsString()
   @IsNotEmpty()
-  @MinLength(10)
+  @MinLength(JOB_MIN_DESC_LEN)
   description: string;
 
   @Type(() => Number)
   @IsNotEmpty()
   @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(1)
+  @Min(JOB_MIN_AMOUNT)
   amount: number;
 }

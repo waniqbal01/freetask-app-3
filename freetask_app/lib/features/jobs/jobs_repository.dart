@@ -10,6 +10,7 @@ import '../../core/storage/storage.dart';
 import '../../models/job.dart';
 import '../../services/http_client.dart';
 import '../auth/auth_repository.dart';
+import 'job_constants.dart';
 
 class JobsRepository {
   JobsRepository({AppStorage? storage, Dio? dio})
@@ -34,12 +35,12 @@ class JobsRepository {
       final trimmedDescription = description.trim();
       final normalizedAmount = double.parse(amount.toStringAsFixed(2));
 
-      if (trimmedDescription.length < 5) {
-        throw StateError('Penerangan perlu sekurang-kurangnya 5 aksara.');
+      if (trimmedDescription.length < jobMinDescLen) {
+        throw StateError('Penerangan perlu sekurang-kurangnya $jobMinDescLen aksara.');
       }
 
-      if (normalizedAmount < 0.01) {
-        throw StateError('Jumlah minima ialah RM0.01.');
+      if (normalizedAmount < jobMinAmount) {
+        throw StateError('Jumlah minima ialah RM${jobMinAmount.toStringAsFixed(2)}.');
       }
 
       final response = await _dio.post<Map<String, dynamic>>(
@@ -58,7 +59,7 @@ class JobsRepository {
       final job = Job.fromJson(data);
       return job;
     } on DioException catch (error) {
-      await _handleDioError(error);
+      await _handleDioError(error, suppressClientErrorSnackbar: true);
       rethrow;
     }
   }
@@ -233,14 +234,18 @@ class JobsRepository {
     appRouter.go('/login');
   }
 
-  Future<void> _handleDioError(DioException error) async {
+  Future<void> _handleDioError(
+    DioException error, {
+    bool suppressClientErrorSnackbar = false,
+  }) async {
     await handleApiError(error);
 
     if (error.response?.statusCode == 401 || error.response?.statusCode == 403) {
       return;
     }
 
-    if (error.response?.statusCode == 400 || error.response?.statusCode == 404) {
+    if (!suppressClientErrorSnackbar &&
+        (error.response?.statusCode == 400 || error.response?.statusCode == 404)) {
       final message = _extractErrorMessage(error);
       notificationService.messengerKey.currentState?.showSnackBar(
         SnackBar(content: Text(message.isEmpty ? 'Permintaan tidak sah.' : message)),

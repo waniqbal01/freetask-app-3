@@ -9,6 +9,7 @@ import 'jobs_repository.dart';
 import '../../core/utils/error_utils.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/section_card.dart';
+import 'job_constants.dart';
 
 class JobCheckoutScreen extends StatefulWidget {
   const JobCheckoutScreen({super.key, this.serviceSummary});
@@ -22,6 +23,8 @@ class JobCheckoutScreen extends StatefulWidget {
 class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
   bool _isSubmitting = false;
   String? _errorMessage;
+  String? _descriptionError;
+  String? _amountError;
 
   Map<String, dynamic> get _summary => widget.serviceSummary ?? <String, dynamic>{};
 
@@ -52,6 +55,12 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
     final amount = _amount;
     final description = _description.isNotEmpty ? _description : _serviceDescription;
 
+    setState(() {
+      _errorMessage = null;
+      _descriptionError = null;
+      _amountError = null;
+    });
+
     if (serviceId.isEmpty || amount == null || description.isEmpty || _hasPriceIssue) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -63,19 +72,16 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       return;
     }
 
-    if (description.trim().length < 10) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Penerangan perlu sekurang-kurangnya 10 aksara.'),
-        ),
-      );
-      return;
-    }
+    final trimmedDescription = description.trim();
 
-    if (amount < 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Jumlah minima ialah RM1.00.')),
-      );
+    if (trimmedDescription.length < jobMinDescLen || amount < jobMinAmount) {
+      setState(() {
+        _descriptionError =
+            trimmedDescription.length < jobMinDescLen ? 'Minimum $jobMinDescLen aksara diperlukan.' : null;
+        _amountError = amount < jobMinAmount
+            ? 'Minimum RM${jobMinAmount.toStringAsFixed(2)} diperlukan.'
+            : null;
+      });
       return;
     }
 
@@ -84,11 +90,11 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       _errorMessage = null;
     });
 
-    try {
-      final job = await jobsRepository.createOrder(
-        serviceId,
-        amount,
-        description,
+      try {
+        final job = await jobsRepository.createOrder(
+          serviceId,
+          amount,
+          description,
         serviceTitle: _title.isEmpty ? _summary['serviceTitle']?.toString() : _title,
       );
       try {
@@ -116,27 +122,36 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       if (mounted) {
         context.go('/jobs');
       }
-    } on DioException catch (error) {
-      if (!mounted) {
-        return;
-      }
-      final message = resolveDioErrorMessage(error);
-      setState(() {
-        _errorMessage = message;
-      });
-      final status = error.response?.statusCode;
-      if (status != 400 && status != 404) {
+      } on DioException catch (error) {
+        if (!mounted) {
+          return;
+        }
+        final message = resolveDioErrorMessage(error);
+        final fieldErrors = _parseFieldErrors(error);
+        setState(() {
+          _errorMessage = fieldErrors.isEmpty ? message : null;
+          _descriptionError = fieldErrors['description'];
+          _amountError = fieldErrors['amount'];
+        });
+        final status = error.response?.statusCode;
+        if (status != 400 && status != 404) {
+          showErrorSnackBar(context, message);
+        }
+      } on StateError catch (error) {
+        if (!mounted) {
+          return;
+        }
+        final message = error.message.isEmpty ? 'Maklumat tempahan tidak sah.' : error.message;
+        setState(() {
+          _errorMessage = message;
+          if (message.toLowerCase().contains('penerangan')) {
+            _descriptionError = message;
+          }
+          if (message.toLowerCase().contains('jumlah minima')) {
+            _amountError = message;
+          }
+        });
         showErrorSnackBar(context, message);
-      }
-    } on StateError catch (error) {
-      if (!mounted) {
-        return;
-      }
-      final message = error.message.isEmpty ? 'Maklumat tempahan tidak sah.' : error.message;
-      setState(() {
-        _errorMessage = message;
-      });
-      showErrorSnackBar(context, message);
     } catch (error) {
       if (!mounted) {
         return;
@@ -242,21 +257,39 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
                     const SizedBox(height: AppSpacing.s24),
                     SectionCard(
                       title: 'Ringkasan Servis',
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                title ?? 'Servis ID: $_serviceId',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.w700),
-                              ),
-                              const SizedBox(height: 8),
-                              Text('Jumlah: $amountText'),
-                            ],
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title ?? 'Servis ID: $_serviceId',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
                           ),
-                        ),
+                          const SizedBox(height: 12),
+                          Text('Penerangan: ${_description.isNotEmpty ? _description : _serviceDescription}'),
+                          const SizedBox(height: 4),
+                          Text(
+                            _descriptionError ?? 'Minimum $jobMinDescLen aksara.',
+                            style: TextStyle(
+                              color: _descriptionError != null
+                                  ? AppColors.error
+                                  : AppColors.neutral400,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text('Jumlah: $amountText'),
+                          const SizedBox(height: 4),
+                          Text(
+                            _amountError ?? 'Minimum RM${jobMinAmount.toStringAsFixed(2)}.',
+                            style: TextStyle(
+                              color: _amountError != null ? AppColors.error : AppColors.neutral400,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     const Spacer(),
                     if (_errorMessage != null) ...[
                       Container(
@@ -291,5 +324,31 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
         ),
       ),
     );
+  }
+
+  Map<String, String> _parseFieldErrors(DioException error) {
+    final errors = <String, String>{};
+    final data = error.response?.data;
+    final dynamic message = data is Map<String, dynamic> ? data['message'] : null;
+
+    final messages = <String>[];
+    if (message is String && message.isNotEmpty) {
+      messages.add(message);
+    }
+    if (message is List) {
+      messages.addAll(message.whereType<String>());
+    }
+
+    for (final item in messages) {
+      final lower = item.toLowerCase();
+      if (lower.contains('description')) {
+        errors['description'] = item;
+      }
+      if (lower.contains('amount')) {
+        errors['amount'] = item;
+      }
+    }
+
+    return errors;
   }
 }
