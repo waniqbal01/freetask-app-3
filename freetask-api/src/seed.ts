@@ -99,6 +99,9 @@ async function main() {
 
   if (reset) {
     console.warn('⚠️  Destructive seed enabled: existing data will be wiped.');
+    // Delete dependent tables first to avoid FK constraint errors
+    await prisma.escrow.deleteMany();
+    await prisma.session.deleteMany();
     await prisma.review.deleteMany();
     await prisma.chatMessage.deleteMany();
     await prisma.job.deleteMany();
@@ -215,17 +218,40 @@ async function main() {
       freelancers[1].id,
       'Report missing agreed benchmarks.',
     ),
+    upsertJob(
+      'Brand identity package',
+      'Admin review needed - payment held.',
+      JobStatus.ACCEPTED,
+      850,
+      services[0].id,
+      clients[1].id,
+      freelancers[0].id,
+    ),
   ]);
 
   await Promise.all(
     jobs.map((job) =>
       prisma.$executeRaw`
         INSERT INTO "Escrow" ("jobId", status, amount, "createdAt", "updatedAt")
-        VALUES (${job.id}, 'PENDING', ${job.amount}, NOW(), NOW())
+        VALUES (${job.id}, 'PENDING', ${job.amount.toString()}, NOW(), NOW())
         ON CONFLICT ("jobId") DO NOTHING
       `,
     ),
   );
+
+  // Set specific escrow statuses for admin testing
+  if (jobs[6]) {
+    await prisma.$executeRaw`
+      UPDATE "Escrow" SET status = 'DISPUTED', "updatedAt" = NOW()
+      WHERE "jobId" = ${jobs[6].id}
+    `;
+  }
+  if (jobs[7]) {
+    await prisma.$executeRaw`
+      UPDATE "Escrow" SET status = 'HELD', "updatedAt" = NOW()
+      WHERE "jobId" = ${jobs[7].id}
+    `;
+  }
 
   await prisma.review.upsert({
     where: { jobId: jobs[4].id },
@@ -259,12 +285,22 @@ async function main() {
     ],
   });
 
-  console.log('Seed data created successfully');
-  console.log('Demo users (email / role):');
-  [admin, ...clients, ...freelancers].forEach((user) => {
-    console.log(`- ${user.email} / ${user.role}`);
+  console.log('✅ Seed data created successfully');
+  console.log('\n📋 Demo Credentials (all use password: Password123!)');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('  Role       | Email');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log(`  ADMIN      | ${admin.email}`);
+  clients.forEach((user) => {
+    console.log(`  CLIENT     | ${user.email}`);
   });
-  console.log(`Demo password for all users: ${rawPassword}`);
+  freelancers.forEach((user) => {
+    console.log(`  FREELANCER | ${user.email}`);
+  });
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log(`\n🔑 Password for all users: ${rawPassword}`);
+  console.log('\n💡 Tip: Use admin@example.com to test escrow hold/release/refund actions.');
+  console.log('    Jobs with HELD/DISPUTED escrow status have been seeded for testing.\n');
 }
 
 main()

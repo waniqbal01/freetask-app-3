@@ -284,6 +284,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             ?.copyWith(color: Colors.redAccent),
                       ),
                     ),
+                  if (escrow != null && _escrowError == null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: _buildEscrowActions(job, escrow),
+                    ),
                   const Divider(height: 24),
                 ],
               );
@@ -292,6 +297,132 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildEscrowActions(Job job, EscrowRecord escrow) {
+    final List<Widget> actions = <Widget>[];
+    final jobStatus = job.status;
+
+    // Hold: only from PENDING escrow status
+    if (escrow.status == EscrowStatus.pending) {
+      final canHold = {JobStatus.pending, JobStatus.accepted}.contains(jobStatus);
+      actions.add(
+        Tooltip(
+          message: canHold
+              ? 'Hold escrow untuk job ini'
+              : 'Hold hanya untuk job PENDING/ACCEPTED',
+          child: ElevatedButton.icon(
+            onPressed: canHold
+                ? () => _handleEscrowAction(
+                      () => escrowRepository.hold(job.id),
+                      job.id,
+                    )
+                : null,
+            icon: const Icon(Icons.pause_circle, size: 16),
+            label: const Text('Hold'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Release & Refund: only from HELD escrow status
+    if (escrow.status == EscrowStatus.held) {
+      final canRelease = {JobStatus.completed, JobStatus.disputed}.contains(jobStatus);
+      final canRefund = {
+        JobStatus.cancelled,
+        JobStatus.rejected,
+        JobStatus.disputed,
+      }.contains(jobStatus);
+
+      actions.add(
+        Tooltip(
+          message: canRelease
+              ? 'Lepaskan dana kepada freelancer'
+              : 'Release untuk job COMPLETED/DISPUTED',
+          child: ElevatedButton.icon(
+            onPressed: canRelease
+                ? () => _handleEscrowAction(
+                      () => escrowRepository.release(job.id),
+                      job.id,
+                    )
+                : null,
+            icon: const Icon(Icons.check_circle, size: 16),
+            label: const Text('Release'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            ),
+          ),
+        ),
+      );
+
+      actions.add(const SizedBox(width: 8));
+
+      actions.add(
+        Tooltip(
+          message: canRefund
+              ? 'Pulangkan dana kepada client'
+              : 'Refund untuk job CANCELLED/REJECTED/DISPUTED',
+          child: ElevatedButton.icon(
+            onPressed: canRefund
+                ? () => _handleEscrowAction(
+                      () => escrowRepository.refund(job.id),
+                      job.id,
+                    )
+                : null,
+            icon: const Icon(Icons.undo, size: 16),
+            label: const Text('Refund'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (actions.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: actions,
+    );
+  }
+
+  Future<void> _handleEscrowAction(
+    Future<EscrowRecord?> Function() action,
+    String jobId,
+  ) async {
+    try {
+      final updated = await action();
+      if (!mounted) return;
+      if (updated != null) {
+        setState(() {
+          _escrowByJob[jobId] = updated;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Escrow status dikemas kini: ${_escrowStatusLabel(updated.status)}'),
+          ),
+        );
+        await _refreshDashboard();
+      }
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ralat: $error')),
+      );
+    }
   }
 
   Widget _buildPaymentsSection() {

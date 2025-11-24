@@ -67,14 +67,23 @@ Copy/paste starter envs:
 Persist uploads between restarts by mounting/volume-binding the `./uploads` folder
 when running in Docker or on a host machine. `/uploads/**` URLs require JWT headers;
 upload responses return relative paths (e.g. `/uploads/<file>`) that the Flutter app
-requests with Authorization.
+requests with Authorization. **Note for web:** `Image.network` on Flutter web requires
+`httpHeaders` parameter with JWT Bearer token to load uploaded images.
 
-Demo logins from the seed (role → email / password):
+**🔑 Demo Logins (Seeded Credentials)**
 
-- Admin: `admin@example.com` / `Password123!`
-- Client: `client@example.com` / `Password123!`
-- Freelancer: `freelancer@example.com` / `Password123!`
-- Extras for multi-user flows: `client1@example.com`, `client2@example.com`, `freelancer1@example.com`, `freelancer2@example.com` (password `Password123!` for all)
+After running `npm run seed`, use these credentials to test different roles:
+
+| Role       | Email                      | Password      |
+|------------|----------------------------|---------------|
+| **Admin**  | `admin@example.com`        | `Password123!` |
+| Client     | `client@example.com`       | `Password123!` |
+| Freelancer | `freelancer@example.com`   | `Password123!` |
+
+Additional test accounts: `client1@example.com`, `client2@example.com`, `freelancer1@example.com`, `freelancer2@example.com` (all use `Password123!`).
+
+> **💡 Tip:** Use `admin@example.com` to test escrow hold/release/refund actions in the admin dashboard. Jobs with HELD/DISPUTED escrow status are seeded for testing.
+
 > Reseeding dengan `SEED_RESET=true` akan memulihkan set akaun demo di atas sebelum ujian dijalankan.
 
 ## Flutter client quickstart
@@ -134,6 +143,7 @@ Auth
 
 1. `POST /auth/register` with role `ADMIN` should return 400; `CLIENT`/`FREELANCER` should succeed.
 2. Missing `JWT_SECRET` in `.env` should prevent the API from starting.
+3. **Token Refresh:** GoRouter guards leverage refresh interceptors to automatically renew expired access tokens. Expected UX: seamless re-authentication without logout on token expiry.
 
 Jobs
 
@@ -143,9 +153,17 @@ Jobs
 
 Escrow / Payments
 
+**Admin escrow control paths:**
+- `POST /escrow/:jobId/hold` — Hold funds (requires ADMIN role)
+- `POST /escrow/:jobId/release` — Release funds to freelancer (requires ADMIN, job must be COMPLETED/DISPUTED)
+- `POST /escrow/:jobId/refund` — Refund funds to client (requires ADMIN, job must be CANCELLED/REJECTED/DISPUTED)
+- `GET /escrow/:jobId` — View escrow status (job participants + ADMIN)
+
+**Test scenarios:**
 1. Admin can view any job detail and hit `POST /escrow/:jobId/hold` → status `HELD`.
 2. From `HELD`, admin can `release` or `refund` and status persists after restart.
 3. Non-admin participants calling escrow actions receive `403/404`; GET still works for participants when enabled.
+4. Seed creates jobs with HELD/DISPUTED escrow for immediate admin testing (see seeded credentials above).
 
 Chat
 
@@ -156,6 +174,12 @@ Uploads
 
 1. Upload valid JPG/PNG/PDF/DOC/DOCX under 5MB – URL returned.
 2. Upload unsupported type or >5MB – API responds 400 and file is rejected.
+3. **Web images:** Flutter web `Image.network` requires `httpHeaders` with JWT Bearer token.
+
+Health Check
+
+- `GET /health` returns `{"status":"ok"}` when DB is reachable (no detailed probe info exposed).
+- **Production:** Consider adding authentication or rate limiting to prevent abuse.
 
 See [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md) for deployment hardening (env
 requirements, proxy headers, uploads volume, and seed usage guidance).
