@@ -118,18 +118,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
         await _uploadAvatarAfterAuth();
 
         final user = authRepository.currentUser;
-        if (user != null) {
+        if (user != null && mounted) {
           goToRoleHome(context, user.role);
-        } else {
+        } else if (mounted) {
           notificationService.pushLocal(
             'Berjaya',
             'Pendaftaran berjaya, sila log masuk.',
           );
-          showErrorSnackBar(
-            context,
-            'Pendaftaran berjaya, sila log masuk.',
-          );
-          context.go('/login');
+          if (mounted) {
+            showErrorSnackBar(
+              context,
+              'Pendaftaran berjaya, sila log masuk.',
+            );
+          }
+          if (mounted) {
+            context.go('/login');
+          }
         }
       } else if (mounted) {
         setState(() {
@@ -176,14 +180,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final mimeType = lookupMimeType(file.name, headerBytes: file.bytes) ?? '';
     if (!UploadService.allowedMimeTypes.contains(mimeType)) {
       if (mounted) {
-        showErrorSnackBar(context, 'Hanya imej JPEG/PNG/GIF atau dokumen diterima.');
+        showErrorSnackBar(
+            context, 'Hanya imej JPEG/PNG/GIF atau dokumen diterima.');
       }
       return;
     }
 
     if (file.size > UploadService.maxFileBytes) {
       if (mounted) {
-        showErrorSnackBar(context, 'Fail melebihi had 5MB. Pilih fail yang lebih kecil.');
+        showErrorSnackBar(
+            context, 'Fail melebihi had 5MB. Pilih fail yang lebih kecil.');
       }
       return;
     }
@@ -253,8 +259,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     } catch (error) {
       if (mounted) {
-        final message =
-            error is StateError ? error.message : 'Avatar upload failed, you can upload later.';
+        final message = error is StateError
+            ? error.message
+            : 'Avatar upload failed, you can upload later.';
         showErrorSnackBar(context, message);
       }
     } finally {
@@ -303,9 +310,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const SizedBox(height: AppSpacing.s8),
                     Text(
                       'Daftar akaun baharu',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -323,7 +331,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             DropdownButtonFormField<String>(
                               initialValue: _selectedRole,
                               items: const [
-                                DropdownMenuItem(value: 'Client', child: Text('Client')),
+                                DropdownMenuItem(
+                                    value: 'Client', child: Text('Client')),
                                 DropdownMenuItem(
                                   value: 'Freelancer',
                                   child: Text('Freelancer'),
@@ -418,7 +427,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 if (_isUploadingAvatar) {
                                   return;
                                 }
-                                FocusScope.of(context).requestFocus(FocusNode());
+                                FocusScope.of(context)
+                                    .requestFocus(FocusNode());
                                 _handlePickAvatar();
                               },
                               decoration: InputDecoration(
@@ -430,12 +440,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         child: SizedBox(
                                           width: 16,
                                           height: 16,
-                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2),
                                         ),
                                       )
                                     : IconButton(
                                         icon: const Icon(Icons.upload_file),
-                                        onPressed: _isUploadingAvatar ? null : _handlePickAvatar,
+                                        onPressed: _isUploadingAvatar
+                                            ? null
+                                            : _handlePickAvatar,
                                       ),
                               ),
                             ),
@@ -503,12 +516,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               Container(
                                 padding: const EdgeInsets.all(AppSpacing.s12),
                                 decoration: BoxDecoration(
-                                  color: AppColors.error.withValues(alpha: 0.08),
+                                  color:
+                                      AppColors.error.withValues(alpha: 0.08),
                                   borderRadius: AppRadius.mediumRadius,
                                 ),
                                 child: Text(
                                   _errorMessage!,
-                                  style: const TextStyle(color: AppColors.error),
+                                  style:
+                                      const TextStyle(color: AppColors.error),
                                 ),
                               ),
                             ],
@@ -519,7 +534,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   ? const SizedBox(
                                       height: 20,
                                       width: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2, color: Colors.white),
                                     )
                                   : Text('Daftar sebagai $normalizedRole'),
                             ),

@@ -27,9 +27,9 @@ class JobsRepository {
   Future<Job> createOrder(
     String serviceId,
     double amount,
-    String description,
-    {String? serviceTitle},
-  ) async {
+    String description, {
+    String? serviceTitle,
+  }) async {
     try {
       final parsedServiceId = int.tryParse(serviceId.toString());
       if (parsedServiceId == null) {
@@ -40,11 +40,13 @@ class JobsRepository {
       final normalizedAmount = double.parse(amount.toStringAsFixed(2));
 
       if (trimmedDescription.length < jobMinDescLen) {
-        throw StateError('Penerangan perlu sekurang-kurangnya $jobMinDescLen aksara.');
+        throw StateError(
+            'Penerangan perlu sekurang-kurangnya $jobMinDescLen aksara.');
       }
 
       if (normalizedAmount < jobMinAmount) {
-        throw StateError('Jumlah minima ialah RM${jobMinAmount.toStringAsFixed(2)}.');
+        throw StateError(
+            'Jumlah minima ialah RM${jobMinAmount.toStringAsFixed(2)}.');
       }
 
       final response = await _dio.post<Map<String, dynamic>>(
@@ -167,14 +169,17 @@ class JobsRepository {
   }
 
   Future<List<Job>> getClientJobs({String? limit, String? offset}) async {
-    return _fetchJobs(_buildQuery(<String, dynamic>{'filter': 'client'}, limit: limit, offset: offset));
+    return _fetchJobs(_buildQuery(<String, dynamic>{'filter': 'client'},
+        limit: limit, offset: offset));
   }
 
   Future<List<Job>> getFreelancerJobs({String? limit, String? offset}) async {
-    return _fetchJobs(_buildQuery(<String, dynamic>{'filter': 'freelancer'}, limit: limit, offset: offset));
+    return _fetchJobs(_buildQuery(<String, dynamic>{'filter': 'freelancer'},
+        limit: limit, offset: offset));
   }
 
-  Future<List<Job>> getAllJobs({String? limit, String? offset, String? filter}) async {
+  Future<List<Job>> getAllJobs(
+      {String? limit, String? offset, String? filter}) async {
     final currentUser = await authRepository.getCurrentUser();
     if (currentUser == null || currentUser.role.toUpperCase() != 'ADMIN') {
       throw StateError('Hanya admin boleh melihat semua job.');
@@ -183,7 +188,8 @@ class JobsRepository {
     if (filter != null) {
       params['filter'] = filter;
     }
-    final baseParams = params.isEmpty ? <String, dynamic>{'filter': 'all'} : params;
+    final baseParams =
+        params.isEmpty ? <String, dynamic>{'filter': 'all'} : params;
     return _fetchJobs(_buildQuery(baseParams, limit: limit, offset: offset));
   }
 
@@ -261,15 +267,18 @@ class JobsRepository {
   }) async {
     await handleApiError(error);
 
-    if (error.response?.statusCode == 401 || error.response?.statusCode == 403) {
+    if (error.response?.statusCode == 401 ||
+        error.response?.statusCode == 403) {
       return;
     }
 
     if (!suppressClientErrorSnackbar &&
-        (error.response?.statusCode == 400 || error.response?.statusCode == 404)) {
+        (error.response?.statusCode == 400 ||
+            error.response?.statusCode == 404)) {
       final message = _extractErrorMessage(error);
       notificationService.messengerKey.currentState?.showSnackBar(
-        SnackBar(content: Text(message.isEmpty ? 'Permintaan tidak sah.' : message)),
+        SnackBar(
+            content: Text(message.isEmpty ? 'Permintaan tidak sah.' : message)),
       );
     }
   }
@@ -287,13 +296,14 @@ class JobsRepository {
 
     if (statusCode == 409) {
       final message = _extractErrorMessage(error);
-      final fallback = 'Status job tidak membenarkan tindakan ini.';
+      const fallback = 'Status job tidak membenarkan tindakan ini.';
       throw JobStatusConflict(message.isEmpty ? fallback : message);
     }
 
     if (statusCode == 400) {
       final message = _extractErrorMessage(error);
-      throw JobStatusConflict(message.isEmpty ? 'Permintaan tidak sah.' : message);
+      throw JobStatusConflict(
+          message.isEmpty ? 'Permintaan tidak sah.' : message);
     }
 
     await _handleDioError(error);

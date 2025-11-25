@@ -26,7 +26,7 @@ class HttpClient {
     _baseUrlFuture = _baseUrlManager.getBaseUrl();
     _baseUrlFuture!.then((value) {
       _currentBaseUrl = value;
-        _applyBaseUrl(value);
+      _applyBaseUrl(value);
     });
   }
 
@@ -37,7 +37,9 @@ class HttpClient {
 
     final messenger = notificationService.messengerKey.currentState;
     final banner = messenger?.showSnackBar(
-      const SnackBar(content: Text('Menukar server… sila tunggu.'), duration: Duration(seconds: 2)),
+      const SnackBar(
+          content: Text('Menukar server… sila tunggu.'),
+          duration: Duration(seconds: 2)),
     );
 
     _cancelInflight();
@@ -50,7 +52,7 @@ class HttpClient {
 
     completer.complete();
     _switchingBaseFuture = null;
-    await banner?.close();
+    banner?.close();
   }
 
   Future<String> currentBaseUrl() async {
@@ -74,7 +76,8 @@ class HttpClient {
     );
     await _clearStoredTokens();
     authRefreshNotifier.value = DateTime.now();
-    final currentLocation = appRouter.location;
+    final currentLocation =
+        appRouter.routerDelegate.currentConfiguration.uri.path;
     if (currentLocation != '/login') {
       appRouter.go('/login');
     }
@@ -86,18 +89,20 @@ class HttpClient {
     }
     _sessionHandled = true;
     notificationService.messengerKey.currentState?.showSnackBar(
-      const SnackBar(content: Text('Sesi anda tidak sah. Sila log masuk semula.')),
+      const SnackBar(
+          content: Text('Sesi anda tidak sah. Sila log masuk semula.')),
     );
     await _clearStoredTokens();
     authRefreshNotifier.value = DateTime.now();
-    if (appRouter.location != '/login') {
+    if (appRouter.routerDelegate.currentConfiguration.uri.path != '/login') {
       appRouter.go('/login');
     }
   }
 
   void _showForbiddenMessage() {
     notificationService.messengerKey.currentState?.showSnackBar(
-      const SnackBar(content: Text('Anda tidak dibenarkan untuk tindakan ini.')),
+      const SnackBar(
+          content: Text('Anda tidak dibenarkan untuk tindakan ini.')),
     );
   }
 
@@ -118,7 +123,8 @@ class HttpClient {
   }
 
   bool _isPublicRequest(RequestOptions options) {
-    return options.method.toUpperCase() == 'GET' && options.path.startsWith('/services');
+    return options.method.toUpperCase() == 'GET' &&
+        options.path.startsWith('/services');
   }
 
   bool _isAuthEndpoint(RequestOptions options) {
@@ -134,7 +140,8 @@ class HttpClient {
     if (_isAuthEndpoint(requestOptions) || _isPublicRequest(requestOptions)) {
       return false;
     }
-    final refreshToken = await _storage.read(AuthRepository.refreshTokenStorageKey);
+    final refreshToken =
+        await _storage.read(AuthRepository.refreshTokenStorageKey);
     return refreshToken != null && refreshToken.isNotEmpty;
   }
 
@@ -146,7 +153,8 @@ class HttpClient {
       return _refreshing!;
     }
 
-    final refreshToken = await _storage.read(AuthRepository.refreshTokenStorageKey);
+    final refreshToken =
+        await _storage.read(AuthRepository.refreshTokenStorageKey);
     if (refreshToken == null || refreshToken.isEmpty) {
       return false;
     }
@@ -164,7 +172,10 @@ class HttpClient {
       final data = response.data;
       final newAccess = data?['accessToken']?.toString();
       final newRefresh = data?['refreshToken']?.toString();
-      if (newAccess == null || newAccess.isEmpty || newRefresh == null || newRefresh.isEmpty) {
+      if (newAccess == null ||
+          newAccess.isEmpty ||
+          newRefresh == null ||
+          newRefresh.isEmpty) {
         completer.complete(false);
         return completer.future;
       }
@@ -187,7 +198,8 @@ class HttpClient {
     dio.interceptors.clear();
     dio.interceptors.add(
       InterceptorsWrapper(
-        onRequest: (RequestOptions options, RequestInterceptorHandler handler) async {
+        onRequest:
+            (RequestOptions options, RequestInterceptorHandler handler) async {
           if (_switchingBaseFuture != null) {
             await _switchingBaseFuture;
           }
@@ -202,7 +214,8 @@ class HttpClient {
           if (token != null && token.isNotEmpty && !isPublicServicesGet) {
             _sessionHandled = false;
             options.headers['Authorization'] = 'Bearer $token';
-          } else if (isPublicServicesGet && options.headers.containsKey('Authorization')) {
+          } else if (isPublicServicesGet &&
+              options.headers.containsKey('Authorization')) {
             options.headers.remove('Authorization');
           }
           handler.next(options);
@@ -222,7 +235,8 @@ class HttpClient {
               await _handleSidMissing();
               return handler.next(error);
             }
-            if (isPublicRequest && error.requestOptions.extra['__retriedWithoutAuth'] != true) {
+            if (isPublicRequest &&
+                error.requestOptions.extra['__retriedWithoutAuth'] != true) {
               await _clearStoredTokens();
               final retryOptions = error.requestOptions
                 ..headers.remove('Authorization')
@@ -296,8 +310,8 @@ class HttpClient {
   Future<void> _swapClients(String baseUrl) async {
     _cancelInflight();
     try {
-      await dio.close(force: true);
-      await _refreshDio.close(force: true);
+      dio.close(force: true);
+      _refreshDio.close(force: true);
     } catch (_) {
       // ignore close errors
     }

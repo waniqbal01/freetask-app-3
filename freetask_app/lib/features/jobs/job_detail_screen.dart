@@ -390,7 +390,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     if (_isUserLoading || _userRole == null) {
       return const <Widget>[];
     }
-    final textTheme = Theme.of(context).textTheme;
     final role = _userRole!.toUpperCase();
     final isJobClient = _userId != null && job.clientId == _userId;
     final isJobFreelancer = _userId != null && job.freelancerId == _userId;
@@ -431,7 +430,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             onPressed: () => _guardedJobAction(
               allowed: canAccept,
               action: () => jobsRepository.acceptJob(job.id),
-              successMessage: 'Job diterima. Anda boleh mulakan apabila bersedia.',
+              successMessage:
+                  'Job diterima. Anda boleh mulakan apabila bersedia.',
             ),
             expanded: false,
             size: FTButtonSize.small,
@@ -534,7 +534,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             },
             expanded: false,
             size: FTButtonSize.small,
-            type: FTButtonType.secondary,
           ),
         );
       }
@@ -550,7 +549,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final statusColor = _escrowStatusColor(record?.status);
     final bool isEscrowUnavailable = _escrowError != null;
     final jobStatus = _job?.status;
-    final bool showActions = isAdmin && !isEscrowUnavailable && !_isEscrowLoading;
+    final bool showActions =
+        isAdmin && !isEscrowUnavailable && !_isEscrowLoading;
     final List<Widget> actions = <Widget>[];
 
     Widget escrowButton({
@@ -571,8 +571,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       return Tooltip(message: disabledReason, child: button);
     }
 
-    final holdAllowedStatuses =
-        {JobStatus.pending, JobStatus.accepted, JobStatus.inProgress}.contains(jobStatus);
+    final holdAllowedStatuses = {
+      JobStatus.pending,
+      JobStatus.accepted,
+      JobStatus.inProgress
+    }.contains(jobStatus);
     final releaseAllowedStatuses =
         {JobStatus.completed, JobStatus.disputed}.contains(jobStatus);
     final refundAllowedStatuses = {
@@ -649,7 +652,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             children: [
               Text(
                 'Escrow',
-                style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                style: textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700),
               ),
               if (_isEscrowLoading)
                 const SizedBox(
@@ -686,21 +690,23 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               padding: const EdgeInsets.only(top: AppSpacing.s8),
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(AppSpacing.s10),
+                padding: const EdgeInsets.all(AppSpacing.s8),
                 decoration: BoxDecoration(
                   color: Colors.orange.shade50,
-                  borderRadius: AppRadius.smallRadius,
+                  borderRadius: AppRadius.mediumRadius,
                   border: Border.all(color: Colors.orange.shade200),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.lock_outline, color: Colors.orange, size: 18),
+                    const Icon(Icons.lock_outline,
+                        color: Colors.orange, size: 18),
                     const SizedBox(width: AppSpacing.s8),
                     Expanded(
                       child: Text(
                         _escrowError!,
-                        style: textTheme.bodyMedium?.copyWith(color: Colors.orange.shade800),
+                        style: textTheme.bodyMedium
+                            ?.copyWith(color: Colors.orange.shade800),
                       ),
                     ),
                   ],
@@ -712,7 +718,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               padding: const EdgeInsets.only(top: AppSpacing.s8),
               child: Text(
                 'Escrow actions hanya untuk admin.',
-                style: textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
+                style:
+                    textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
               ),
             ),
           if (actions.isNotEmpty) ...[
@@ -790,8 +797,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   const SizedBox(width: AppSpacing.s8),
                   Text(
                     'Maklumat Job',
-                    style:
-                        textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+                    style: textTheme.headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.w700),
                   ),
                 ],
               ),

@@ -13,13 +13,17 @@ abstract class AppStorage {
 /// SharedPreferences (localStorage-backed) on web to avoid startup crashes.
 class PlatformStorage implements AppStorage {
   factory PlatformStorage({AppStorage? override}) {
-    _instance ??= override ?? (kIsWeb ? WebPreferencesStorage() : SecureKeyStorage());
+    if (_instance == null) {
+      final delegate =
+          override ?? (kIsWeb ? WebPreferencesStorage() : SecureKeyStorage());
+      _instance = PlatformStorage._(delegate);
+    }
     return _instance!;
   }
 
   PlatformStorage._(this._delegate);
 
-  static AppStorage? _instance;
+  static PlatformStorage? _instance;
   final AppStorage _delegate;
 
   @override
@@ -45,11 +49,13 @@ class SecureKeyStorage implements AppStorage {
   Future<String?> read(String key) => _storage.read(key: key);
 
   @override
-  Future<void> write(String key, String value) => _storage.write(key: key, value: value);
+  Future<void> write(String key, String value) =>
+      _storage.write(key: key, value: value);
 }
 
 class WebPreferencesStorage implements AppStorage {
-  WebPreferencesStorage({SharedPreferences? preferences}) : _preferences = preferences;
+  WebPreferencesStorage({SharedPreferences? preferences})
+      : _preferences = preferences;
 
   SharedPreferences? _preferences;
 

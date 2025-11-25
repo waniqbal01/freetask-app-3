@@ -35,24 +35,25 @@ class FakeStorage implements AppStorage {
   }
 }
 
-class RecordingDio extends Dio {
+class RecordingDio implements Dio {
   int postCalls = 0;
   Map<String, dynamic>? lastRequestData;
 
   String _repeat(String value, int times) => List.filled(times, value).join();
 
   @override
-  Future<Response<Map<String, dynamic>>> post<Map<String, dynamic>>(
+  Future<Response<T>> post<T>(
     String path, {
-    data,
+    Object? data,
+    Map<String, dynamic>? queryParameters,
     Options? options,
     CancelToken? cancelToken,
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
     postCalls++;
-    lastRequestData = (data as Map?)?.cast<String, dynamic>();
-    return Response<Map<String, dynamic>>(
+    lastRequestData = (data as Map<String, dynamic>?);
+    return Response<T>(
       requestOptions: RequestOptions(path: path),
       statusCode: 201,
       data: {
@@ -61,12 +62,187 @@ class RecordingDio extends Dio {
         'freelancerId': '2',
         'serviceId': lastRequestData?['serviceId'].toString() ?? '',
         'serviceTitle': lastRequestData?['title']?.toString() ?? 'Service',
-        'description': lastRequestData?['description']?.toString() ?? _repeat('x', jobMinDescLen),
+        'description': lastRequestData?['description']?.toString() ??
+            _repeat('x', jobMinDescLen),
         'amount': lastRequestData?['amount'] ?? jobMinAmount,
         'status': 'PENDING',
-      },
+      } as T,
     );
   }
+
+  // Implement minimal Dio interface members (these won't be called in tests)
+  @override
+  BaseOptions get options => BaseOptions();
+
+  @override
+  set options(BaseOptions value) {}
+
+  @override
+  Dio clone(
+          {HttpClientAdapter? httpClientAdapter,
+          Interceptors? interceptors,
+          BaseOptions? options,
+          Transformer? transformer}) =>
+      throw UnimplementedError();
+
+  @override
+  Interceptors get interceptors => Interceptors();
+
+  @override
+  HttpClientAdapter get httpClientAdapter => throw UnimplementedError();
+
+  @override
+  set httpClientAdapter(HttpClientAdapter adapter) =>
+      throw UnimplementedError();
+
+  @override
+  Transformer get transformer => throw UnimplementedError();
+
+  @override
+  set transformer(Transformer transformer) => throw UnimplementedError();
+
+  @override
+  void close({bool force = false}) {}
+
+  @override
+  Future<Response<T>> delete<T>(String path,
+          {Object? data,
+          Map<String, dynamic>? queryParameters,
+          Options? options,
+          CancelToken? cancelToken}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Response<T>> deleteUri<T>(Uri uri,
+          {Object? data, Options? options, CancelToken? cancelToken}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Response> download(String urlPath, dynamic savePath,
+          {ProgressCallback? onReceiveProgress,
+          Map<String, dynamic>? queryParameters,
+          CancelToken? cancelToken,
+          bool deleteOnError = true,
+          dynamic fileAccessMode,
+          String lengthHeader = Headers.contentLengthHeader,
+          Object? data,
+          Options? options}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Response> downloadUri(Uri uri, dynamic savePath,
+          {ProgressCallback? onReceiveProgress,
+          CancelToken? cancelToken,
+          bool deleteOnError = true,
+          dynamic fileAccessMode,
+          String lengthHeader = Headers.contentLengthHeader,
+          Object? data,
+          Options? options}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Response<T>> fetch<T>(RequestOptions requestOptions) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Response<T>> get<T>(String path,
+          {Object? data,
+          Map<String, dynamic>? queryParameters,
+          Options? options,
+          CancelToken? cancelToken,
+          ProgressCallback? onReceiveProgress}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Response<T>> getUri<T>(Uri uri,
+          {Object? data,
+          Options? options,
+          CancelToken? cancelToken,
+          ProgressCallback? onReceiveProgress}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Response<T>> head<T>(String path,
+          {Object? data,
+          Map<String, dynamic>? queryParameters,
+          Options? options,
+          CancelToken? cancelToken}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Response<T>> headUri<T>(Uri uri,
+          {Object? data, Options? options, CancelToken? cancelToken}) =>
+      throw UnimplementedError();
+
+  void lock() {}
+
+  @override
+  Future<Response<T>> patch<T>(String path,
+          {Object? data,
+          Map<String, dynamic>? queryParameters,
+          Options? options,
+          CancelToken? cancelToken,
+          ProgressCallback? onSendProgress,
+          ProgressCallback? onReceiveProgress}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Response<T>> patchUri<T>(Uri uri,
+          {Object? data,
+          Options? options,
+          CancelToken? cancelToken,
+          ProgressCallback? onSendProgress,
+          ProgressCallback? onReceiveProgress}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Response<T>> postUri<T>(Uri uri,
+          {Object? data,
+          Options? options,
+          CancelToken? cancelToken,
+          ProgressCallback? onSendProgress,
+          ProgressCallback? onReceiveProgress}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Response<T>> put<T>(String path,
+          {Object? data,
+          Map<String, dynamic>? queryParameters,
+          Options? options,
+          CancelToken? cancelToken,
+          ProgressCallback? onSendProgress,
+          ProgressCallback? onReceiveProgress}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Response<T>> putUri<T>(Uri uri,
+          {Object? data,
+          Options? options,
+          CancelToken? cancelToken,
+          ProgressCallback? onSendProgress,
+          ProgressCallback? onReceiveProgress}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Response<T>> request<T>(String path,
+          {Object? data,
+          Map<String, dynamic>? queryParameters,
+          CancelToken? cancelToken,
+          Options? options,
+          ProgressCallback? onSendProgress,
+          ProgressCallback? onReceiveProgress}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Response<T>> requestUri<T>(Uri uri,
+          {Object? data,
+          CancelToken? cancelToken,
+          Options? options,
+          ProgressCallback? onSendProgress,
+          ProgressCallback? onReceiveProgress}) =>
+      throw UnimplementedError();
+
+  void unlock() {}
 }
 
 void main() {
@@ -87,7 +263,8 @@ void main() {
       final repository = JobsRepository(storage: FakeStorage(), dio: dio);
 
       expect(
-        () => repository.createOrder('1', jobMinAmount - 0.5, 'valid description'),
+        () => repository.createOrder(
+            '1', jobMinAmount - 0.5, 'valid description'),
         throwsA(isA<StateError>()),
       );
       expect(dio.postCalls, 0);

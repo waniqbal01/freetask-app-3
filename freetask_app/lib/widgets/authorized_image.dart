@@ -36,7 +36,8 @@ class AuthorizedImage extends StatelessWidget {
         }
 
         if (snapshot.hasError || !snapshot.hasData) {
-          return placeholder ?? _fallbackContainer(icon: Icons.image_not_supported_outlined);
+          return placeholder ??
+              _fallbackContainer(icon: Icons.image_not_supported_outlined);
         }
 
         final data = snapshot.data!;
@@ -47,7 +48,8 @@ class AuthorizedImage extends StatelessWidget {
           fit: fit,
           headers: data.headers.isEmpty ? null : data.headers,
           errorBuilder: (_, __, ___) =>
-              placeholder ?? _fallbackContainer(icon: Icons.image_not_supported_outlined),
+              placeholder ??
+              _fallbackContainer(icon: Icons.image_not_supported_outlined),
         );
 
         if (borderRadius == null) {
@@ -55,7 +57,7 @@ class AuthorizedImage extends StatelessWidget {
         }
 
         return ClipRRect(
-          borderRadius: borderRadius,
+          borderRadius: borderRadius!,
           child: image,
         );
       },

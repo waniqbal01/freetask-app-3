@@ -124,7 +124,8 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.error_outline, size: 40, color: Colors.redAccent),
+                        const Icon(Icons.error_outline,
+                            size: 40, color: Colors.redAccent),
                         const SizedBox(height: 12),
                         Text(
                           message,
@@ -132,7 +133,8 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                         ),
                         const SizedBox(height: 12),
                         ElevatedButton(
-                          onPressed: () => ref.refresh(chatMessagesProvider(widget.chatId)),
+                          onPressed: () =>
+                              ref.refresh(chatMessagesProvider(widget.chatId)),
                           child: const Text('Cuba Lagi'),
                         ),
                       ],
@@ -181,6 +183,23 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
       SnackBar(content: Text(message)),
     );
   }
+
+  String _formatTimestamp(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+
+    if (difference.inMinutes < 1) {
+      return 'Sekarang';
+    } else if (difference.inHours < 1) {
+      return '${difference.inMinutes} minit lalu';
+    } else if (difference.inDays < 1) {
+      return '${difference.inHours} jam lalu';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} hari lalu';
+    } else {
+      return '${timestamp.day}/${timestamp.month}/${timestamp.year}';
+    }
+  }
 }
 
 class _MessageComposer extends StatelessWidget {
@@ -212,7 +231,8 @@ class _MessageComposer extends StatelessWidget {
               child: TextField(
                 controller: controller,
                 readOnly: !enabled,
-                textInputAction: enabled ? TextInputAction.send : TextInputAction.none,
+                textInputAction:
+                    enabled ? TextInputAction.send : TextInputAction.none,
                 decoration: InputDecoration(
                   hintText: enabled
                       ? 'Tulis mesej...'

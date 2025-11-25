@@ -274,7 +274,8 @@ class _JobListScreenState extends State<JobListScreen> {
                   child: const Text('Batal'),
                 ),
                 FilledButton(
-                  onPressed: isValid ? () => Navigator.of(context).pop(trimmed) : null,
+                  onPressed:
+                      isValid ? () => Navigator.of(context).pop(trimmed) : null,
                   child: const Text('Hantar'),
                 ),
               ],
@@ -467,7 +468,8 @@ class _JobListScreenState extends State<JobListScreen> {
 
     if (isClientView && role == 'CLIENT' && isClientOwner) {
       final List<Widget> actions = <Widget>[];
-      if ({JobStatus.pending, JobStatus.accepted, JobStatus.inProgress}.contains(job.status)) {
+      if ({JobStatus.pending, JobStatus.accepted, JobStatus.inProgress}
+          .contains(job.status)) {
         actions.add(
           FTButton(
             label: 'Batalkan',
@@ -500,7 +502,6 @@ class _JobListScreenState extends State<JobListScreen> {
             },
             expanded: false,
             size: FTButtonSize.small,
-            type: FTButtonType.secondary,
           ),
         );
       }
@@ -596,7 +597,6 @@ class _JobListScreenState extends State<JobListScreen> {
             },
             expanded: false,
             size: FTButtonSize.small,
-            type: FTButtonType.secondary,
           ),
         ],
       );
@@ -682,7 +682,8 @@ class _JobListScreenState extends State<JobListScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.assignment_outlined, size: 48, color: Colors.grey),
+              const Icon(Icons.assignment_outlined,
+                  size: 48, color: Colors.grey),
               const SizedBox(height: 12),
               const Text('Tiada job ditemui'),
               const SizedBox(height: 12),
@@ -760,7 +761,8 @@ class _JobListScreenState extends State<JobListScreen> {
                   ],
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
