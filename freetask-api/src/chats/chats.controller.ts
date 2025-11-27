@@ -10,10 +10,10 @@ import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 @Controller('chats')
 @UseGuards(JwtAuthGuard)
 export class ChatsController {
-  constructor(private readonly chatsService: ChatsService) {}
+  constructor(private readonly chatsService: ChatsService) { }
 
   @Get()
-  @Throttle(15, 60)
+  @Throttle({ default: { limit: 15, ttl: 60000 } })
   listThreads(
     @GetUser('userId') userId: number,
     @GetUser('role') role: UserRole,
@@ -23,7 +23,7 @@ export class ChatsController {
   }
 
   @Get(':jobId/messages')
-  @Throttle(25, 60)
+  @Throttle({ default: { limit: 25, ttl: 60000 } })
   listMessages(
     @Param('jobId', ParseIntPipe) jobId: number,
     @GetUser('userId') userId: number,

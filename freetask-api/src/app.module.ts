@@ -19,7 +19,7 @@ import { EscrowModule } from './escrow/escrow.module';
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([
       {
-        ttl: 60,
+        ttl: 60000,
         limit: 30,
       },
     ]),
@@ -41,4 +41,4 @@ import { EscrowModule } from './escrow/escrow.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

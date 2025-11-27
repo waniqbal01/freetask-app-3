@@ -24,7 +24,7 @@ import { JobsQueryDto } from './dto/jobs-query.dto';
 @Controller('jobs')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class JobsController {
-  constructor(private readonly jobsService: JobsService) {}
+  constructor(private readonly jobsService: JobsService) { }
 
   @Post()
   @Roles(UserRole.CLIENT)
@@ -37,7 +37,7 @@ export class JobsController {
   }
 
   @Get()
-  @Throttle(20, 60)
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   findAll(
     @GetUser('userId') userId: number,
     @GetUser('role') role: UserRole,
