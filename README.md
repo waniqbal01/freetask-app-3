@@ -33,7 +33,7 @@ npm run start:dev
 Reseed flags:
 
 - `SEED_FORCE=true npm run seed` — paksa tambah rekod walaupun DB ada data. Selamat untuk menambah pengguna/perkhidmatan demo tanpa memadam data sedia ada.
-- `SEED_RESET=true npm run seed` — padam data demo dahulu sebelum masukkan semula (destruktif, untuk dev sahaja). Guna ini apabila mahu set semula akaun/escrow sebelum pengujian baharu.
+- ⚠️ **WARNING: `SEED_RESET=true` WIPES ALL DEMO DATA PERMANENTLY.** Use only in dev environment. This command deletes existing data before reseeding.
 
 **Do not skip envs in production** – set `ALLOWED_ORIGINS`/`PUBLIC_BASE_URL` so the
 API can emit correct URLs and allow only intended origins. The server now fails fast
@@ -69,6 +69,8 @@ when running in Docker or on a host machine. `/uploads/**` URLs require JWT head
 upload responses return relative paths (e.g. `/uploads/<file>`) that the Flutter app
 requests with Authorization. **Note for web:** `Image.network` on Flutter web requires
 `httpHeaders` parameter with JWT Bearer token to load uploaded images.
+
+> **💡 Tip**: Uploads are stored in `./uploads` (gitignored to prevent accidental commits).
 
 **🔑 Demo Logins (Seeded Credentials)**
 
@@ -118,13 +120,15 @@ app (or by using `--dart-define=API_BASE_URL` at build time):
 > - Set `ALLOWED_ORIGINS=http://localhost:*` in `.env` (development only)
 > - OR add the exact port after running flutter (e.g., `ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:53678`)
 >
-> **For production**, always use explicit origins only. Wildcard patterns (`*`) should never be used in production.
+> 🚨 **NEVER use wildcard `*` patterns in ALLOWED_ORIGINS for production.** Explicitly list all client origins (web, mobile). Wildcard patterns expose your API to CORS-based attacks in production environments.
 
 **iOS** (if simulator is running):
 
   ```bash
   flutter run -d ios --dart-define=API_BASE_URL=http://localhost:4000
   ```
+
+> ✅ **iOS Configuration Confirmed**: The default `http://localhost:4000` works correctly for iOS simulator. Physical iOS devices require your LAN IP (e.g., `http://192.168.x.x:4000`).
 
 For web/desktop testing, ensure your browser origin (e.g. `http://localhost:3000` or
 `http://localhost:5173`) appears in `ALLOWED_ORIGINS` when running the API in production.
@@ -172,10 +176,23 @@ Escrow / Payments
 3. Non-admin participants calling escrow actions receive `403/404`; GET still works for participants when enabled.
 4. Seed creates jobs with HELD/DISPUTED escrow for immediate admin testing (see seeded credentials above).
 
+**Escrow Admin Manual Test Steps** (Step-by-Step QA Guide):
+1. Login as `admin@example.com` with password `Password123!`
+2. Navigate to `/admin` dashboard to view all jobs
+3. Find a job with `HELD` escrow status (e.g., "Brand identity package" - seeded job)
+4. Click "Release Funds" button
+5. Verify job escrow status changes to `RELEASED` and persists after page refresh
+6. Find a job with `DISPUTED` escrow status (seeded in demo data)
+7. Click "Refund" button
+8. Verify job escrow status changes to `REFUNDED` and persists after restart
+9. Logout and login as `client@example.com` to verify non-admin users cannot see escrow admin actions
+
 Chat
 
 1. Open a job chat from list: `/chats/:jobId/messages` should load messages.
 2. Sending a message appends to the same thread without 404s.
+
+> **ℹ️ Chat Design**: MVP uses REST polling (GET `/chats/:jobId/messages`). Real-time WebSocket support planned for Phase 2.
 
 Uploads
 

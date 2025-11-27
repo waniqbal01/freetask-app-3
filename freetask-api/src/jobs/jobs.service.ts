@@ -150,6 +150,18 @@ export class JobsService {
     this.ensureRole(role, [UserRole.FREELANCER, UserRole.CLIENT]);
     const job = await this.ensureJobParticipant(id, userId);
     this.ensureValidTransition(job.status, JobStatus.DISPUTED);
+
+    // Enforce 7-day dispute window for COMPLETED jobs
+    if (job.status === JobStatus.COMPLETED) {
+      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+      const timeSinceCompletion = Date.now() - job.updatedAt.getTime();
+      if (timeSinceCompletion > sevenDaysMs) {
+        throw new ForbiddenException(
+          'Dispute period has expired (7 days after completion).',
+        );
+      }
+    }
+
     const trimmedReason = dto.reason?.trim() ?? '';
     if (trimmedReason.length < JOB_MIN_DISPUTE_REASON_LEN) {
       throw new BadRequestException(

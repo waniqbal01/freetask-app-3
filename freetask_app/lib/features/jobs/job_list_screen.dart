@@ -685,13 +685,31 @@ class _JobListScreenState extends State<JobListScreen> {
               const Icon(Icons.assignment_outlined,
                   size: 48, color: Colors.grey),
               const SizedBox(height: 12),
-              const Text('Tiada job ditemui'),
-              const SizedBox(height: 12),
-              FTButton(
-                label: 'Muat Semula',
-                onPressed: onRefresh,
-                expanded: false,
+              Text(
+                isClientView
+                    ? 'Tiada job sebagai client'
+                    : 'Tiada job sebagai freelancer',
+                style: const TextStyle(fontSize: 16),
               ),
+              const SizedBox(height: 16),
+              if (isClientView)
+                FTButton(
+                  label: 'Cipta Job Pertama',
+                  onPressed: () {
+                    // Navigate to services/browse where clients can create jobs
+                    context.go('/services');
+                  },
+                  expanded: false,
+                )
+              else
+                FTButton(
+                  label: 'Semak Perkhidmatan',
+                  onPressed: () {
+                    // Navigate to services/browse for freelancers
+                    context.go('/services');
+                  },
+                  expanded: false,
+                ),
             ],
           ),
         ),

@@ -25,13 +25,15 @@ final chatThreadsProvider = FutureProvider<List<ChatThread>>((Ref ref) async {
   return repository.fetchThreads();
 });
 
-final chatThreadsProviderWithQuery = FutureProvider.family<List<ChatThread>, ({String? limit, String? offset})>((Ref ref, query) async {
+final chatThreadsProviderWithQuery =
+    FutureProvider.family<List<ChatThread>, ({String? limit, String? offset})>(
+        (Ref ref, query) async {
   final repository = ref.watch(chatRepositoryProvider);
   return repository.fetchThreads(limit: query.limit, offset: query.offset);
 });
 
-final chatMessagesProvider = StreamProvider.family<List<ChatMessage>, String>(
-    (Ref ref, String jobId) {
+final chatMessagesProvider =
+    StreamProvider.family<List<ChatMessage>, String>((Ref ref, String jobId) {
   final repository = ref.watch(chatRepositoryProvider);
   return repository.streamMessages(jobId);
 });
@@ -44,9 +46,11 @@ class ChatRepository {
   final AppStorage _storage;
   final Dio _dio;
   List<ChatThread> _threads = <ChatThread>[];
-  final Map<String, List<ChatMessage>> _messages = <String, List<ChatMessage>>{};
+  final Map<String, List<ChatMessage>> _messages =
+      <String, List<ChatMessage>>{};
   final Map<String, StreamController<List<ChatMessage>>> _controllers =
       <String, StreamController<List<ChatMessage>>>{};
+  final Map<String, Timer> _pollingTimers = <String, Timer>{};
 
   Future<List<ChatThread>> fetchThreads({String? limit, String? offset}) async {
     final paginationQuery = _buildPagination(limit: limit, offset: offset);
@@ -78,7 +82,10 @@ class ChatRepository {
   Stream<List<ChatMessage>> streamMessages(String jobId) {
     final controller = _controllers.putIfAbsent(
       jobId,
-      () => StreamController<List<ChatMessage>>.broadcast(),
+      () => StreamController<List<ChatMessage>>.broadcast(
+        onListen: () => _startPolling(jobId),
+        onCancel: () => _stopPolling(jobId),
+      ),
     );
     unawaited(
       _loadMessages(jobId).catchError((Object error, StackTrace stackTrace) {
@@ -86,8 +93,8 @@ class ChatRepository {
         controller.addError(error, stackTrace);
       }),
     );
-    controller
-        .add(List<ChatMessage>.unmodifiable(_messages[jobId] ?? <ChatMessage>[]));
+    controller.add(
+        List<ChatMessage>.unmodifiable(_messages[jobId] ?? <ChatMessage>[]));
     return controller.stream;
   }
 
@@ -121,6 +128,10 @@ class ChatRepository {
     for (final controller in _controllers.values) {
       controller.close();
     }
+    for (final timer in _pollingTimers.values) {
+      timer.cancel();
+    }
+    _pollingTimers.clear();
   }
 
   Future<void> reloadMessages(String jobId) {
@@ -140,7 +151,8 @@ class ChatRepository {
           .whereType<Map<String, dynamic>>()
           .map(ChatMessage.fromJson)
           .toList(growable: false)
-        ..sort((ChatMessage a, ChatMessage b) => a.timestamp.compareTo(b.timestamp));
+        ..sort((ChatMessage a, ChatMessage b) =>
+            a.timestamp.compareTo(b.timestamp));
       _messages[jobId] = messages;
       final controller = _controllers.putIfAbsent(
         jobId,
@@ -232,7 +244,8 @@ class ChatRepository {
         if (attempt == 2) {
           rethrow;
         }
-        await Future<void>.delayed(Duration(milliseconds: 200 * (1 << attempt)));
+        await Future<void>.delayed(
+            Duration(milliseconds: 200 * (1 << attempt)));
       }
     }
     throw lastError ?? Exception('Permintaan gagal selepas percubaan semula.');
@@ -269,6 +282,23 @@ class ChatRepository {
     notificationService.messengerKey.currentState?.showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  void _startPolling(String jobId) {
+    if (_pollingTimers.containsKey(jobId)) return;
+
+    // Initial load
+    _loadMessages(jobId);
+
+    // Poll every 3 seconds
+    _pollingTimers[jobId] = Timer.periodic(const Duration(seconds: 3), (_) {
+      _loadMessages(jobId);
+    });
+  }
+
+  void _stopPolling(String jobId) {
+    _pollingTimers[jobId]?.cancel();
+    _pollingTimers.remove(jobId);
   }
 
   String resolveErrorMessage(DioException error) {
