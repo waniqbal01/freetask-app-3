@@ -129,10 +129,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: AppSpacing.s8),
                     Text(
                       'Selamat kembali 👋',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.neutral900,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.neutral900,
+                              ),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -208,12 +209,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               Container(
                                 padding: const EdgeInsets.all(AppSpacing.s12),
                                 decoration: BoxDecoration(
-                                  color: AppColors.error.withValues(alpha: 0.08),
+                                  color:
+                                      AppColors.error.withValues(alpha: 0.08),
                                   borderRadius: AppRadius.mediumRadius,
                                 ),
                                 child: Text(
                                   _errorMessage!,
-                                  style: const TextStyle(color: AppColors.error),
+                                  style:
+                                      const TextStyle(color: AppColors.error),
                                 ),
                               ),
                             ],
@@ -224,7 +227,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ? const SizedBox(
                                       height: 20,
                                       width: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2, color: Colors.white),
                                     )
                                   : const Text('Log Masuk'),
                             ),
@@ -243,7 +247,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Gunakan akaun sedia ada untuk ujian cepat:'),
+                          const Text(
+                              'Gunakan akaun sedia ada untuk ujian cepat:'),
                           const SizedBox(height: AppSpacing.s12),
                           _DemoCredentialRow(
                             role: 'Admin',
@@ -274,6 +279,44 @@ class _LoginScreenState extends State<LoginScreen> {
                           const Text(
                             'Kata laluan untuk semua akaun demo: Password123!',
                             style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s12),
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.s12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: AppRadius.mediumRadius,
+                        border: Border.all(color: Colors.blue.shade200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.phone_iphone,
+                                  size: 18, color: Colors.blue.shade700),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'iOS Physical Device?',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.blue.shade700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Running on a physical iOS device? Update API URL via "Tukar API Server" above to your LAN IP (e.g., http://192.168.1.100:4000)',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.blue.shade800,
+                            ),
                           ),
                         ],
                       ),

@@ -52,6 +52,10 @@ class ChatRepository {
       <String, StreamController<List<ChatMessage>>>{};
   final Map<String, Timer> _pollingTimers = <String, Timer>{};
 
+  // Circuit breaker stream
+  final _circuitOpenController = StreamController<bool>.broadcast();
+  Stream<bool> get circuitOpenStream => _circuitOpenController.stream;
+
   Future<List<ChatThread>> fetchThreads({String? limit, String? offset}) async {
     final paginationQuery = _buildPagination(limit: limit, offset: offset);
     try {
@@ -132,6 +136,7 @@ class ChatRepository {
       timer.cancel();
     }
     _pollingTimers.clear();
+    _circuitOpenController.close();
   }
 
   Future<void> reloadMessages(String jobId) {
@@ -170,8 +175,12 @@ class ChatRepository {
     final parsedLimit = parsePositiveInt(limit);
     final parsedOffset = parsePositiveInt(offset);
     final query = <String, dynamic>{};
+    // Default limit to 100 to match expected chat message volume
+    // Backend defaults to 50, but we want to fetch more messages for better UX
     if (parsedLimit != null) {
-      query['limit'] = min(parsedLimit, 50);
+      query['limit'] = min(parsedLimit, 100);
+    } else {
+      query['limit'] = 100; // Explicit default
     }
     if (parsedOffset != null) {
       query['offset'] = parsedOffset;
@@ -191,17 +200,20 @@ class ChatRepository {
     // Check if in cooldown
     if (_circuitBreakerCooldownUntil != null) {
       if (DateTime.now().isBefore(_circuitBreakerCooldownUntil!)) {
+        _circuitOpenController.add(true);
         return true;
       }
       // Cooldown expired, reset
       _circuitBreakerCooldownUntil = null;
       _recentFailures.clear();
+      _circuitOpenController.add(false);
     }
 
     // If >10 failures in last 60s, activate cooldown
     if (_recentFailures.length >= 10) {
       _circuitBreakerCooldownUntil =
           DateTime.now().add(const Duration(minutes: 5));
+      _circuitOpenController.add(true);
       notificationService.messengerKey.currentState?.showSnackBar(
         const SnackBar(
           content: Text(
@@ -213,6 +225,7 @@ class ChatRepository {
       return true;
     }
 
+    _circuitOpenController.add(false);
     return false;
   }
 

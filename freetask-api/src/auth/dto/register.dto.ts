@@ -34,8 +34,11 @@ export class RegisterDto {
 
   @IsOptional()
   @IsString()
-  // @deprecated Use avatarUrl instead. Kept for backward compatibility with legacy clients.
-  // This field is automatically mapped to avatarUrl via Transform decorator above.
+  /**
+   * @deprecated Use avatarUrl instead. This field will be removed in v2.
+   * Kept for backward compatibility with legacy clients.
+   * Automatically mapped to avatarUrl via Transform decorator above.
+   */
   avatar?: string;
 
   @IsOptional()

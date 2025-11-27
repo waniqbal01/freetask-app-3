@@ -32,7 +32,9 @@ npm run start:dev
 
 Reseed flags:
 
-- `SEED_FORCE=true npm run seed` — paksa tambah rekod walaupun DB ada data. Selamat untuk menambah pengguna/perkhidmatan demo tanpa memadam data sedia ada.
+- `SEED_FORCE=true npm run seed` — **⚠️ WARNING:** Force-adds demo users via `upsert`.  
+  If demo emails (`client@example.com`, etc.) match real production users, their passwords/roles will be overwritten.  
+  **NEVER use in production**. Safe for dev if demo emails are unique.
 - ⚠️ **WARNING: `SEED_RESET=true` WIPES ALL DEMO DATA PERMANENTLY.** Use only in dev environment. This command deletes existing data before reseeding.
 
 **Do not skip envs in production** – set `ALLOWED_ORIGINS`/`PUBLIC_BASE_URL` so the
@@ -90,6 +92,8 @@ Additional test accounts: `client1@example.com`, `client2@example.com`, `freelan
 
 ## Flutter client quickstart
 
+> 🚨 **iOS Physical Device Users:** The default `http://localhost:4000` only works for iOS simulator. For physical iOS devices, you **must** override the API URL in the app via **Tukar API Server** (Settings menu) or use `--dart-define=API_BASE_URL=http://YOUR_LAN_IP:4000` (e.g., `http://192.168.1.100:4000`). See the API settings screen for runtime configuration.
+
 The Flutter application lives in the [`freetask_app`](freetask_app/) directory. To fetch
 dependencies and run the project locally, make sure you have the Flutter SDK installed,
 then execute:
@@ -97,6 +101,26 @@ then execute:
 ```bash
 cd freetask_app
 flutter pub get
+```
+
+## Running Tests
+
+### Backend Tests
+
+```bash
+cd freetask-api
+npm test              # Run all unit tests
+npm run test:e2e      # Run integration tests (if configured)
+npm run test:cov      # Generate coverage report
+```
+
+### Flutter Tests
+
+```bash
+cd freetask_app
+flutter test                    # Run all tests
+flutter test --coverage         # With coverage report
+flutter test integration_test/  # E2E tests (if configured)
 ```
 
 The backend runs on port **4000** by default. Flutter will pick sensible defaults
@@ -147,6 +171,31 @@ in both `PUBLIC_BASE_URL` and `ALLOWED_ORIGINS`. Jika ujian dijalankan oleh QA d
 - [x] Uploads constrained by size/MIME with sanitized filenames.
 - [x] Global rate limiter enabled (30 req/min default) beyond auth.
 - [x] Login screen documents seed credentials for quick QA.
+
+## API Conventions
+
+### Avatar Upload Field
+
+> **⚠️ API Change Notice**: The `avatar` field in registration and user update payloads is **deprecated**.  
+> Use `avatarUrl` instead. The legacy `avatar` field is kept for backward compatibility with older clients and will be removed in API v2.
+
+**Example:**
+```json
+// ✅ Preferred
+POST /auth/register
+{
+  "email": "user@example.com",
+  "password": "Password123!",
+  "name": "John Doe",
+  "role": "CLIENT",
+  "avatarUrl": "https://example.com/avatar.jpg"
+}
+
+// ⚠️ Legacy (still works, but deprecated)
+{
+  "avatar": "https://example.com/avatar.jpg"
+}
+```
 
 ## Manual E2E test guide
 

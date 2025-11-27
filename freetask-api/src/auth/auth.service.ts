@@ -20,7 +20,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   private readonly accessTtlMs = this.resolveDuration(
     process.env.JWT_ACCESS_EXPIRES_IN || process.env.JWT_EXPIRES_IN || '30m',
@@ -28,8 +28,8 @@ export class AuthService {
   );
 
   private readonly refreshTtlMs = this.resolveDuration(
-    process.env.JWT_REFRESH_EXPIRES_IN || '14d',
-    14 * 24 * 60 * 60 * 1000,
+    process.env.JWT_REFRESH_EXPIRES_IN,
+    undefined, // No fallback - force explicit configuration
   );
 
   async register(
@@ -48,7 +48,7 @@ export class AuthService {
       throw new ConflictException('Email already in use');
     }
 
-    const avatarUrl = dto.avatarUrl ?? dto.avatar;
+    const avatarUrl = dto.avatarUrl;
 
     const hashed = await bcrypt.hash(dto.password, 10);
     const user = await this.prisma.user.create({
@@ -56,7 +56,7 @@ export class AuthService {
         email,
         password: hashed,
         name: dto.name,
-        role: dto.role,
+        role: dto.role as any,
         avatarUrl,
         bio: dto.bio,
         skills: dto.skills,
@@ -203,9 +203,18 @@ export class AuthService {
     });
   }
 
-  private resolveDuration(input: string, fallbackMs: number): number {
+  private resolveDuration(input: string | undefined, fallbackMs: number | undefined): number {
+    if (!input) {
+      if (fallbackMs === undefined) {
+        throw new Error('JWT configuration missing: Explicit expiry required');
+      }
+      return fallbackMs;
+    }
     const match = input.match(/^(\d+)([smhdw])?$/i);
     if (!match) {
+      if (fallbackMs === undefined) {
+        throw new Error(`Invalid JWT expiry format: ${input}`);
+      }
       return fallbackMs;
     }
     const value = Number(match[1]);

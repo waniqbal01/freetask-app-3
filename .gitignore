@@ -1,4 +1,8 @@
 node_modules
 coverage
 dist
-/uploads
+# Uploads
+/uploads/
+!/uploads/.gitkeep
+src/uploads/
+!src/uploads/.gitkeep

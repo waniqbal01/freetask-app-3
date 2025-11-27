@@ -13,7 +13,10 @@ export class UpdateUserDto {
 
   @IsOptional()
   @IsString()
-  // Accepts `avatar` from Flutter payloads and maps it to `avatarUrl` in the service layer.
+  /**
+   * @deprecated Use avatarUrl instead. This field will be removed in v2.
+   * Accepts `avatar` from Flutter payloads and maps it to `avatarUrl` in the service layer.
+   */
   avatar?: string;
 
   @IsOptional()

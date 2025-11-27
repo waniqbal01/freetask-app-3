@@ -82,7 +82,8 @@ model Job {
   freelancer     User        @relation("FreelancerJobs", fields: [freelancerId], references: [id])
   freelancerId   Int
   messages       ChatMessage[]
-  review         Review?
+
+  reviews        Review[]
   escrow         Escrow?
 }
 
@@ -90,9 +91,9 @@ model ChatMessage {
   id          Int      @id @default(autoincrement())
   createdAt   DateTime @default(now())
   content     String
-  sender      User     @relation(fields: [senderId], references: [id])
+  sender      User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
   senderId    Int
-  job         Job      @relation(fields: [jobId], references: [id])
+  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
   jobId       Int
 }
 
@@ -103,9 +104,9 @@ model Review {
   comment       String?
   job           Job       @relation(fields: [jobId], references: [id])
   jobId         Int
-  reviewer      User      @relation("ReviewerReviews", fields: [reviewerId], references: [id])
+  reviewer      User      @relation("ReviewerReviews", fields: [reviewerId], references: [id], onDelete: Cascade)
   reviewerId    Int
-  reviewee      User      @relation("RevieweeReviews", fields: [revieweeId], references: [id])
+  reviewee      User      @relation("RevieweeReviews", fields: [revieweeId], references: [id], onDelete: Cascade)
   revieweeId    Int
 
   @@unique([jobId, reviewerId])

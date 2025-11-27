@@ -876,6 +876,33 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       label: 'Jumlah',
                       value: _formatAmount(job),
                     ),
+                    if (job.hasAmountIssue) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(AppSpacing.s8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: AppRadius.mediumRadius,
+                          border: Border.all(color: Colors.red.shade200),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.warning_amber_rounded,
+                                color: Colors.red, size: 18),
+                            const SizedBox(width: AppSpacing.s8),
+                            Expanded(
+                              child: Text(
+                                'Price data unavailable or corrupted. Contact support.',
+                                style: textTheme.bodySmall
+                                    ?.copyWith(color: Colors.red.shade800),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     _DetailRow(
                       icon: Icons.person_outline,

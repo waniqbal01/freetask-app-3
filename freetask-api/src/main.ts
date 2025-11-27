@@ -5,6 +5,8 @@ import { JwtExceptionFilter } from './common/filters/jwt-exception.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { getAllowedOrigins, normalizeOrigin } from './config/cors';
 
+import { NestExpressApplication } from '@nestjs/platform-express';
+
 // ---------------------------------------------------
 // Bootstrap NestJS App (Dev mode = restricted CORS)
 // ---------------------------------------------------
@@ -15,7 +17,11 @@ async function bootstrap() {
       throw new Error('JWT_SECRET is required to start the API server');
     }
 
-    const app = await NestFactory.create(AppModule, {
+    if (!process.env.JWT_REFRESH_EXPIRES_IN) {
+      throw new Error('JWT_REFRESH_EXPIRES_IN is required (e.g. "7d", "30d")');
+    }
+
+    const app = await NestFactory.create<NestExpressApplication>(AppModule, {
       bufferLogs: true,
     });
 
@@ -26,8 +32,13 @@ async function bootstrap() {
     const isProduction = process.env.NODE_ENV === 'production';
     const configuredOrigins = getAllowedOrigins(logger, isProduction);
 
-    if (isProduction && configuredOrigins.length === 0) {
-      throw new Error('ALLOWED_ORIGINS must be configured in production for CORS');
+    if (isProduction) {
+      if (configuredOrigins.length === 0) {
+        throw new Error('ALLOWED_ORIGINS must be configured in production for CORS');
+      }
+      if (configuredOrigins.includes('*')) {
+        throw new Error('ALLOWED_ORIGINS cannot use wildcard * in production');
+      }
     }
 
     const devFallbackPatterns = [

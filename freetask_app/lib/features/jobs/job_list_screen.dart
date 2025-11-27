@@ -410,8 +410,20 @@ class _JobListScreenState extends State<JobListScreen> {
                     amountText,
                     style: textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
+                      color: job.hasAmountIssue ? Colors.red.shade700 : null,
                     ),
                   ),
+                  if (job.hasAmountIssue) ...[
+                    const SizedBox(width: 6),
+                    Tooltip(
+                      message: 'Amount could not be parsed. Contact support.',
+                      child: Icon(
+                        Icons.warning_amber_rounded,
+                        size: 16,
+                        color: Colors.red.shade700,
+                      ),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 8),
@@ -692,21 +704,19 @@ class _JobListScreenState extends State<JobListScreen> {
                 style: const TextStyle(fontSize: 16),
               ),
               const SizedBox(height: 16),
-              if (isClientView)
+              if (_currentUser?.role == 'CLIENT')
                 FTButton(
-                  label: 'Cipta Job Pertama',
-                  onPressed: () {
-                    // Navigate to services/browse where clients can create jobs
-                    context.go('/services');
-                  },
+                  label: 'Browse Services',
+                  onPressed: () => context.go('/home'),
                   expanded: false,
                 )
-              else
+              else if (_currentUser?.role == 'FREELANCER')
                 FTButton(
-                  label: 'Semak Perkhidmatan',
+                  label: 'View Available Jobs',
                   onPressed: () {
-                    // Navigate to services/browse for freelancers
-                    context.go('/services');
+                    // Navigate to job board or services
+                    context.go(
+                        '/home'); // Redirect to home for now as job board might be restricted
                   },
                   expanded: false,
                 ),

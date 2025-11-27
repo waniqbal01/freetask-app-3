@@ -37,6 +37,17 @@ class JobsRepository {
       }
 
       final trimmedDescription = description.trim();
+
+      // Validate decimal precision (max 2 decimal places)
+      final amountString = amount.toString();
+      if (amountString.contains('.')) {
+        final decimalPart = amountString.split('.')[1];
+        if (decimalPart.length > 2) {
+          throw StateError(
+              'Jumlah hanya boleh mempunyai maksimum 2 tempat perpuluhan.');
+        }
+      }
+
       final normalizedAmount = double.parse(amount.toStringAsFixed(2));
 
       if (trimmedDescription.length < jobMinDescLen) {
