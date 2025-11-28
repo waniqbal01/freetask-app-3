@@ -21,7 +21,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   private readonly logger = new Logger(AuthService.name);
 
@@ -32,7 +32,7 @@ export class AuthService {
 
   private readonly refreshTtlMs = this.resolveDuration(
     process.env.JWT_REFRESH_EXPIRES_IN,
-    undefined, // No fallback - force explicit configuration
+    process.env.NODE_ENV === 'production' ? undefined : 7 * 24 * 60 * 60 * 1000, // 7d default in dev
   );
 
   async register(

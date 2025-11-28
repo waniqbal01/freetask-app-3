@@ -31,6 +31,27 @@ npm install
 ```bash
 npx prisma migrate dev
 ```
+
+### Rolling Back Migrations
+
+To reset DB to a clean state (⚠️ **DESTRUCTIVE**):
+```bash
+npx prisma migrate reset  # Drops DB, reruns all migrations, reseeds
+```
+
+This command will:
+1. Drop the database (all data will be lost)
+2. Recreate the database
+3. Run all migrations from scratch
+4. Run seed scripts automatically (if configured)
+
+Use this when:
+- Migration conflicts occur during development
+- Schema is corrupted and needs fresh start
+- Switching between git branches with incompatible migrations
+
+> ⚠️ **Warning**: Never use `migrate reset` in production! It will delete all data.
+
 5. Seed demo data (safe by default – no truncation unless `SEED_RESET=true`):
 ```bash
 npm run seed
@@ -41,6 +62,8 @@ npm run seed
 ```bash
 npm run start:dev
 ```
+
+**Health Check**: `GET http://localhost:4000/health` → `{"status":"ok"}`
 
 Seed credentials (role → email / password):
 

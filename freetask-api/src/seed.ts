@@ -8,11 +8,12 @@ async function upsertUser(
   name: string,
   password: string,
   role: UserRole,
+  avatarUrl?: string,
 ) {
   return prisma.user.upsert({
     where: { email },
-    update: { name, password, role },
-    create: { email, name, password, role },
+    update: { name, password, role, avatarUrl },
+    create: { email, name, password, role, avatarUrl },
   });
 }
 
@@ -98,7 +99,9 @@ async function main() {
   }
 
   if (reset) {
-    console.warn('⚠️  Destructive seed enabled: existing data will be wiped.');
+    console.warn('⚠️⚠️⚠️ DESTRUCTIVE MODE: All data will be deleted in 5 seconds. Press Ctrl+C to cancel.');
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    console.warn('⚠️  Proceeding with destructive seed: existing data will be wiped.');
     // Delete dependent tables first to avoid FK constraint errors
     await prisma.escrow.deleteMany();
     await prisma.session.deleteMany();
@@ -115,18 +118,18 @@ async function main() {
   const password = await bcrypt.hash(rawPassword, 10);
 
   const freelancers = await Promise.all([
-    upsertUser('freelancer1@example.com', 'Freelancer One', password, UserRole.FREELANCER),
-    upsertUser('freelancer2@example.com', 'Freelancer Two', password, UserRole.FREELANCER),
-    upsertUser('freelancer@example.com', 'Freelancer QA', password, UserRole.FREELANCER),
+    upsertUser('freelancer1@example.com', 'Freelancer One', password, UserRole.FREELANCER, '/uploads/public/demo-avatar-1.jpg'),
+    upsertUser('freelancer2@example.com', 'Freelancer Two', password, UserRole.FREELANCER, '/uploads/public/demo-avatar-2.jpg'),
+    upsertUser('freelancer@example.com', 'Freelancer QA', password, UserRole.FREELANCER, '/uploads/public/demo-avatar-qa.jpg'),
   ]);
 
   const clients = await Promise.all([
-    upsertUser('client1@example.com', 'Client One', password, UserRole.CLIENT),
-    upsertUser('client2@example.com', 'Client Two', password, UserRole.CLIENT),
-    upsertUser('client@example.com', 'Client QA', password, UserRole.CLIENT),
+    upsertUser('client1@example.com', 'Client One', password, UserRole.CLIENT, '/uploads/public/demo-client-1.jpg'),
+    upsertUser('client2@example.com', 'Client Two', password, UserRole.CLIENT, '/uploads/public/demo-client-2.jpg'),
+    upsertUser('client@example.com', 'Client QA', password, UserRole.CLIENT, '/uploads/public/demo-client-qa.jpg'),
   ]);
 
-  const admin = await upsertUser('admin@example.com', 'Admin User', password, UserRole.ADMIN);
+  const admin = await upsertUser('admin@example.com', 'Admin User', password, UserRole.ADMIN, '/uploads/public/demo-admin.jpg');
 
   const services = await Promise.all([
     upsertService('Logo Design', 'Professional logo design service.', 150, 'Design', freelancers[0].id),

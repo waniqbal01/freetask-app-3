@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -241,86 +242,88 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.s16),
-                    SectionCard(
-                      title: 'Demo Accounts',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                              'Gunakan akaun sedia ada untuk ujian cepat:'),
-                          const SizedBox(height: AppSpacing.s12),
-                          _DemoCredentialRow(
-                            role: 'Admin',
-                            email: 'admin@example.com',
-                            onTap: _fillDemoCredentials,
-                          ),
-                          _DemoCredentialRow(
-                            role: 'Client',
-                            email: 'client1@example.com',
-                            onTap: _fillDemoCredentials,
-                          ),
-                          _DemoCredentialRow(
-                            role: 'Client',
-                            email: 'client2@example.com',
-                            onTap: _fillDemoCredentials,
-                          ),
-                          _DemoCredentialRow(
-                            role: 'Freelancer',
-                            email: 'freelancer1@example.com',
-                            onTap: _fillDemoCredentials,
-                          ),
-                          _DemoCredentialRow(
-                            role: 'Freelancer',
-                            email: 'freelancer2@example.com',
-                            onTap: _fillDemoCredentials,
-                          ),
-                          const SizedBox(height: AppSpacing.s12),
-                          const Text(
-                            'Kata laluan untuk semua akaun demo: Password123!',
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                        ],
+                    if (kDebugMode) ...[
+                      const SizedBox(height: AppSpacing.s16),
+                      SectionCard(
+                        title: 'Demo Accounts',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                                'Gunakan akaun sedia ada untuk ujian cepat:'),
+                            const SizedBox(height: AppSpacing.s12),
+                            _DemoCredentialRow(
+                              role: 'Admin',
+                              email: 'admin@example.com',
+                              onTap: _fillDemoCredentials,
+                            ),
+                            _DemoCredentialRow(
+                              role: 'Client',
+                              email: 'client1@example.com',
+                              onTap: _fillDemoCredentials,
+                            ),
+                            _DemoCredentialRow(
+                              role: 'Client',
+                              email: 'client2@example.com',
+                              onTap: _fillDemoCredentials,
+                            ),
+                            _DemoCredentialRow(
+                              role: 'Freelancer',
+                              email: 'freelancer1@example.com',
+                              onTap: _fillDemoCredentials,
+                            ),
+                            _DemoCredentialRow(
+                              role: 'Freelancer',
+                              email: 'freelancer2@example.com',
+                              onTap: _fillDemoCredentials,
+                            ),
+                            const SizedBox(height: AppSpacing.s12),
+                            const Text(
+                              'Kata laluan untuk semua akaun demo: Password123!',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.s12),
-                    Container(
-                      padding: const EdgeInsets.all(AppSpacing.s12),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: AppRadius.mediumRadius,
-                        border: Border.all(color: Colors.blue.shade200),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.phone_iphone,
-                                  size: 18, color: Colors.blue.shade700),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'iOS Physical Device?',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.blue.shade700,
+                      const SizedBox(height: AppSpacing.s12),
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.s12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: AppRadius.mediumRadius,
+                          border: Border.all(color: Colors.blue.shade200),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.phone_iphone,
+                                    size: 18, color: Colors.blue.shade700),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'iOS Physical Device?',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.blue.shade700,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Running on a physical iOS device? Update API URL via "Tukar API Server" above to your LAN IP (e.g., http://192.168.1.100:4000)',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.blue.shade800,
+                              ],
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 6),
+                            Text(
+                              'Running on a physical iOS device? Update API URL via "Tukar API Server" above to your LAN IP (e.g., http://192.168.1.100:4000)',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.blue.shade800,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),

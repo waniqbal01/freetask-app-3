@@ -18,10 +18,6 @@ async function bootstrap() {
       throw new Error('JWT_SECRET is required to start the API server');
     }
 
-    if (!process.env.JWT_REFRESH_EXPIRES_IN) {
-      throw new Error('JWT_REFRESH_EXPIRES_IN is required (e.g. "7d", "30d")');
-    }
-
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
       bufferLogs: true,
     });
@@ -76,6 +72,13 @@ async function bootstrap() {
     });
 
     // ------------------------------
+    // Global Upload Size Limits
+    // ------------------------------
+    const express = require('express');
+    app.use(express.json({ limit: '10mb' }));
+    app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+    // ------------------------------
     // Global Filters & Interceptors
     // ------------------------------
     app.useGlobalFilters(new JwtExceptionFilter());
@@ -93,17 +96,19 @@ async function bootstrap() {
     );
 
     // ------------------------------
-    // Swagger documentation
+    // Swagger documentation (Dev/Test only)
     // ------------------------------
-    const config = new DocumentBuilder()
-      .setTitle('Freetask API')
-      .setDescription('API docs for Freetask MVP')
-      .setVersion('1.0')
-      .addBearerAuth()
-      .build();
+    if (process.env.NODE_ENV !== 'production') {
+      const config = new DocumentBuilder()
+        .setTitle('Freetask API')
+        .setDescription('API docs for Freetask MVP')
+        .setVersion('1.0')
+        .addBearerAuth()
+        .build();
 
-    const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('api', app, document);
+      const document = SwaggerModule.createDocument(app, config);
+      SwaggerModule.setup('api', app, document);
+    }
 
     // ------------------------------
     // Start server

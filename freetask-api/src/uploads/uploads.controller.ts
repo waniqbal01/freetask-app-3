@@ -58,7 +58,7 @@ export class UploadsController {
       },
       storage: diskStorage({
         destination: (_req, _file, cb) => {
-          const uploadsDir = 'uploads'; // Default fallback
+          const uploadsDir = process.env.UPLOAD_DIR || 'uploads';
           if (!require('fs').existsSync(uploadsDir)) {
             require('fs').mkdirSync(uploadsDir, { recursive: true });
           }
@@ -84,6 +84,17 @@ export class UploadsController {
     return this.uploadsService.buildUploadResponse(file.filename);
   }
 
+  // Public endpoint for serving avatars and public images (no JWT required)
+  @Get('public/:filename')
+  async getPublicFile(@Param('filename') filename: string, @Res({ passthrough: true }) res: Response) {
+    const { stream, mimeType, filename: safeName, asAttachment } = await this.uploadsService.getFileStream(filename);
+    res.setHeader('Content-Type', mimeType);
+    const dispositionType = asAttachment ? 'attachment' : 'inline';
+    res.setHeader('Content-Disposition', `${dispositionType}; filename="${safeName}"`);
+    return new StreamableFile(stream);
+  }
+
+  // Protected endpoint for authenticated users
   @UseGuards(JwtAuthGuard)
   @Get(':filename')
   @ApiUnauthorizedResponse({ description: 'Unauthorized - JWT diperlukan untuk muat turun.' })

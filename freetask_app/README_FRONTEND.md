@@ -28,6 +28,17 @@ You can override these at runtime without rebuilding, or via `--dart-define=API_
 3. Save. The client will immediately use the new URL; clear the field to reset to the default.
 4. You can also revisit the same form under **Settings → API Server** (`/settings/api`) once signed in.
 
+### iOS Physical Device Setup
+
+The default `http://localhost:4000` only works for iOS simulator. For physical devices:
+
+1. Find your Mac's LAN IP: `ifconfig | grep inet` (look for something like `192.168.1.100`)
+2. Override API URL in app Settings → "Tukar API Server"
+3. Enter `http://YOUR_LAN_IP:4000` (e.g., `http://192.168.1.100:4000`)
+4. Ensure your backend's `ALLOWED_ORIGINS` includes this IP (e.g., `http://192.168.1.100:4000`)
+
+> **Tip**: On Windows, use `ipconfig` instead of `ifconfig`
+
 ### Common origins / CORS tips
 
 Add your frontend origin to the API `ALLOWED_ORIGINS` if running the backend in production mode:
