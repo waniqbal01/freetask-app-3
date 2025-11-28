@@ -11,6 +11,8 @@ import '../../theme/app_theme.dart';
 import '../../widgets/section_card.dart';
 import 'job_constants.dart';
 
+import '../auth/auth_repository.dart';
+
 class JobCheckoutScreen extends StatefulWidget {
   const JobCheckoutScreen({super.key, this.serviceSummary});
 
@@ -26,14 +28,38 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
   String? _descriptionError;
   String? _amountError;
 
-  Map<String, dynamic> get _summary => widget.serviceSummary ?? <String, dynamic>{};
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = authRepository.currentUser;
+      if (user?.role != 'CLIENT') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Hanya Client boleh membuat tempahan job.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/home');
+        }
+      }
+    });
+  }
+
+  Map<String, dynamic> get _summary =>
+      widget.serviceSummary ?? <String, dynamic>{};
 
   String get _serviceId => (_summary['serviceId'] ?? '') as String;
 
   String get _description => _summary['description']?.toString() ?? '';
 
   String get _serviceDescription =>
-      _summary['serviceDescription']?.toString() ?? _summary['service_desc']?.toString() ?? '';
+      _summary['serviceDescription']?.toString() ??
+      _summary['service_desc']?.toString() ??
+      '';
 
   String get _title => _summary['title']?.toString() ?? '';
 
@@ -53,7 +79,8 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
   Future<void> _createOrder() async {
     final serviceId = _serviceId;
     final amount = _amount;
-    final description = _description.isNotEmpty ? _description : _serviceDescription;
+    final description =
+        _description.isNotEmpty ? _description : _serviceDescription;
 
     setState(() {
       _errorMessage = null;
@@ -61,7 +88,10 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       _amountError = null;
     });
 
-    if (serviceId.isEmpty || amount == null || description.isEmpty || _hasPriceIssue) {
+    if (serviceId.isEmpty ||
+        amount == null ||
+        description.isEmpty ||
+        _hasPriceIssue) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(_hasPriceIssue
@@ -76,8 +106,9 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
 
     if (trimmedDescription.length < jobMinDescLen || amount < jobMinAmount) {
       setState(() {
-        _descriptionError =
-            trimmedDescription.length < jobMinDescLen ? 'Minimum $jobMinDescLen aksara diperlukan.' : null;
+        _descriptionError = trimmedDescription.length < jobMinDescLen
+            ? 'Minimum $jobMinDescLen aksara diperlukan.'
+            : null;
         _amountError = amount < jobMinAmount
             ? 'Minimum RM${jobMinAmount.toStringAsFixed(2)} diperlukan.'
             : null;
@@ -90,12 +121,13 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       _errorMessage = null;
     });
 
-      try {
-        final job = await jobsRepository.createOrder(
-          serviceId,
-          amount,
-          description,
-        serviceTitle: _title.isEmpty ? _summary['serviceTitle']?.toString() : _title,
+    try {
+      final job = await jobsRepository.createOrder(
+        serviceId,
+        amount,
+        description,
+        serviceTitle:
+            _title.isEmpty ? _summary['serviceTitle']?.toString() : _title,
       );
       try {
         await escrowRepository.hold(job.id);
@@ -122,36 +154,38 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       if (mounted) {
         context.go('/jobs');
       }
-      } on DioException catch (error) {
-        if (!mounted) {
-          return;
-        }
-        final message = resolveDioErrorMessage(error);
-        final fieldErrors = _parseFieldErrors(error);
-        setState(() {
-          _errorMessage = fieldErrors.isEmpty ? message : null;
-          _descriptionError = fieldErrors['description'];
-          _amountError = fieldErrors['amount'];
-        });
-        final status = error.response?.statusCode;
-        if (status != 400 && status != 404) {
-          showErrorSnackBar(context, message);
-        }
-      } on StateError catch (error) {
-        if (!mounted) {
-          return;
-        }
-        final message = error.message.isEmpty ? 'Maklumat tempahan tidak sah.' : error.message;
-        setState(() {
-          _errorMessage = message;
-          if (message.toLowerCase().contains('penerangan')) {
-            _descriptionError = message;
-          }
-          if (message.toLowerCase().contains('jumlah minima')) {
-            _amountError = message;
-          }
-        });
+    } on DioException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      final message = resolveDioErrorMessage(error);
+      final fieldErrors = _parseFieldErrors(error);
+      setState(() {
+        _errorMessage = fieldErrors.isEmpty ? message : null;
+        _descriptionError = fieldErrors['description'];
+        _amountError = fieldErrors['amount'];
+      });
+      final status = error.response?.statusCode;
+      if (status != 400 && status != 404) {
         showErrorSnackBar(context, message);
+      }
+    } on StateError catch (error) {
+      if (!mounted) {
+        return;
+      }
+      final message = error.message.isEmpty
+          ? 'Maklumat tempahan tidak sah.'
+          : error.message;
+      setState(() {
+        _errorMessage = message;
+        if (message.toLowerCase().contains('penerangan')) {
+          _descriptionError = message;
+        }
+        if (message.toLowerCase().contains('jumlah minima')) {
+          _amountError = message;
+        }
+      });
+      showErrorSnackBar(context, message);
     } catch (error) {
       if (!mounted) {
         return;
@@ -176,7 +210,8 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
           content: const Column(
             mainAxisSize: MainAxisSize.min,
@@ -218,8 +253,9 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
   Widget build(BuildContext context) {
     final title = _summary['title']?.toString();
     final amount = _amount;
-    final amountText =
-        amount == null || amount <= 0 || _hasPriceIssue ? 'Harga belum tersedia' : 'RM${amount.toStringAsFixed(2)}';
+    final amountText = amount == null || amount <= 0 || _hasPriceIssue
+        ? 'Harga belum tersedia'
+        : 'RM${amount.toStringAsFixed(2)}';
 
     return Scaffold(
       body: Container(
@@ -268,10 +304,12 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
                                 ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 12),
-                          Text('Penerangan: ${_description.isNotEmpty ? _description : _serviceDescription}'),
+                          Text(
+                              'Penerangan: ${_description.isNotEmpty ? _description : _serviceDescription}'),
                           const SizedBox(height: 4),
                           Text(
-                            _descriptionError ?? 'Minimum $jobMinDescLen aksara.',
+                            _descriptionError ??
+                                'Minimum $jobMinDescLen aksara.',
                             style: TextStyle(
                               color: _descriptionError != null
                                   ? AppColors.error
@@ -282,9 +320,12 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
                           Text('Jumlah: $amountText'),
                           const SizedBox(height: 4),
                           Text(
-                            _amountError ?? 'Minimum RM${jobMinAmount.toStringAsFixed(2)}.',
+                            _amountError ??
+                                'Minimum RM${jobMinAmount.toStringAsFixed(2)}.',
                             style: TextStyle(
-                              color: _amountError != null ? AppColors.error : AppColors.neutral400,
+                              color: _amountError != null
+                                  ? AppColors.error
+                                  : AppColors.neutral400,
                             ),
                           ),
                         ],
@@ -329,7 +370,8 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
   Map<String, String> _parseFieldErrors(DioException error) {
     final errors = <String, String>{};
     final data = error.response?.data;
-    final dynamic message = data is Map<String, dynamic> ? data['message'] : null;
+    final dynamic message =
+        data is Map<String, dynamic> ? data['message'] : null;
 
     final messages = <String>[];
     if (message is String && message.isNotEmpty) {

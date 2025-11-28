@@ -2,6 +2,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { JwtExceptionFilter } from './common/filters/jwt-exception.filter';
+import { TransformDecimalInterceptor } from './common/interceptors/transform-decimal.interceptor';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { getAllowedOrigins, normalizeOrigin } from './config/cors';
 
@@ -75,9 +76,10 @@ async function bootstrap() {
     });
 
     // ------------------------------
-    // Global Filters
+    // Global Filters & Interceptors
     // ------------------------------
     app.useGlobalFilters(new JwtExceptionFilter());
+    app.useGlobalInterceptors(new TransformDecimalInterceptor());
 
     // ------------------------------
     // Global Validation Pipes

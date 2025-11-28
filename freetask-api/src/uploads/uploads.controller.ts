@@ -21,12 +21,11 @@ import { Response } from 'express';
 import { UploadsMulterExceptionFilter } from './uploads.filter';
 
 @Controller('uploads')
-@UseGuards(JwtAuthGuard)
-@UseFilters(UploadsMulterExceptionFilter)
 export class UploadsController {
-  constructor(private readonly uploadsService: UploadsService) {}
+  constructor(private readonly uploadsService: UploadsService) { }
 
   @Post()
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: 5 * 1024 * 1024 },
@@ -56,19 +55,25 @@ export class UploadsController {
       },
       storage: diskStorage({
         destination: (_req, _file, cb) => {
-          const uploadsService = this.uploadsService;
-          uploadsService.ensureUploadsDir();
-          cb(null, uploadsService.getUploadsDir());
+          const uploadsDir = 'uploads'; // Default fallback
+          if (!require('fs').existsSync(uploadsDir)) {
+            require('fs').mkdirSync(uploadsDir, { recursive: true });
+          }
+          cb(null, uploadsDir);
         },
         filename: (_req, file, cb) => {
-          const uploadsService = this.uploadsService;
-          const filename = uploadsService.buildFileName(file.originalname);
+          const { extname } = require('path');
+          const { randomUUID } = require('crypto');
+          const fileExt = extname(file.originalname || '').toLowerCase();
+          // Simple sanitization for extension
+          const safeExt = fileExt.replace(/[^a-z0-9.]/g, '');
+          const filename = `${randomUUID()}${safeExt}`;
           cb(null, filename);
         },
       }),
     }),
   )
-  uploadFile(@UploadedFile() file: Express.Multer.File) {
+  uploadFile(@UploadedFile() file: any) {
     if (!file) {
       throw new BadRequestException('Tiada fail dihantar');
     }

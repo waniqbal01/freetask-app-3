@@ -46,5 +46,6 @@ export function getAllowedOrigins(
     'http://localhost:5173',
     'http://10.0.2.2:3000',
     'http://10.0.2.2:4000',
+    '*', // Allow all in dev for Flutter/mobile testing
   ];
 }
