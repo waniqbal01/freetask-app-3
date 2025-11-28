@@ -77,6 +77,14 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                     'Tetapan ini membenarkan QA menukar host API tanpa rebuild.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
+                  const SizedBox(height: AppSpacing.s8),
+                  Text(
+                    'Nota: Muat naik & muat turun fail /uploads memerlukan token log masuk aktif. Pastikan pengguna telah log masuk sebelum membuka pautan fail.',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: Colors.grey.shade700),
+                  ),
                   const SizedBox(height: AppSpacing.s16),
                   TextField(
                     controller: _controller,

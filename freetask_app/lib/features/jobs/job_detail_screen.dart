@@ -239,6 +239,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       _escrowError = null;
     });
 
+    if (!canMutateEscrow(_userRole)) {
+      if (mounted) {
+        showErrorSnackBar(context, 'Hanya admin boleh mengubah status escrow.');
+      }
+      setState(() {
+        _isEscrowProcessing = false;
+      });
+      return;
+    }
+
     try {
       final updated = await action();
       if (!mounted) return;

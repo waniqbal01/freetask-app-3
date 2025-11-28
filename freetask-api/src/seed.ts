@@ -300,6 +300,22 @@ async function main() {
     ],
   });
 
+  const longHistory: Prisma.ChatMessageCreateManyInput[] = [];
+  const baseTime = Date.now();
+  for (let i = 0; i < 60; i++) {
+    longHistory.push({
+      jobId: jobs[0].id,
+      senderId: i % 2 === 0 ? clients[0].id : freelancers[0].id,
+      content: `Milestone update #${i + 1}`,
+      createdAt: new Date(baseTime - (60 - i) * 60 * 1000),
+    });
+  }
+
+  await prisma.chatMessage.createMany({
+    data: longHistory,
+    skipDuplicates: true,
+  });
+
   console.log('✅ Seed data created successfully');
   console.log('\n📋 Demo Credentials (all use password: Password123!)');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

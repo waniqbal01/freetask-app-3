@@ -65,11 +65,11 @@ export class ChatsService {
     pagination?: { limit?: number; offset?: number },
   ): Promise<ChatMessageDto[]> {
     await this.ensureJobParticipant(jobId, userId, role);
-    const take = Math.min(Math.max(pagination?.limit ?? 50, 1), 50);
+    const take = Math.min(Math.max(pagination?.limit ?? 50, 1), 200);
     const skip = Math.max(pagination?.offset ?? 0, 0);
     const messages = await this.prisma.chatMessage.findMany({
       where: { jobId },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
       include: {
         sender: {
           select: { id: true, name: true },
@@ -79,17 +79,19 @@ export class ChatsService {
       skip,
     });
 
-    return messages.map(
-      (message) =>
-        ({
-          id: message.id,
-          jobId: message.jobId,
-          senderId: message.sender.id,
-          senderName: message.sender.name,
-          content: message.content,
-          createdAt: message.createdAt,
-        }) satisfies ChatMessageDto,
-    );
+    return messages
+      .reverse()
+      .map(
+        (message) =>
+          ({
+            id: message.id,
+            jobId: message.jobId,
+            senderId: message.sender.id,
+            senderName: message.sender.name,
+            content: message.content,
+            createdAt: message.createdAt,
+          }) satisfies ChatMessageDto,
+      );
   }
 
   async postMessage(

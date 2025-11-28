@@ -403,6 +403,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     Future<EscrowRecord?> Function() action,
     String jobId,
   ) async {
+    final user = await authRepository.getCurrentUser();
+    if (user?.role.toUpperCase() != 'ADMIN') {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Hanya admin boleh mengubah escrow.')),
+      );
+      return;
+    }
     try {
       final updated = await action();
       if (!mounted) return;

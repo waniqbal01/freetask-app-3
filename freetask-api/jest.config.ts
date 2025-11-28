@@ -7,6 +7,11 @@ const config: Config = {
   transform: {
     '^.+\\.(t|j)s$': 'ts-jest',
   },
+  globals: {
+    'ts-jest': {
+      tsconfig: 'tsconfig.spec.json',
+    },
+  },
   collectCoverageFrom: ['**/*.(t|j)s'],
   coverageDirectory: '../coverage',
   testEnvironment: 'node',
