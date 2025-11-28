@@ -19,7 +19,10 @@ import { UploadsService } from './uploads.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Response } from 'express';
 import { UploadsMulterExceptionFilter } from './uploads.filter';
+import { ApiBearerAuth, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
 
+@ApiBearerAuth()
+@ApiTags('uploads')
 @Controller('uploads')
 export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) { }
@@ -81,7 +84,9 @@ export class UploadsController {
     return this.uploadsService.buildUploadResponse(file.filename);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get(':filename')
+  @ApiUnauthorizedResponse({ description: 'Unauthorized - JWT diperlukan untuk muat turun.' })
   async downloadFile(@Param('filename') filename: string, @Res({ passthrough: true }) res: Response) {
     const { stream, mimeType, filename: safeName, asAttachment } = await this.uploadsService.getFileStream(filename);
     res.setHeader('Content-Type', mimeType);

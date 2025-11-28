@@ -80,8 +80,10 @@ class UploadService {
         ),
       );
     } on DioException catch (error) {
-      if (error.response?.statusCode == 401) {
-        _notifyUnauthorized();
+      if (error.response?.statusCode == 401 || error.response?.statusCode == 403) {
+        _notifyUnauthorized(
+          message: 'Akses fail memerlukan log masuk aktif. Sila log masuk semula.',
+        );
       }
       rethrow;
     }
@@ -139,9 +141,9 @@ class UploadService {
     return '$sanitizedBase$path';
   }
 
-  void _notifyUnauthorized() {
+  void _notifyUnauthorized({String message = 'Sesi tamat. Sila log masuk semula untuk akses fail.'}) {
     notificationService.messengerKey.currentState?.showSnackBar(
-      const SnackBar(content: Text('Sesi tamat. Sila log masuk semula untuk akses fail.')),
+      SnackBar(content: Text(message)),
     );
   }
 }

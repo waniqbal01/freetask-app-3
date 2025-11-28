@@ -17,6 +17,7 @@ NestJS API powering it.
 - When `NODE_ENV=production`, `ALLOWED_ORIGINS` **must** be set or the API will exit at startup.
 - Set `PUBLIC_BASE_URL` to your API origin; upload responses return relative `/uploads/<file>` paths and require JWT to fetch.
 - Set `TRUST_PROXY=true` when running behind ingress/reverse-proxy so forwarded headers are trusted for URL validation.
+- All `/uploads/:filename` requests are protected by JWT (downloads included). Clients must send the `Authorization: Bearer <token>` header or they will receive `401/403` responses.
 
 ## Backend quickstart (NestJS + Prisma/Postgres)
 

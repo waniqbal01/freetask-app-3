@@ -30,6 +30,10 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
   Widget build(BuildContext context) {
     final asyncMessages = ref.watch(chatMessagesProvider(widget.chatId));
     final bool hasMessageError = asyncMessages.hasError;
+    final repository = ref.watch(chatRepositoryProvider);
+    final bool hasMore = repository.hasMore(widget.chatId);
+    final bool isLoadingMore = repository.isLoadingMore(widget.chatId);
+    final bool isInitialLoading = repository.isInitialLoading(widget.chatId);
     final thread = ref.watch(chatThreadsProvider).maybeWhen(
           data: (List<ChatThread> threads) => threads.firstWhere(
             (ChatThread element) => element.id == widget.chatId,
@@ -64,53 +68,70 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
           Expanded(
             child: asyncMessages.when(
               data: (List<ChatMessage> messages) {
+                if (isInitialLoading && messages.isEmpty) {
+                  return const Center(child: CircularProgressIndicator());
+                }
                 if (messages.isEmpty) {
                   return const Center(
-                    child: Text('Tiada data'),
+                    child: Text('Tiada mesej lagi. Hantar mesej pertama!'),
                   );
                 }
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (_scrollController.hasClients) {
-                    _scrollController.jumpTo(
-                      _scrollController.position.maxScrollExtent,
-                    );
+                    final atBottom = _scrollController.offset >=
+                        _scrollController.position.maxScrollExtent - 40;
+                    if (atBottom || !hasMore) {
+                      _scrollController.jumpTo(
+                        _scrollController.position.maxScrollExtent,
+                      );
+                    }
                   }
                 });
-                return ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(16),
-                  itemCount: messages.length,
-                  itemBuilder: (BuildContext context, int index) {
-                    final message = messages[index];
-                    return Align(
-                      alignment: Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(vertical: 6),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(
-                              message.text,
-                              style: const TextStyle(color: Colors.black87),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${message.senderName} • ${_formatTimestamp(message.timestamp)}',
-                              style: const TextStyle(
-                                color: Colors.black54,
-                                fontSize: 12,
+                return RefreshIndicator(
+                  onRefresh: () =>
+                      ref.read(chatRepositoryProvider).reloadMessages(widget.chatId),
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: messages.length + (hasMore ? 1 : 0),
+                    itemBuilder: (BuildContext context, int index) {
+                      if (hasMore && index == 0) {
+                        return _LoadMoreBanner(
+                          isLoadingMore: isLoadingMore,
+                          onLoadMore: _handleLoadMore,
+                        );
+                      }
+                      final message = hasMore ? messages[index - 1] : messages[index];
+                      return Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                message.text,
+                                style: const TextStyle(color: Colors.black87),
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 4),
+                              Text(
+                                '${message.senderName} • ${_formatTimestamp(message.timestamp)}',
+                                style: const TextStyle(
+                                  color: Colors.black54,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -175,6 +196,18 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
         return;
       }
       _showSnackBar('Ralat menghantar mesej.');
+    }
+  }
+
+  Future<void> _handleLoadMore() async {
+    try {
+      await ref.read(chatRepositoryProvider).loadMoreMessages(widget.chatId);
+    } on DioException catch (error) {
+      if (!mounted) return;
+      _showSnackBar(resolveDioErrorMessage(error));
+    } catch (error) {
+      if (!mounted) return;
+      _showSnackBar('Gagal memuat mesej tambahan: $error');
     }
   }
 
@@ -250,6 +283,44 @@ class _MessageComposer extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _LoadMoreBanner extends StatelessWidget {
+  const _LoadMoreBanner({
+    required this.isLoadingMore,
+    required this.onLoadMore,
+  });
+
+  final bool isLoadingMore;
+  final VoidCallback onLoadMore;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Sejarah chat dipendekkan. Muat lebih mesej lama.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          const SizedBox(width: 8),
+          FilledButton.tonal(
+            onPressed: isLoadingMore ? null : onLoadMore,
+            child: isLoadingMore
+                ? const SizedBox(
+                    height: 16,
+                    width: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Load more'),
+          ),
+        ],
       ),
     );
   }

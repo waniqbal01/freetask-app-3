@@ -51,10 +51,18 @@ class ChatRepository {
   final Map<String, StreamController<List<ChatMessage>>> _controllers =
       <String, StreamController<List<ChatMessage>>>{};
   final Map<String, Timer> _pollingTimers = <String, Timer>{};
+  static const int _pageSize = 50;
+  final Map<String, bool> _hasMore = <String, bool>{};
+  final Map<String, bool> _isLoadingMore = <String, bool>{};
+  final Map<String, bool> _isInitialLoading = <String, bool>{};
 
   // Circuit breaker stream
   final _circuitOpenController = StreamController<bool>.broadcast();
   Stream<bool> get circuitOpenStream => _circuitOpenController.stream;
+
+  bool hasMore(String jobId) => _hasMore[jobId] ?? false;
+  bool isLoadingMore(String jobId) => _isLoadingMore[jobId] ?? false;
+  bool isInitialLoading(String jobId) => _isInitialLoading[jobId] ?? false;
 
   Future<List<ChatThread>> fetchThreads({String? limit, String? offset}) async {
     final paginationQuery = _buildPagination(limit: limit, offset: offset);
@@ -91,14 +99,15 @@ class ChatRepository {
         onCancel: () => _stopPolling(jobId),
       ),
     );
+    _isInitialLoading[jobId] = true;
     unawaited(
-      _loadMessages(jobId).catchError((Object error, StackTrace stackTrace) {
+      _loadMessages(jobId)
+          .catchError((Object error, StackTrace stackTrace) {
         _notifyStreamError(error);
         controller.addError(error, stackTrace);
       }),
     );
-    controller.add(
-        List<ChatMessage>.unmodifiable(_messages[jobId] ?? <ChatMessage>[]));
+    _emit(jobId);
     return controller.stream;
   }
 
@@ -121,7 +130,7 @@ class ChatRepository {
           options: await _authorizedOptions(),
         );
       });
-      await _loadMessages(jobId);
+      await _loadMessages(jobId, mergeExisting: true);
     } on DioException catch (error) {
       await _handleError(error);
       rethrow;
@@ -143,11 +152,33 @@ class ChatRepository {
     return _loadMessages(jobId);
   }
 
-  Future<void> _loadMessages(String jobId) async {
+  Future<void> loadMoreMessages(String jobId) {
+    return _loadMessages(jobId, append: true, mergeExisting: true);
+  }
+
+  Future<void> _loadMessages(String jobId,
+      {bool append = false, bool mergeExisting = true}) async {
+    final current = _messages[jobId] ?? <ChatMessage>[];
+    if (append && (_isLoadingMore[jobId] ?? false)) {
+      return;
+    }
+
+    if (!append && current.isEmpty) {
+      _isInitialLoading[jobId] = true;
+    }
+    if (append) {
+      _isLoadingMore[jobId] = true;
+    }
+    _emit(jobId);
+
     try {
       final response = await _retryRequest(() async {
         return _dio.get<List<dynamic>>(
           '/chats/$jobId/messages',
+          queryParameters: _buildPagination(
+            limit: _pageSize.toString(),
+            offset: append ? current.length.toString() : '0',
+          ),
           options: await _authorizedOptions(),
         );
       });
@@ -158,16 +189,26 @@ class ChatRepository {
           .toList(growable: false)
         ..sort((ChatMessage a, ChatMessage b) =>
             a.timestamp.compareTo(b.timestamp));
-      _messages[jobId] = messages;
-      final controller = _controllers.putIfAbsent(
-        jobId,
-        () => StreamController<List<ChatMessage>>.broadcast(),
-      );
-      controller.add(List<ChatMessage>.unmodifiable(messages));
+      List<ChatMessage> merged;
+      if (append) {
+        merged = _dedupeMessages(<ChatMessage>[...messages, ...current]);
+      } else if (mergeExisting && current.isNotEmpty) {
+        merged = _dedupeMessages(<ChatMessage>[...current, ...messages]);
+      } else {
+        merged = messages;
+      }
+
+      _messages[jobId] = merged;
+      _hasMore[jobId] = messages.length >= _pageSize;
+      _emit(jobId);
     } on DioException catch (error) {
       await _handleError(error);
       _notifyStreamError('Rangkaian terputus. Tap untuk cuba lagi.');
       rethrow;
+    }
+    finally {
+      _isLoadingMore[jobId] = false;
+      _isInitialLoading[jobId] = false;
     }
   }
 
@@ -175,17 +216,25 @@ class ChatRepository {
     final parsedLimit = parsePositiveInt(limit);
     final parsedOffset = parsePositiveInt(offset);
     final query = <String, dynamic>{};
-    // Default limit to 100 to match expected chat message volume
-    // Backend defaults to 50, but we want to fetch more messages for better UX
-    if (parsedLimit != null) {
-      query['limit'] = min(parsedLimit, 100);
-    } else {
-      query['limit'] = 100; // Explicit default
-    }
+    query['limit'] = min(parsedLimit ?? _pageSize, _pageSize);
     if (parsedOffset != null) {
       query['offset'] = parsedOffset;
     }
     return query;
+  }
+
+  void _emit(String jobId) {
+    final controller = _controllers.putIfAbsent(
+      jobId,
+      () => StreamController<List<ChatMessage>>.broadcast(),
+    );
+    controller.add(List<ChatMessage>.unmodifiable(_messages[jobId] ?? <ChatMessage>[]));
+  }
+
+  List<ChatMessage> _dedupeMessages(List<ChatMessage> messages) {
+    final seen = <String>{};
+    messages.sort((ChatMessage a, ChatMessage b) => a.timestamp.compareTo(b.timestamp));
+    return messages.where((ChatMessage message) => seen.add(message.id)).toList(growable: false);
   }
 
   // Circuit breaker state
