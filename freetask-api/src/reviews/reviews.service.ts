@@ -5,12 +5,12 @@ import { JobStatus, Prisma } from '@prisma/client';
 
 @Injectable()
 export class ReviewsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(userId: number, dto: CreateReviewDto) {
     const job = await this.prisma.job.findUnique({
       where: { id: dto.jobId },
-      include: { review: true },
+      include: { reviews: true },
     });
     if (!job) {
       throw new NotFoundException('Job not found');
@@ -21,7 +21,9 @@ export class ReviewsService {
     if (job.status !== JobStatus.COMPLETED) {
       throw new ForbiddenException('Job must be completed before reviewing');
     }
-    if (job.review) {
+
+    const existingReview = job.reviews.find((r) => r.reviewerId === userId);
+    if (existingReview) {
       throw new ForbiddenException('Review already submitted');
     }
 

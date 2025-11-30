@@ -103,7 +103,7 @@ export class EscrowService {
   }
 
   private ensureHoldAllowed(status: JobStatus) {
-    const allowedStatuses = [JobStatus.PENDING, JobStatus.ACCEPTED, JobStatus.IN_PROGRESS];
+    const allowedStatuses: JobStatus[] = [JobStatus.PENDING, JobStatus.ACCEPTED, JobStatus.IN_PROGRESS];
     if (!allowedStatuses.includes(status)) {
       throw new ConflictException(
         `Escrow hold not allowed when job status is ${status.toString().toUpperCase()}`,
@@ -112,8 +112,8 @@ export class EscrowService {
   }
 
   private ensureReleaseOrRefundAllowed(status: JobStatus, action: 'release' | 'refund') {
-    const releaseAllowed = [JobStatus.COMPLETED, JobStatus.DISPUTED];
-    const refundAllowed = [
+    const releaseAllowed: JobStatus[] = [JobStatus.COMPLETED, JobStatus.DISPUTED];
+    const refundAllowed: JobStatus[] = [
       JobStatus.COMPLETED,
       JobStatus.DISPUTED,
       JobStatus.CANCELLED,
@@ -135,7 +135,7 @@ export class EscrowService {
     switch (status) {
       case JobStatus.COMPLETED: {
         // Validation: Cannot complete if already refunded/cancelled
-        if ([EscrowStatus.REFUNDED, EscrowStatus.CANCELLED].includes(escrow.status)) {
+        if (([EscrowStatus.REFUNDED, EscrowStatus.CANCELLED] as EscrowStatus[]).includes(escrow.status)) {
           this.logger.warn(
             `Job completion blocked: Escrow already ${escrow.status} for escrow ${escrow.id}`,
           );
@@ -155,14 +155,14 @@ export class EscrowService {
           );
           return null;
         }
-        if ([EscrowStatus.REFUNDED, EscrowStatus.CANCELLED].includes(escrow.status)) {
+        if (([EscrowStatus.REFUNDED, EscrowStatus.CANCELLED] as EscrowStatus[]).includes(escrow.status)) {
           return null;
         }
         return escrow.amount ? EscrowStatus.REFUNDED : EscrowStatus.CANCELLED;
       }
       case JobStatus.DISPUTED: {
         // Validation: Cannot dispute if already closed
-        if ([EscrowStatus.RELEASED, EscrowStatus.REFUNDED].includes(escrow.status)) {
+        if (([EscrowStatus.RELEASED, EscrowStatus.REFUNDED] as EscrowStatus[]).includes(escrow.status)) {
           this.logger.warn(
             `Job dispute blocked: Escrow already closed (${escrow.status}) for escrow ${escrow.id}`,
           );
@@ -189,19 +189,19 @@ export class EscrowService {
     newStatus: JobStatus,
   ): string | null {
     if (newStatus === JobStatus.COMPLETED) {
-      if ([EscrowStatus.REFUNDED, EscrowStatus.CANCELLED].includes(escrow.status)) {
+      if (([EscrowStatus.REFUNDED, EscrowStatus.CANCELLED] as EscrowStatus[]).includes(escrow.status)) {
         return `Cannot complete job: escrow already ${escrow.status.toLowerCase()}`;
       }
     }
 
-    if ([JobStatus.CANCELLED, JobStatus.REJECTED].includes(newStatus)) {
+    if (([JobStatus.CANCELLED, JobStatus.REJECTED] as JobStatus[]).includes(newStatus)) {
       if (escrow.status === EscrowStatus.RELEASED) {
         return 'Cannot cancel/reject job: escrow already released to freelancer';
       }
     }
 
     if (newStatus === JobStatus.DISPUTED) {
-      if ([EscrowStatus.RELEASED, EscrowStatus.REFUNDED].includes(escrow.status)) {
+      if (([EscrowStatus.RELEASED, EscrowStatus.REFUNDED] as EscrowStatus[]).includes(escrow.status)) {
         return `Cannot dispute job: escrow already ${escrow.status.toLowerCase()}`;
       }
     }
