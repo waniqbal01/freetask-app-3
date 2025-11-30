@@ -8,6 +8,22 @@ String resolveDioErrorMessage(
   final statusCode = error.response?.statusCode;
   final path = error.requestOptions.path;
 
+  // Network/connection errors (no response from server)
+  if (error.type == DioExceptionType.connectionError ||
+      error.type == DioExceptionType.unknown) {
+    return 'Tidak dapat hubungi server. Sila semak:\n'
+        '1. Backend API sedang berjalan?\n'
+        '2. URL API betul? (Semak "Tukar API Server")\n'
+        '3. CORS configuration betul? (untuk Web)';
+  }
+
+  // Timeout errors
+  if (error.type == DioExceptionType.connectionTimeout ||
+      error.type == DioExceptionType.receiveTimeout) {
+    return 'Sambungan terputus. Server tidak bertindak balas.';
+  }
+
+  // HTTP error responses (server responded with error)
   if (statusCode == 401 && path.contains('/auth/login')) {
     return 'Email atau kata laluan salah.';
   }
@@ -20,6 +36,7 @@ String resolveDioErrorMessage(
     return 'Sila semak semula maklumat yang diisi.';
   }
 
+  // Extract message from response
   final responseData = error.response?.data;
 
   if (responseData is Map<String, dynamic>) {
@@ -39,6 +56,7 @@ String resolveDioErrorMessage(
     }
   }
 
+  // Fallback to error message from Dio
   final message = error.message;
   if (message != null && message.trim().isNotEmpty) {
     return message.trim();

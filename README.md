@@ -147,6 +147,40 @@ app (or by using `--dart-define=API_BASE_URL` at build time):
 >
 > 🚨 **NEVER use wildcard `*` patterns in ALLOWED_ORIGINS for production.** Explicitly list all client origins (web, mobile). Wildcard patterns expose your API to CORS-based attacks in production environments.
 
+### 🐛 Troubleshooting Flutter Web Login
+
+**Error: "The XMLHttpRequest onError callback was called..."**
+
+This typically indicates a CORS issue with Flutter Web's random port:
+
+1. **Check if backend is running:** Open browser to `http://localhost:4000/health` → Should return `{"status":"ok"}`
+
+2. **CORS Solution (Development):**
+   - **Option A (Recommended):** Leave `ALLOWED_ORIGINS` empty in `freetask-api/.env`
+     ```env
+     ALLOWED_ORIGINS=
+     ```
+     This enables wildcard `*` fallback in development mode.
+   
+   - **Option B:** Add the exact Flutter Web port to `ALLOWED_ORIGINS`:
+     ```bash
+     # After running `flutter run -d chrome`, note the port (e.g., http://localhost:63599)
+     # Then add to .env:
+     ALLOWED_ORIGINS=http://localhost:63599,http://localhost:4000
+     ```
+     ⚠️ Remember to restart backend after changing `.env`
+
+3. **Verify API URL in Flutter:**
+   - Click "Tukar API Server" on login screen
+   - Ensure it's set to `http://localhost:4000`
+
+4. **Test health endpoint from Flutter Web:**
+   - Open browser console (F12) → Network tab
+   - Login should show request to `http://localhost:4000/auth/login`
+   - If you see CORS error, double-check step 2
+
+> **💡 Production Note:** Never use empty `ALLOWED_ORIGINS` or wildcard in production. Always specify exact origins.
+
 **iOS** (if simulator is running):
 
   ```bash
