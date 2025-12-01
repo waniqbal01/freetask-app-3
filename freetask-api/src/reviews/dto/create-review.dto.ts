@@ -1,8 +1,12 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsPositive, IsString, Max, Min } from 'class-validator';
 
 export class CreateReviewDto {
   @IsInt()
   jobId: number;
+
+  @IsInt()
+  @IsPositive()
+  revieweeId: number;
 
   @IsInt()
   @Min(1, { message: 'Rating must be at least 1' })

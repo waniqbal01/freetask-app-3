@@ -38,9 +38,12 @@ export class JobsService {
     }
     const amount = new Prisma.Decimal(parsedAmount.toFixed(2));
 
+    // Trim title to prevent whitespace inconsistencies
+    const trimmedTitle = (dto.title ?? service.title).trim();
+
     const job = await this.prisma.job.create({
       data: {
-        title: dto.title ?? service.title,
+        title: trimmedTitle,
         description: dto.description,
         amount,
         serviceId: service.id,

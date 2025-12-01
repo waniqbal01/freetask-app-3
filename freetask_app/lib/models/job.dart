@@ -116,7 +116,7 @@ class Job {
       case 'DISPUTED':
         return JobStatus.disputed;
       default:
-        print('Unknown job status received: $value. Falling back to pending.');
+        // Unknown status - fallback to pending
         return JobStatus.pending;
     }
   }
@@ -131,7 +131,7 @@ class Job {
         return (value: parsed, hadError: false);
       }
     }
-    print('Invalid job amount received: $value');
+    // Invalid amount - return 0 with error flag
     return (value: 0, hadError: true);
   }
 

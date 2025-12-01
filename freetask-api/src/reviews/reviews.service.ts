@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nest js/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { JobStatus, Prisma } from '@prisma/client';
@@ -15,23 +15,39 @@ export class ReviewsService {
     if (!job) {
       throw new NotFoundException('Job not found');
     }
-    if (job.clientId !== userId) {
-      throw new ForbiddenException('Only the client can review this job');
+
+    // Verify user is part of this job (client or freelancer)
+    if (job.clientId !== userId && job.freelancerId !== userId) {
+      throw new ForbiddenException('You are not part of this job');
     }
+
     if (job.status !== JobStatus.COMPLETED) {
       throw new ForbiddenException('Job must be completed before reviewing');
     }
 
-    const existingReview = job.reviews.find((r) => r.reviewerId === userId);
+    // Validate revieweeId is either client or freelancer of job
+    if (dto.revieweeId !== job.clientId && dto.revieweeId !== job.freelancerId) {
+      throw new ForbiddenException('Reviewee must be part of this job');
+    }
+
+    // Prevent self-reviews
+    if (dto.revieweeId === userId) {
+      throw new ForbiddenException('Cannot review yourself');
+    }
+
+    // Check for existing review with same (jobId, reviewerId, revieweeId)
+    const existingReview = job.reviews.find(
+      (r) => r.reviewerId === userId && r.revieweeId === dto.revieweeId
+    );
     if (existingReview) {
-      throw new ForbiddenException('Review already submitted');
+      throw new ForbiddenException('You have already reviewed this person for this job');
     }
 
     const review = await this.prisma.review.create({
       data: {
         jobId: job.id,
-        reviewerId: job.clientId,
-        revieweeId: job.freelancerId,
+        reviewerId: userId,
+        revieweeId: dto.revieweeId,
         rating: dto.rating,
         comment: dto.comment,
       },

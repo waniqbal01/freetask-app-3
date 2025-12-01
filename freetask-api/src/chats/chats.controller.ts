@@ -34,6 +34,7 @@ export class ChatsController {
   }
 
   @Post(':jobId/messages')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   sendMessage(
     @Param('jobId', ParseIntPipe) jobId: number,
     @GetUser('userId') userId: number,
