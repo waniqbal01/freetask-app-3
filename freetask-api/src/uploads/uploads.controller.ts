@@ -11,6 +11,7 @@ import {
   Res,
   UseFilters,
   StreamableFile,
+  Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -20,15 +21,20 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Response } from 'express';
 import { UploadsMulterExceptionFilter } from './uploads.filter';
 import { ApiBearerAuth, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiBearerAuth()
 @ApiTags('uploads')
 @Controller('uploads')
 export class UploadsController {
+  private readonly logger = new Logger(UploadsController.name);
+
   constructor(private readonly uploadsService: UploadsService) { }
 
   @Post()
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // Stricter limit for uploads: 5 per minute
+  @UseFilters(UploadsMulterExceptionFilter)
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: 5 * 1024 * 1024 },
@@ -76,10 +82,15 @@ export class UploadsController {
       }),
     }),
   )
-  uploadFile(@UploadedFile() file: any) {
+  uploadFile(@UploadedFile() file: any, @Req() req: any) {
     if (!file) {
+      this.logger.warn(`Upload failed: No file provided by user ${req.user?.userId}`);
       throw new BadRequestException('Tiada fail dihantar');
     }
+
+    this.logger.log(
+      `File uploaded successfully: ${file.filename} (${file.size} bytes) by user ${req.user?.userId}`,
+    );
 
     return this.uploadsService.buildUploadResponse(file.filename);
   }

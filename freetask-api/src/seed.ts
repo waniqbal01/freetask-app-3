@@ -118,18 +118,18 @@ async function main() {
   const password = await bcrypt.hash(rawPassword, 10);
 
   const freelancers = await Promise.all([
-    upsertUser('freelancer1@example.com', 'Freelancer One', password, UserRole.FREELANCER, '/uploads/public/demo-avatar-1.jpg'),
-    upsertUser('freelancer2@example.com', 'Freelancer Two', password, UserRole.FREELANCER, '/uploads/public/demo-avatar-2.jpg'),
-    upsertUser('freelancer@example.com', 'Freelancer QA', password, UserRole.FREELANCER, '/uploads/public/demo-avatar-qa.jpg'),
+    upsertUser('freelancer1@example.com', 'Freelancer One', password, UserRole.FREELANCER, 'https://ui-avatars.com/api/?name=Freelancer+One&background=random'),
+    upsertUser('freelancer2@example.com', 'Freelancer Two', password, UserRole.FREELANCER, 'https://ui-avatars.com/api/?name=Freelancer+Two&background=random'),
+    upsertUser('freelancer@example.com', 'Freelancer QA', password, UserRole.FREELANCER, 'https://ui-avatars.com/api/?name=Freelancer+QA&background=random'),
   ]);
 
   const clients = await Promise.all([
-    upsertUser('client1@example.com', 'Client One', password, UserRole.CLIENT, '/uploads/public/demo-client-1.jpg'),
-    upsertUser('client2@example.com', 'Client Two', password, UserRole.CLIENT, '/uploads/public/demo-client-2.jpg'),
-    upsertUser('client@example.com', 'Client QA', password, UserRole.CLIENT, '/uploads/public/demo-client-qa.jpg'),
+    upsertUser('client1@example.com', 'Client One', password, UserRole.CLIENT, 'https://ui-avatars.com/api/?name=Client+One&background=random'),
+    upsertUser('client2@example.com', 'Client Two', password, UserRole.CLIENT, 'https://ui-avatars.com/api/?name=Client+Two&background=random'),
+    upsertUser('client@example.com', 'Client QA', password, UserRole.CLIENT, 'https://ui-avatars.com/api/?name=Client+QA&background=random'),
   ]);
 
-  const admin = await upsertUser('admin@example.com', 'Admin User', password, UserRole.ADMIN, '/uploads/public/demo-admin.jpg');
+  const admin = await upsertUser('admin@example.com', 'Admin User', password, UserRole.ADMIN, 'https://ui-avatars.com/api/?name=Admin+User&background=random');
 
   const services = await Promise.all([
     upsertService('Logo Design', 'Professional logo design service.', 150, 'Design', freelancers[0].id),

@@ -13,11 +13,18 @@ NestJS API powering it.
 
 ## ⚠️ Production Requirements (mandatory)
 
-- Set `ALLOWED_ORIGINS` in production; the API fails fast if it is empty.
-- When `NODE_ENV=production`, `ALLOWED_ORIGINS` **must** be set or the API will exit at startup.
-- Set `PUBLIC_BASE_URL` to your API origin; upload responses return relative `/uploads/<file>` paths and require JWT to fetch.
-- Set `TRUST_PROXY=true` when running behind ingress/reverse-proxy so forwarded headers are trusted for URL validation.
-- All `/uploads/:filename` requests are protected by JWT (downloads included). Clients must send the `Authorization: Bearer <token>` header or they will receive `401/403` responses.
+- **JWT Configuration (Required):**
+  - Set `JWT_SECRET` to a strong, random secret (minimum 32 characters recommended)
+  - Set `JWT_REFRESH_EXPIRES_IN` (e.g., `7d`) - **API will fail to start without this in production**
+- **CORS Configuration (Required):**
+  - Set `ALLOWED_ORIGINS` in production; the API fails fast if it is empty
+  - When `NODE_ENV=production`, `ALLOWED_ORIGINS` **must** be set or the API will exit at startup
+  - Never use wildcard `*` in production - explicitly list all client origins
+- **URL Configuration:**
+  - Set `PUBLIC_BASE_URL` to your API origin; upload responses return relative `/uploads/<file>` paths and require JWT to fetch
+  - Set `TRUST_PROXY=true` when running behind ingress/reverse-proxy so forwarded headers are trusted for URL validation
+- **Upload Security:**
+  - All `/uploads/:filename` requests are protected by JWT (downloads included). Clients must send the `Authorization: Bearer <token>` header or they will receive `401/403` responses.
 
 ## Backend quickstart (NestJS + Prisma/Postgres)
 

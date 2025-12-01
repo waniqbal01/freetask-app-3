@@ -102,6 +102,34 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                     'URL aktif: ${_activeBaseUrl ?? Env.defaultApiBaseUrl}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
+                  const SizedBox(height: AppSpacing.s16),
+                  Text(
+                    'Pilihan Pantas:',
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                  const SizedBox(height: AppSpacing.s8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      ActionChip(
+                        label: const Text('Android Emulator'),
+                        onPressed: () =>
+                            _controller.text = 'http://10.0.2.2:4000',
+                        avatar: const Icon(Icons.android, size: 16),
+                      ),
+                      ActionChip(
+                        label: const Text('iOS / Web (Local)'),
+                        onPressed: () =>
+                            _controller.text = 'http://localhost:4000',
+                        avatar: const Icon(Icons.laptop, size: 16),
+                      ),
+                      ActionChip(
+                        label: const Text('Reset Default'),
+                        onPressed: () => _controller.text = '',
+                        avatar: const Icon(Icons.restore, size: 16),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: AppSpacing.s24),
                   ElevatedButton.icon(
                     onPressed: _isSaving ? null : _save,

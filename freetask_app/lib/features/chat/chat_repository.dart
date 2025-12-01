@@ -41,10 +41,13 @@ final chatMessagesProvider =
 class ChatRepository {
   ChatRepository({AppStorage? storage, Dio? dio})
       : _storage = storage ?? appStorage,
-        _dio = dio ?? HttpClient().dio;
+        _dio = dio ?? HttpClient().dio {
+    _logoutSubscription = authRepository.onLogout.listen((_) => dispose());
+  }
 
   final AppStorage _storage;
   final Dio _dio;
+  StreamSubscription? _logoutSubscription;
   List<ChatThread> _threads = <ChatThread>[];
   final Map<String, List<ChatMessage>> _messages =
       <String, List<ChatMessage>>{};
@@ -101,8 +104,7 @@ class ChatRepository {
     );
     _isInitialLoading[jobId] = true;
     unawaited(
-      _loadMessages(jobId)
-          .catchError((Object error, StackTrace stackTrace) {
+      _loadMessages(jobId).catchError((Object error, StackTrace stackTrace) {
         _notifyStreamError(error);
         controller.addError(error, stackTrace);
       }),
@@ -138,6 +140,7 @@ class ChatRepository {
   }
 
   void dispose() {
+    _logoutSubscription?.cancel();
     for (final controller in _controllers.values) {
       controller.close();
     }
@@ -205,8 +208,7 @@ class ChatRepository {
       await _handleError(error);
       _notifyStreamError('Rangkaian terputus. Tap untuk cuba lagi.');
       rethrow;
-    }
-    finally {
+    } finally {
       _isLoadingMore[jobId] = false;
       _isInitialLoading[jobId] = false;
     }
@@ -228,13 +230,17 @@ class ChatRepository {
       jobId,
       () => StreamController<List<ChatMessage>>.broadcast(),
     );
-    controller.add(List<ChatMessage>.unmodifiable(_messages[jobId] ?? <ChatMessage>[]));
+    controller.add(
+        List<ChatMessage>.unmodifiable(_messages[jobId] ?? <ChatMessage>[]));
   }
 
   List<ChatMessage> _dedupeMessages(List<ChatMessage> messages) {
     final seen = <String>{};
-    messages.sort((ChatMessage a, ChatMessage b) => a.timestamp.compareTo(b.timestamp));
-    return messages.where((ChatMessage message) => seen.add(message.id)).toList(growable: false);
+    messages.sort(
+        (ChatMessage a, ChatMessage b) => a.timestamp.compareTo(b.timestamp));
+    return messages
+        .where((ChatMessage message) => seen.add(message.id))
+        .toList(growable: false);
   }
 
   // Circuit breaker state

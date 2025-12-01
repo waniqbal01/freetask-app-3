@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 
 import '../../core/storage/storage.dart';
@@ -31,7 +32,10 @@ class AuthRepository {
       final data = response.data;
       final token = data?['accessToken']?.toString();
       final refreshToken = data?['refreshToken']?.toString();
-      if (token == null || token.isEmpty || refreshToken == null || refreshToken.isEmpty) {
+      if (token == null ||
+          token.isEmpty ||
+          refreshToken == null ||
+          refreshToken.isEmpty) {
         return false;
       }
       await _saveTokens(token, refreshToken);
@@ -57,7 +61,10 @@ class AuthRepository {
       final data = response.data;
       final token = data?['accessToken']?.toString();
       final refreshToken = data?['refreshToken']?.toString();
-      if (token != null && token.isNotEmpty && refreshToken != null && refreshToken.isNotEmpty) {
+      if (token != null &&
+          token.isNotEmpty &&
+          refreshToken != null &&
+          refreshToken.isNotEmpty) {
         await _saveTokens(token, refreshToken);
       }
       final userJson = data?['user'];
@@ -126,6 +133,9 @@ class AuthRepository {
     return _storage.read(refreshTokenStorageKey);
   }
 
+  final _logoutController = StreamController<void>.broadcast();
+  Stream<void> get onLogout => _logoutController.stream;
+
   Future<void> logout() async {
     final token = await _storage.read(tokenStorageKey);
     try {
@@ -142,6 +152,7 @@ class AuthRepository {
       await _storage.delete(tokenStorageKey);
       await _storage.delete(legacyTokenStorageKey);
       await _storage.delete(refreshTokenStorageKey);
+      _logoutController.add(null);
     }
   }
 

@@ -18,6 +18,13 @@ async function bootstrap() {
       throw new Error('JWT_SECRET is required to start the API server');
     }
 
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // Validate JWT_REFRESH_EXPIRES_IN in production
+    if (isProduction && (!process.env.JWT_REFRESH_EXPIRES_IN || process.env.JWT_REFRESH_EXPIRES_IN.trim().length === 0)) {
+      throw new Error('JWT_REFRESH_EXPIRES_IN is required in production to start the API server');
+    }
+
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
       bufferLogs: true,
     });
@@ -26,7 +33,6 @@ async function bootstrap() {
       app.set('trust proxy', 1);
       logger.log('Trust proxy enabled for forwarded headers');
     }
-    const isProduction = process.env.NODE_ENV === 'production';
     const configuredOrigins = getAllowedOrigins(logger, isProduction);
 
     if (isProduction) {
