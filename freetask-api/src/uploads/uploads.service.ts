@@ -80,6 +80,18 @@ export class UploadsService {
     };
   }
 
+  /**
+   * Get file stream for public endpoint. Only allows files with UUID pattern
+   * and allowed extensions to prevent unauthorized access to private files.
+   */
+  async getPublicFileStream(rawFilename: string) {
+    if (!UploadsService.isPublicFile(rawFilename)) {
+      this.logger.warn(`Blocked public access attempt for non-public file: ${rawFilename}`);
+      throw new NotFoundException('File not found or not publicly accessible');
+    }
+    return this.getFileStream(rawFilename);
+  }
+
   buildUploadResponse(filename: string) {
     const relativePath = this.buildRelativePath(filename);
     return { key: filename, url: relativePath };
@@ -160,6 +172,21 @@ export class UploadsService {
     const normalized = extension.toLowerCase();
     const allowed = ['.jpg', '.jpeg', '.png', '.gif', '.pdf', '.doc', '.docx'];
     return allowed.includes(normalized);
+  }
+
+  /**
+   * Check if filename is allowed for public access.
+   * Only allows UUID-pattern filenames with image extensions to prevent
+   * unauthorized access to private documents.
+   */
+  static isPublicFile(filename: string): boolean {
+    if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return false;
+    }
+
+    // Only allow UUID-pattern filenames (lowercase hex + hyphens)
+    const uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.(jpg|jpeg|png|gif)$/i;
+    return uuidPattern.test(filename);
   }
 
   static sanitizeBaseName(originalName: string) {

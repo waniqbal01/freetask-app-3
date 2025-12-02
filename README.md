@@ -213,6 +213,90 @@ in both `PUBLIC_BASE_URL` and `ALLOWED_ORIGINS`. Jika ujian dijalankan oleh QA d
 - [x] Uploads constrained by size/MIME with sanitized filenames.
 - [x] Global rate limiter enabled (30 req/min default) beyond auth.
 - [x] Login screen documents seed credentials for quick QA.
+- [x] Reviews require `revieweeId` to prevent missing parameter errors.
+- [x] Public uploads endpoint restricted to UUID-pattern image files only.
+
+## API Error Formats & Rate Limiting
+
+### Standard Error Responses
+
+All API errors follow a consistent JSON structure:
+
+```json
+{
+  "statusCode": 400,
+  "message": "Error description",
+  "error": "Bad Request"
+}
+```
+
+**Common Status Codes:**
+
+| Code | Type | Example Message |
+|------|------|----------------|
+| 400 | Bad Request | Validation errors, invalid input |
+| 401 | Unauthorized | Missing or invalid JWT token |
+| 403 | Forbidden | Insufficient permissions for action |
+| 404 | Not Found | Resource does not exist |
+| 409 | Conflict | Invalid job status transition |
+| 429 | Too Many Requests | Rate limit exceeded |
+| 500 | Internal Server Error | Unexpected server error |
+
+**Validation Error Example:**
+```json
+{
+  "statusCode": 400,
+  "message": [
+    "revieweeId must be a positive number",
+    "rating must not be less than 1"
+  ],
+  "error": "Bad Request"
+}
+```
+
+### Rate Limiting Configuration
+
+Rate limits protect the API from abuse and ensure fair resource allocation. All endpoints use `@nestjs/throttler` with the following limits:
+
+#### Authentication Endpoints
+- **POST `/auth/register`**: 10 requests per 60 seconds
+- **POST `/auth/login`**: 10 requests per 60 seconds
+- **POST `/auth/refresh`**: 20 requests per 60 seconds
+
+#### Upload Endpoints
+- **POST `/uploads`**: 5 requests per 60 seconds (stricter limit for resource-intensive operations)
+
+#### Global Default
+All other endpoints: 30 requests per 60 seconds
+
+**Rate Limit Response (429):**
+```json
+{
+  "statusCode": 429,
+  "message": "ThrottlerException: Too Many Requests"
+}
+```
+
+**Flutter Handling:**
+Ensure your Flutter error handling distinguishes between 429 (rate limit) and other errors to show appropriate user messages like "Terlalu banyak percubaan. Sila cuba lagi sebentar."
+
+### Upload Security Model
+
+#### Protected Endpoint (JWT Required)
+- **GET `/uploads/:filename`**: Requires `Authorization: Bearer <token>` header
+- Access to ALL files (images, PDFs, documents)
+- Returns 401 if JWT missing/invalid
+
+#### Public Endpoint (No Auth)
+- **GET `/uploads/public/:filename`**: No JWT required
+- **Restricted Access**: Only UUID-pattern image files (`.jpg`, `.jpeg`, `.png`, `.gif`)
+- Pattern: `[uuid].[image-ext]` (e.g., `12345678-1234-1234-1234-123456789abc.jpg`)
+- **Blocked**: PDFs, documents, non-UUID filenames
+- Returns 404 for blocked file patterns
+
+**Security Rationale:**  
+Public endpoint prevents unauthorized access to private documents while allowing avatar images and public assets to be served without authentication.
+
 
 ## API Conventions
 

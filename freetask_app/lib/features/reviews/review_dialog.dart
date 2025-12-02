@@ -8,10 +8,12 @@ class ReviewDialog extends StatefulWidget {
   const ReviewDialog({
     super.key,
     required this.jobId,
+    required this.revieweeId,
     required this.serviceTitle,
   });
 
   final String jobId;
+  final String revieweeId;
   final String serviceTitle;
 
   @override
@@ -74,7 +76,9 @@ class _ReviewDialogState extends State<ReviewDialog> {
                   hintText: 'Kongsi pengalaman anda...',
                 ),
                 validator: (String? value) {
-                  if (value != null && value.isNotEmpty && value.trim().length < 10) {
+                  if (value != null &&
+                      value.isNotEmpty &&
+                      value.trim().length < 10) {
                     return 'Komen mesti sekurang-kurangnya 10 aksara.';
                   }
                   return null;
@@ -86,7 +90,8 @@ class _ReviewDialogState extends State<ReviewDialog> {
       ),
       actions: <Widget>[
         TextButton(
-          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(false),
+          onPressed:
+              _isSubmitting ? null : () => Navigator.of(context).pop(false),
           child: const Text('Batal'),
         ),
         FilledButton(
@@ -112,10 +117,15 @@ class _ReviewDialogState extends State<ReviewDialog> {
     });
 
     final parsedJobId = int.tryParse(widget.jobId);
-    if (parsedJobId == null) {
+    final parsedRevieweeId = int.tryParse(widget.revieweeId);
+
+    if (parsedJobId == null || parsedRevieweeId == null) {
       setState(() => _isSubmitting = false);
       if (mounted) {
         Navigator.of(context).pop(false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Data tidak sah. Sila cuba lagi.')),
+        );
       }
       return;
     }
@@ -123,6 +133,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
     try {
       await reviewsRepository.createReview(
         jobId: parsedJobId,
+        revieweeId: parsedRevieweeId,
         rating: _rating,
         comment: _commentController.text,
       );
@@ -146,11 +157,20 @@ class _ReviewDialogState extends State<ReviewDialog> {
         );
       }
     } on DioException catch (error) {
-      final message = resolveDioErrorMessage(error);
       if (mounted) {
         setState(() {
           _isSubmitting = false;
         });
+
+        // Provide specific error messaging for common review validation failures
+        final message = error.response?.statusCode == 403
+            ? (error.response?.data?['message']?.toString() ??
+                'Tidak dapat menghantar review. Pastikan anda adalah sebahagian daripada job ini.')
+            : error.response?.statusCode == 400
+                ? (error.response?.data?['message']?.toString() ??
+                    'Data review tidak sah. Sila cuba lagi.')
+                : resolveDioErrorMessage(error);
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message)),
         );

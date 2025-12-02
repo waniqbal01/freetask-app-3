@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nest js/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { JobStatus, Prisma } from '@prisma/client';

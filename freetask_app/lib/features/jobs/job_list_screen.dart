@@ -217,10 +217,26 @@ class _JobListScreenState extends State<JobListScreen> {
   }
 
   Future<void> _openReviewDialog(Job job) async {
+    // Determine reviewee: if current user is client, review freelancer; otherwise review client
+    final currentUserId = _currentUser?.id;
+    final isClient = currentUserId == job.clientId;
+    final revieweeId = isClient ? job.freelancerId : job.clientId;
+
+    if (revieweeId.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Tidak dapat menentukan penerima review.')),
+        );
+      }
+      return;
+    }
+
     final submitted = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => ReviewDialog(
         jobId: job.id,
+        revieweeId: revieweeId,
         serviceTitle: job.serviceTitle,
       ),
     );

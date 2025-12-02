@@ -17,7 +17,9 @@ class Review {
 
   factory Review.fromJson(Map<String, dynamic> json) {
     return Review(
-      id: json['id'] is int ? json['id'] as int : int.tryParse('${json['id']}') ?? 0,
+      id: json['id'] is int
+          ? json['id'] as int
+          : int.tryParse('${json['id']}') ?? 0,
       jobId: json['jobId'] is int
           ? json['jobId'] as int
           : int.tryParse('${json['job_id'] ?? json['jobId']}') ?? 0,
@@ -25,7 +27,9 @@ class Review {
           ? json['rating'] as int
           : int.tryParse('${json['rating']}') ?? 0,
       comment: json['comment']?.toString(),
-      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? json['createdAt']?.toString() ?? '') ??
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ??
+              json['createdAt']?.toString() ??
+              '') ??
           DateTime.now(),
       reviewerId: json['reviewerId'] is int
           ? json['reviewerId'] as int
@@ -60,20 +64,24 @@ class ReviewsRepository {
 
   Future<Review> createReview({
     required int jobId,
+    required int revieweeId,
     required int rating,
     String? comment,
   }) async {
     final token = await _requireAuthToken();
-    final sanitizedComment = (comment?.trim().isEmpty ?? true) ? null : comment!.trim();
+    final sanitizedComment =
+        (comment?.trim().isEmpty ?? true) ? null : comment!.trim();
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         '/reviews',
         data: <String, dynamic>{
           'jobId': jobId,
+          'revieweeId': revieweeId,
           'rating': rating,
           if (sanitizedComment != null) 'comment': sanitizedComment,
         },
-        options: Options(headers: <String, String>{'Authorization': 'Bearer $token'}),
+        options: Options(
+            headers: <String, String>{'Authorization': 'Bearer $token'}),
       );
       final review = Review.fromJson(response.data ?? <String, dynamic>{});
       _submittedJobIds.add(review.jobId);
@@ -90,7 +98,8 @@ class ReviewsRepository {
       final response = await _dio.get<List<dynamic>>(
         '/reviews',
         queryParameters: <String, dynamic>{'jobId': jobId},
-        options: Options(headers: <String, String>{'Authorization': 'Bearer $token'}),
+        options: Options(
+            headers: <String, String>{'Authorization': 'Bearer $token'}),
       );
       final data = response.data ?? <dynamic>[];
       final reviews = data
@@ -110,7 +119,8 @@ class ReviewsRepository {
     try {
       final response = await _dio.get<List<dynamic>>(
         '/reviews/mine',
-        options: Options(headers: <String, String>{'Authorization': 'Bearer $token'}),
+        options: Options(
+            headers: <String, String>{'Authorization': 'Bearer $token'}),
       );
       final data = response.data ?? <dynamic>[];
       final reviews = data
@@ -134,7 +144,8 @@ class ReviewsRepository {
   Future<String> _requireAuthToken() async {
     final token = await _storage.read(AuthRepository.tokenStorageKey);
     if (token == null || token.isEmpty) {
-      throw const AuthRequiredException('Sila log masuk untuk buat/lihat review');
+      throw const AuthRequiredException(
+          'Sila log masuk untuk buat/lihat review');
     }
     return token;
   }

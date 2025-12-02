@@ -273,9 +273,10 @@ async function main() {
 
   await prisma.review.upsert({
     where: {
-      jobId_reviewerId: {
+      jobId_reviewerId_revieweeId: {
         jobId: jobs[4].id,
         reviewerId: clients[0].id,
+        revieweeId: freelancers[0].id,
       },
     },
     update: {

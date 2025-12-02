@@ -94,4 +94,51 @@ describe('UploadsController (e2e)', () => {
       .set('Authorization', 'Bearer test')
       .expect(200);
   });
+
+  describe('public endpoint security', () => {
+    it('allows access to UUID-pattern image files publicly', async () => {
+      const service = app.get(UploadsService);
+      service.ensureUploadsDir();
+      const uuidFilename = '12345678-1234-1234-1234-123456789abc.jpg';
+      const targetFile = join(uploadsPath, uuidFilename);
+      mkdirSync(uploadsPath, { recursive: true });
+      writeFileSync(targetFile, 'public-image');
+
+      await request(app.getHttpServer())
+        .get(`/uploads/public/${uuidFilename}`)
+        .expect(200);
+    });
+
+    it('blocks public access to PDF files', async () => {
+      const service = app.get(UploadsService);
+      service.ensureUploadsDir();
+      const pdfFilename = '12345678-1234-1234-1234-123456789abc.pdf';
+      const targetFile = join(uploadsPath, pdfFilename);
+      mkdirSync(uploadsPath, { recursive: true });
+      writeFileSync(targetFile, 'private-doc');
+
+      await request(app.getHttpServer())
+        .get(`/uploads/public/${pdfFilename}`)
+        .expect(404); // Not found or not publicly accessible
+    });
+
+    it('blocks public access to non-UUID filenames', async () => {
+      const service = app.get(UploadsService);
+      service.ensureUploadsDir();
+      const regularFilename = 'avatar.jpg';
+      const targetFile = join(uploadsPath, regularFilename);
+      mkdirSync(uploadsPath, { recursive: true });
+      writeFileSync(targetFile, 'should-not-access');
+
+      await request(app.getHttpServer())
+        .get(`/uploads/public/${regularFilename}`)
+        .expect(404);
+    });
+
+    it('blocks path traversal attempts on public endpoint', async () => {
+      await request(app.getHttpServer())
+        .get('/uploads/public/..%2F..%2Fmain.ts')
+        .expect(404);
+    });
+  });
 });

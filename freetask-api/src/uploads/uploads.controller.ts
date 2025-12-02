@@ -96,9 +96,10 @@ export class UploadsController {
   }
 
   // Public endpoint for serving avatars and public images (no JWT required)
+  // Only allows access to UUID-pattern image files for security
   @Get('public/:filename')
   async getPublicFile(@Param('filename') filename: string, @Res({ passthrough: true }) res: Response) {
-    const { stream, mimeType, filename: safeName, asAttachment } = await this.uploadsService.getFileStream(filename);
+    const { stream, mimeType, filename: safeName, asAttachment } = await this.uploadsService.getPublicFileStream(filename);
     res.setHeader('Content-Type', mimeType);
     const dispositionType = asAttachment ? 'attachment' : 'inline';
     res.setHeader('Content-Disposition', `${dispositionType}; filename="${safeName}"`);
