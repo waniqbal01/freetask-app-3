@@ -10,7 +10,9 @@ import 'auth_redirect.dart';
 import 'auth_repository.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.returnTo});
+
+  final String? returnTo;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -60,22 +62,31 @@ class _LoginScreenState extends State<LoginScreen> {
       if (success && mounted) {
         final user = authRepository.currentUser;
         if (user != null) {
+          if (widget.returnTo != null && widget.returnTo!.isNotEmpty) {
+            context.go(widget.returnTo!);
+            return;
+          }
           goToRoleHome(context, user.role);
         } else {
           context.go('/home');
         }
       } else if (mounted) {
         setState(() {
-          _errorMessage = 'Log masuk gagal. Sila cuba lagi.';
+          _errorMessage = 'Email atau kata laluan tidak sah. Sila cuba lagi.';
         });
-        showErrorSnackBar(context, 'Log masuk gagal. Sila cuba lagi.');
+        showErrorSnackBar(
+            context, 'Email atau kata laluan tidak sah. Sila cuba lagi.');
       }
     } catch (error) {
       if (error is DioException) {
         final message = resolveDioErrorMessage(error);
         if (mounted) {
           setState(() {
-            _errorMessage = message;
+            _errorMessage =
+                error.response?.statusCode == 401 ||
+                        message.toLowerCase().contains('unauthorized')
+                    ? 'Email atau kata laluan tidak sah. Sila cuba lagi.'
+                    : message;
           });
           showErrorSnackBar(context, message);
         }
@@ -158,6 +169,33 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                OutlinedButton.icon(
+                                  onPressed: _isSubmitting
+                                      ? null
+                                      : () =>
+                                          _fillDemoCredentials('client1@example.com'),
+                                  icon: const Icon(
+                                      Icons.person_pin_circle_outlined),
+                                  label:
+                                      const Text('Guna akaun demo Client'),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: _isSubmitting
+                                      ? null
+                                      : () => _fillDemoCredentials(
+                                          'freelancer1@example.com'),
+                                  icon:
+                                      const Icon(Icons.workspace_premium_outlined),
+                                  label: const Text(
+                                      'Guna akaun demo Freelancer'),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: AppSpacing.s16),
                             TextFormField(
                               controller: _emailController,
                               keyboardType: TextInputType.emailAddress,

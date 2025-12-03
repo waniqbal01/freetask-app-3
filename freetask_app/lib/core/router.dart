@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/admin/admin_dashboard_screen.dart';
+import '../features/admin/admin_unauthorized_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/auth/role_selection_screen.dart';
 import '../features/auth/startup_screen.dart';
+import '../features/onboarding/onboarding_screen.dart';
 import '../features/chat/chat_list_screen.dart';
 import '../features/chat/chat_room_screen.dart';
 import '../features/checkout/checkout_screen.dart';
@@ -45,40 +47,44 @@ final appRouter = GoRouter(
   initialLocation: '/startup',
   refreshListenable: authRefreshNotifier,
   redirect: (context, state) async {
-    final location = state.uri.path;
-    final isAuthPage = ['/login', '/register', '/role-selection'].contains(location);
-    final isStartup = location == '/startup' || location == '/';
-    final needsAuth = location.startsWith('/jobs') ||
-        location.startsWith('/chats') ||
-        location.startsWith('/admin') ||
-        location.startsWith('/settings');
+  final location = state.uri.path;
+  final isAuthPage = ['/login', '/register', '/role-selection'].contains(location);
+  final isStartup = location == '/startup' || location == '/';
+  final isAdminUnauthorized = location == '/admin/unauthorized';
+  final needsAuth = location.startsWith('/jobs') ||
+      location.startsWith('/chats') ||
+      location.startsWith('/admin') ||
+      location.startsWith('/settings');
 
     final tokenExists = await hasToken();
 
-    if (!tokenExists && needsAuth) {
-      return '/login';
-    }
+  if (!tokenExists && needsAuth) {
+    final encoded = Uri.encodeComponent(state.uri.toString());
+    return '/login?returnTo=$encoded';
+  }
 
-    if (tokenExists && (isAuthPage || isStartup)) {
-      return '/home';
+  if (tokenExists && (isAuthPage || isStartup)) {
+    final returnTo = state.uri.queryParameters['returnTo'];
+    if (returnTo != null && returnTo.isNotEmpty) {
+      return returnTo;
     }
+    return '/home';
+  }
 
-    if (location.startsWith('/admin')) {
-      try {
-        final user = await authRepository.getCurrentUser();
-        if (user == null) {
-          return '/login';
-        }
-        if (user.role.toUpperCase() != 'ADMIN') {
-          notificationService.messengerKey.currentState?.showSnackBar(
-            const SnackBar(content: Text('Anda bukan admin.')), 
-          );
-          return '/home';
-        }
-      } catch (_) {
+  if (location.startsWith('/admin') && !isAdminUnauthorized) {
+    try {
+      final user = await authRepository.getCurrentUser();
+      if (user == null) {
         return '/login';
       }
+      if (user.role.toUpperCase() != 'ADMIN') {
+        final encoded = Uri.encodeComponent(state.uri.toString());
+        return '/admin/unauthorized?from=$encoded';
+      }
+    } catch (_) {
+      return '/login';
     }
+  }
 
     if (location.startsWith('/jobs')) {
       final filter = state.uri.queryParameters['filter'];
@@ -106,6 +112,12 @@ final appRouter = GoRouter(
       },
     ),
     GoRoute(
+      path: '/onboarding',
+      builder: (BuildContext context, GoRouterState state) {
+        return const OnboardingScreen();
+      },
+    ),
+    GoRoute(
       path: '/',
       builder: (BuildContext context, GoRouterState state) {
         return const RoleSelectionScreen();
@@ -114,7 +126,8 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/login',
       builder: (BuildContext context, GoRouterState state) {
-        return const LoginScreen();
+        final returnTo = state.uri.queryParameters['returnTo'];
+        return LoginScreen(returnTo: returnTo);
       },
     ),
     GoRoute(
@@ -205,6 +218,13 @@ final appRouter = GoRouter(
       path: '/admin',
       builder: (BuildContext context, GoRouterState state) {
         return const AdminDashboardScreen();
+      },
+    ),
+    GoRoute(
+      path: '/admin/unauthorized',
+      builder: (BuildContext context, GoRouterState state) {
+        final from = state.uri.queryParameters['from'];
+        return AdminUnauthorizedScreen(from: from);
       },
     ),
     GoRoute(

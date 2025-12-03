@@ -562,6 +562,84 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return actions;
   }
 
+  Widget? _buildBottomActionBar(Job job) {
+    if (_isUserLoading || _userRole == null || _userId == null) {
+      return null;
+    }
+
+    final role = _userRole!.toUpperCase();
+    final isJobClient = job.clientId == _userId;
+    final isJobFreelancer = job.freelancerId == _userId;
+
+    if (role == 'FREELANCER' && isJobFreelancer) {
+      if (canFreelancerAccept(job.status)) {
+        return _ActionBarButton(
+          label: 'Accept Job',
+          isLoading: _isProcessing,
+          onPressed: () => _guardedJobAction(
+            allowed: true,
+            action: () => jobsRepository.acceptJob(job.id),
+            successMessage: 'Job diterima. Anda boleh mulakan apabila bersedia.',
+          ),
+        );
+      }
+      if (canFreelancerStart(job.status)) {
+        return _ActionBarButton(
+          label: 'Mulakan Kerja',
+          isLoading: _isProcessing,
+          onPressed: () => _guardedJobAction(
+            allowed: true,
+            action: () => jobsRepository.startJob(job.id),
+            successMessage: 'Job dimulakan! Status kini In Progress.',
+          ),
+        );
+      }
+      if (canFreelancerComplete(job.status)) {
+        return _ActionBarButton(
+          label: 'Hantar & Tandakan Selesai',
+          isLoading: _isProcessing,
+          onPressed: () => _guardedJobAction(
+            allowed: true,
+            action: () => jobsRepository.markCompleted(job.id),
+            successMessage: 'Job ditandakan selesai. Status kini Completed.',
+          ),
+        );
+      }
+      if (job.status == JobStatus.completed) {
+        return const _ActionBarLabel(text: 'Status: Completed');
+      }
+      if (job.status == JobStatus.disputed) {
+        return _ActionBarLabelButton(
+          label: 'Lihat status dispute',
+          onTap: () {},
+        );
+      }
+    }
+
+    if (role == 'CLIENT' && isJobClient) {
+      if (canClientCancel(job.status)) {
+        return _ActionBarButton(
+          label: 'Batalkan Job',
+          isLoading: _isProcessing,
+          onPressed: () => _guardedJobAction(
+            allowed: true,
+            action: () => jobsRepository.cancelJob(job.id),
+            successMessage: 'Job dibatalkan.',
+          ),
+          variant: FTButtonVariant.outline,
+        );
+      }
+      if (job.status == JobStatus.disputed) {
+        return const _ActionBarLabel(text: 'Dispute sedang berjalan');
+      }
+      if (job.status == JobStatus.completed) {
+        return const _ActionBarLabel(text: 'Status: Completed');
+      }
+    }
+
+    return null;
+  }
+
   Widget _buildEscrowSection(TextTheme textTheme) {
     final isAdmin = canMutateEscrow(_userRole);
     final record = _escrow;
@@ -856,6 +934,51 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               ),
                               const SizedBox(height: 6),
                               JobStatusBadge(visual: statusVisual),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  const Icon(Icons.shield_moon_outlined,
+                                      size: 18, color: AppColors.neutral500),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Status pembayaran / escrow:',
+                                    style:
+                                        textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  if (_isEscrowLoading)
+                                    const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  else if (_escrowError != null)
+                                    Tooltip(
+                                      message: _escrowError,
+                                      child: Chip(
+                                        label: const Text('Info escrow tiada'),
+                                        backgroundColor: Colors.orange.shade50,
+                                      ),
+                                    )
+                                  else
+                                    Chip(
+                                      label:
+                                          Text(_escrowStatusLabel(_escrow?.status)),
+                                      backgroundColor: _escrowStatusColor(
+                                              _escrow?.status)
+                                          .withOpacity(0.12),
+                                      labelStyle: TextStyle(
+                                        color:
+                                            _escrowStatusColor(_escrow?.status),
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ],
                           ),
                         ),
@@ -979,6 +1102,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
 
     return Scaffold(
+      bottomNavigationBar: job != null ? _buildBottomActionBar(job) : null,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -1045,6 +1169,94 @@ class _DetailRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ActionBarButton extends StatelessWidget {
+  const _ActionBarButton({
+    required this.label,
+    required this.onPressed,
+    this.isLoading = false,
+    this.variant = FTButtonVariant.filled,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+  final bool isLoading;
+  final FTButtonVariant variant;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x11000000),
+              blurRadius: 12,
+              offset: Offset(0, -2),
+            ),
+          ],
+        ),
+        child: FTButton(
+          label: label,
+          onPressed: isLoading ? null : onPressed,
+          isLoading: isLoading,
+          expanded: true,
+          variant: variant,
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionBarLabel extends StatelessWidget {
+  const _ActionBarLabel({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        width: double.infinity,
+        color: Colors.grey.shade100,
+        child: Center(
+          child: Text(
+            text,
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionBarLabelButton extends StatelessWidget {
+  const _ActionBarLabelButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        child: ElevatedButton.icon(
+          onPressed: onTap,
+          icon: const Icon(Icons.info_outline),
+          label: Text(label),
+          style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+        ),
+      ),
     );
   }
 }
