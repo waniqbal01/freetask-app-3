@@ -67,6 +67,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: isAdmin
                       ? 'Pantau transaksi dan status job dengan cepat.'
                       : 'Gunakan tab di bawah untuk bertukar skrin utama.',
+                  switchLabel: 'Tukar role/akun',
+                  onSwitch: () => context.go('/settings'),
                 ),
                 const SizedBox(height: AppSpacing.s16),
                 Card(
@@ -82,22 +84,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onTap: () => context.push('/settings/api'),
                         trailing: const Icon(Icons.chevron_right),
                       ),
-                      const Divider(height: 0),
-                      ListTile(
-                        leading: const Icon(Icons.shield_outlined),
-                        title: const Text('Admin Dashboard'),
-                        subtitle: Text(isAdmin
-                            ? 'Akses terus ke paparan admin.'
-                            : 'Hanya tersedia untuk role Admin.'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: isAdmin
-                            ? () => context.push('/admin')
-                            : () => ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Anda bukan admin.'),
-                                  ),
-                                ),
-                      ),
+                      if (isAdmin) ...[
+                        const Divider(height: 0),
+                        ListTile(
+                          leading: const Icon(Icons.shield_outlined),
+                          title: const Text('Admin Dashboard'),
+                          subtitle:
+                              const Text('Akses terus ke paparan admin.'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => context.push('/admin'),
+                        ),
+                      ],
                     ],
                   ),
                 ),

@@ -264,7 +264,8 @@ class _JobListScreenState extends State<JobListScreen> {
           builder: (BuildContext context, StateSetter setState) {
             final trimmed = controller.text.trim();
             final isValid = trimmed.length >= jobMinDisputeReasonLen;
-            final helper = '${trimmed.length}/$jobMinDisputeReasonLen aksara';
+            final helper =
+                '${trimmed.length}/$jobMaxDisputeReasonLen aksara (min $jobMinDisputeReasonLen)';
 
             return AlertDialog(
               title: const Text('Nyatakan sebab dispute'),
@@ -272,6 +273,11 @@ class _JobListScreenState extends State<JobListScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const Text(
+                    'Kongsikan ringkasan jelas tentang isu. Sertakan fakta penting tetapi elak maklumat sensitif.',
+                    style: AppTextStyles.bodySmall,
+                  ),
+                  const SizedBox(height: AppSpacing.s8),
                   TextField(
                     controller: controller,
                     decoration: InputDecoration(
@@ -281,6 +287,7 @@ class _JobListScreenState extends State<JobListScreen> {
                           ? null
                           : 'Minimum $jobMinDisputeReasonLen aksara diperlukan.',
                     ),
+                    maxLength: jobMaxDisputeReasonLen,
                     maxLines: 3,
                     onChanged: (_) => setState(() {}),
                   ),
@@ -289,12 +296,15 @@ class _JobListScreenState extends State<JobListScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.neutral600,
+                  ),
                   child: const Text('Batal'),
                 ),
                 FilledButton(
                   onPressed:
                       isValid ? () => Navigator.of(context).pop(trimmed) : null,
-                  child: const Text('Hantar'),
+                  child: const Text('Hantar Dispute'),
                 ),
               ],
             );
@@ -714,6 +724,12 @@ class _JobListScreenState extends State<JobListScreen> {
     }
 
     if (jobs.isEmpty) {
+      final title =
+          isClientView ? 'Tiada job sebagai client' : 'Tiada job sebagai freelancer';
+      final subtitle = isClientView
+          ? 'Buka marketplace untuk hire freelancer atau cuba refresh sekiranya anda baru selesai membuat tempahan.'
+          : 'Belum ada job aktif. Semak Job Board atau kekalkan status sedia menerima kerja.';
+
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -725,28 +741,27 @@ class _JobListScreenState extends State<JobListScreen> {
                   size: 48, color: Colors.grey),
               const SizedBox(height: 12),
               Text(
-                isClientView
-                    ? 'Tiada job sebagai client'
-                    : 'Tiada job sebagai freelancer',
+                title,
                 style: const TextStyle(fontSize: 16),
               ),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.neutral500),
+              ),
               const SizedBox(height: 16),
-              if (_currentUser?.role == 'CLIENT')
-                FTButton(
-                  label: 'Browse Services',
-                  onPressed: () => context.go('/home'),
-                  expanded: false,
-                )
-              else if (_currentUser?.role == 'FREELANCER')
-                FTButton(
-                  label: 'View Available Jobs',
-                  onPressed: () {
-                    // Navigate to job board or services
-                    context.go(
-                        '/home'); // Redirect to home for now as job board might be restricted
-                  },
-                  expanded: false,
-                ),
+              FTButton(
+                label: isClientView ? 'Cari Servis' : 'Pergi ke Job Board',
+                onPressed: () => context.go('/home'),
+                expanded: false,
+              ),
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: onRefresh,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Refresh senarai'),
+              ),
             ],
           ),
         ),
@@ -837,6 +852,8 @@ class _JobListScreenState extends State<JobListScreen> {
                       actionLabel: actionLabel,
                       onAction: onAction,
                       subtitle: subtitle,
+                      switchLabel: 'Tukar role/akun',
+                      onSwitch: () => context.go('/settings'),
                     ),
                   ),
                 const TabBar(

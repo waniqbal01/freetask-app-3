@@ -272,10 +272,49 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                 AppSpacing.s24,
                 AppSpacing.s24,
               ),
-              child: FTButton(
-                label: disableHire ? 'Harga belum tersedia' : 'Hire Sekarang',
-                isLoading: _isHireLoading,
-                onPressed: disableHire ? null : () => _handleHire(service),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (disableHire) ...[
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.s12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: AppRadius.mediumRadius,
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline,
+                              color: Colors.orange.shade700, size: 20),
+                          const SizedBox(width: AppSpacing.s8),
+                          Expanded(
+                            child: Text(
+                              'Harga servis belum sah. Mohon refresh atau hubungi sokongan untuk bantuan sebelum hire.',
+                              style: AppTextStyles.bodySmall
+                                  .copyWith(color: Colors.orange.shade800),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s12),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () => GoRouter.of(context).go('/chats'),
+                        icon: const Icon(Icons.support_agent_outlined),
+                        label: const Text('Chat sokongan'),
+                      ),
+                    ),
+                  ],
+                  FTButton(
+                    label: disableHire ? 'Harga belum tersedia' : 'Hire Sekarang',
+                    isLoading: _isHireLoading,
+                    onPressed: disableHire ? null : () => _handleHire(service),
+                  ),
+                ],
               ),
             ),
           );

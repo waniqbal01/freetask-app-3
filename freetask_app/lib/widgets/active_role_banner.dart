@@ -10,12 +10,16 @@ class ActiveRoleBanner extends StatelessWidget {
     this.actionLabel,
     this.onAction,
     this.subtitle,
+    this.switchLabel,
+    this.onSwitch,
   });
 
   final AppUser? user;
   final String? actionLabel;
   final VoidCallback? onAction;
   final String? subtitle;
+  final String? switchLabel;
+  final VoidCallback? onSwitch;
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +68,7 @@ class ActiveRoleBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Anda log masuk sebagai $label',
+                  'You are logged in as $label',
                   style: AppTextStyles.bodyLarge.copyWith(
                     fontWeight: FontWeight.w700,
                     color: accentColor,
@@ -76,6 +80,21 @@ class ActiveRoleBanner extends StatelessWidget {
                     subtitle!,
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.neutral500,
+                    ),
+                  ),
+                ],
+                if (switchLabel != null && onSwitch != null) ...[
+                  const SizedBox(height: AppSpacing.s4),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: onSwitch,
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      icon: const Icon(Icons.swap_horiz_rounded, size: 18),
+                      label: Text(switchLabel!),
                     ),
                   ),
                 ],

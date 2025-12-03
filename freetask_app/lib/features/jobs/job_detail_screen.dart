@@ -297,7 +297,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           builder: (BuildContext context, StateSetter setState) {
             final trimmed = controller.text.trim();
             final isValid = trimmed.length >= jobMinDisputeReasonLen;
-            final helper = '${trimmed.length}/$jobMinDisputeReasonLen aksara';
+            final helper =
+                '${trimmed.length}/$jobMaxDisputeReasonLen aksara (min $jobMinDisputeReasonLen)';
 
             return AlertDialog(
               title: const Text('Nyatakan sebab dispute'),
@@ -305,6 +306,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const Text(
+                    'Kongsikan ringkasan jelas tentang isu. Sertakan fakta penting tetapi elak maklumat sensitif.',
+                    style: AppTextStyles.bodySmall,
+                  ),
+                  const SizedBox(height: AppSpacing.s8),
                   TextField(
                     controller: controller,
                     decoration: InputDecoration(
@@ -314,6 +320,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           : 'Minimum $jobMinDisputeReasonLen aksara diperlukan.',
                       helperText: helper,
                     ),
+                    maxLength: jobMaxDisputeReasonLen,
                     maxLines: 3,
                     onChanged: (_) => setState(() {}),
                   ),
@@ -322,12 +329,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.neutral600,
+                  ),
                   child: const Text('Batal'),
                 ),
                 FilledButton(
                   onPressed:
                       isValid ? () => Navigator.of(context).pop(trimmed) : null,
-                  child: const Text('Hantar'),
+                  child: const Text('Hantar Dispute'),
                 ),
               ],
             );
