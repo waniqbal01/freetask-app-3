@@ -180,6 +180,8 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                                   actionLabel: actionLabel,
                                   onAction: onAction,
                                   subtitle: subtitle,
+                                  switchLabel: 'Tukar role/akun',
+                                  onSwitch: () => context.go('/settings'),
                                 ),
                                 const SizedBox(height: AppSpacing.s12),
                               ],
@@ -245,19 +247,49 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                         ),
                       )
                     else if (_services.isEmpty)
-                      const SliverFillRemaining(
+                      SliverFillRemaining(
                         hasScrollBody: false,
-                        child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
                             children: <Widget>[
-                              Icon(Icons.store_mall_directory_outlined,
+                              const Icon(Icons.store_mall_directory_outlined,
                                   size: 52, color: Colors.grey),
-                              SizedBox(height: 12),
-                              Text('Tiada servis buat masa ini'),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Tiada servis ditemui',
+                                style: AppTextStyles.titleMedium,
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Cuba tukar kategori atau segar semula carian. Anda juga boleh buang penapis untuk melihat lebih banyak servis.',
+                                textAlign: TextAlign.center,
+                                style: AppTextStyles.bodySmall,
+                              ),
+                              const SizedBox(height: 16),
+                              FTButton(
+                                label: 'Segar semula',
+                                onPressed: _fetchServices,
+                                expanded: false,
+                              ),
+                              const SizedBox(height: 8),
+                              TextButton.icon(
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedCategory = 'Semua';
+                                    _searchController.clear();
+                                  });
+                                  _fetchServices();
+                                },
+                                icon: const Icon(Icons.filter_alt_off_outlined),
+                                label: const Text('Buang penapis & kategori'),
+                              ),
                             ],
                           ),
                         ),
+                      ),
                       )
                     else
                       SliverPadding(
