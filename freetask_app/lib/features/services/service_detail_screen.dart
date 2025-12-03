@@ -68,15 +68,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   }
 
   Future<void> _handleHire(Service service) async {
-    if (service.isPriceUnavailable) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Harga servis belum tersedia. Sila cuba lagi atau hubungi sokongan.'),
-        ),
-      );
-      return;
-    }
-
     setState(() {
       _isHireLoading = true;
     });
@@ -85,8 +76,9 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       'serviceId': service.id,
       'title': service.title,
       'description': service.description,
+      'serviceDescription': service.description,
       'price': service.price,
-      'priceIssue': service.hasPriceIssue,
+      'priceIssue': service.hasPriceIssue || service.isPriceUnavailable,
     };
 
     try {
@@ -126,13 +118,20 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   Text(
                     _errorMessage!,
                     textAlign: TextAlign.center,
-                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error),
+                    style:
+                        AppTextStyles.bodyMedium.copyWith(color: AppColors.error),
                   ),
                   AppSpacing.vertical16,
                   FTButton(
                     label: 'Cuba Lagi',
                     onPressed: _loadService,
                     expanded: false,
+                  ),
+                  const SizedBox(height: AppSpacing.s8),
+                  TextButton.icon(
+                    onPressed: () => context.go('/home'),
+                    icon: const Icon(Icons.home_outlined),
+                    label: const Text('Pergi ke Home'),
                   ),
                 ],
               ),
@@ -309,11 +308,24 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                       ),
                     ),
                   ],
-                  FTButton(
-                    label: disableHire ? 'Harga belum tersedia' : 'Hire Sekarang',
-                    isLoading: _isHireLoading,
-                    onPressed: disableHire ? null : () => _handleHire(service),
-                  ),
+                  if (disableHire) ...[
+                    FTButton(
+                      label: 'Minta sebut harga',
+                      isLoading: _isHireLoading,
+                      onPressed: () => _handleHire(service),
+                    ),
+                    const SizedBox(height: AppSpacing.s8),
+                    OutlinedButton.icon(
+                      onPressed: () => GoRouter.of(context).go('/chats'),
+                      icon: const Icon(Icons.chat_bubble_outline),
+                      label: const Text('Chat sokongan / penyedia'),
+                    ),
+                  ] else
+                    FTButton(
+                      label: 'Hire Sekarang',
+                      isLoading: _isHireLoading,
+                      onPressed: () => _handleHire(service),
+                    ),
                 ],
               ),
             ),
@@ -515,6 +527,14 @@ class _PriceIssueBlock extends StatelessWidget {
                 onPressed: onRefresh,
                 expanded: false,
                 size: FTButtonSize.small,
+              ),
+              const SizedBox(width: AppSpacing.s12),
+              FTButton(
+                label: 'Minta sebut harga',
+                expanded: false,
+                size: FTButtonSize.small,
+                onPressed: () => GoRouter.of(context)
+                    .push('/jobs/checkout', extra: {'priceIssue': true}),
               ),
               const SizedBox(width: AppSpacing.s12),
               TextButton.icon(

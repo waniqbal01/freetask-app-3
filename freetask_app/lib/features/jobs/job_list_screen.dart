@@ -39,6 +39,7 @@ class _JobListScreenState extends State<JobListScreen> {
   String? _freelancerErrorMessage;
   bool _isProcessing = false;
   AppUser? _currentUser;
+  String? _userLoadError;
 
   @override
   void initState() {
@@ -55,8 +56,16 @@ class _JobListScreenState extends State<JobListScreen> {
       setState(() {
         _currentUser = user;
       });
-    } catch (_) {
-      // Ignore user fetch failures for now; UI will remain in guest mode.
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _userLoadError =
+            'Profil gagal dimuat. Tarik untuk refresh atau log keluar & masuk semula.';
+      });
+      showErrorSnackBar(
+        context,
+        'Profil gagal dimuat: $error',
+      );
     }
   }
 
@@ -717,6 +726,12 @@ class _JobListScreenState extends State<JobListScreen> {
                 onPressed: onRefresh,
                 expanded: false,
               ),
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: () => context.go('/home'),
+                icon: const Icon(Icons.home_outlined),
+                label: const Text('Pergi ke Home'),
+              ),
             ],
           ),
         ),
@@ -753,7 +768,8 @@ class _JobListScreenState extends State<JobListScreen> {
               const SizedBox(height: 16),
               FTButton(
                 label: isClientView ? 'Cari Servis' : 'Pergi ke Job Board',
-                onPressed: () => context.go('/home'),
+                onPressed: () =>
+                    isClientView ? context.go('/home') : context.go('/jobs'),
                 expanded: false,
               ),
               const SizedBox(height: 8),
@@ -844,6 +860,54 @@ class _JobListScreenState extends State<JobListScreen> {
                     ],
                   ),
                 ),
+                if (_userLoadError != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Container(
+                      padding: const EdgeInsets.all(AppSpacing.s12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: AppRadius.mediumRadius,
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.warning_amber_rounded,
+                              color: Colors.orange.shade700),
+                          const SizedBox(width: AppSpacing.s8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _userLoadError!,
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: Colors.orange.shade900,
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: _loadCurrentUser,
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.zero,
+                                  ),
+                                  child: const Text('Cuba muat semula profil'),
+                                ),
+                                TextButton.icon(
+                                  onPressed: authRepository.logout,
+                                  icon: const Icon(Icons.logout, size: 16),
+                                  label: const Text('Log keluar'),
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 if (_currentUser != null)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -858,8 +922,8 @@ class _JobListScreenState extends State<JobListScreen> {
                   ),
                 const TabBar(
                   tabs: [
-                    Tab(text: 'Client Jobs'),
-                    Tab(text: 'Freelancer Jobs'),
+                    Tab(text: 'Sebagai Client'),
+                    Tab(text: 'Sebagai Freelancer'),
                   ],
                 ),
                 Padding(

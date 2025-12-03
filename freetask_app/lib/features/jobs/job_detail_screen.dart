@@ -571,6 +571,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final isJobClient = job.clientId == _userId;
     final isJobFreelancer = job.freelancerId == _userId;
 
+    final expectedRole = _isClientView ? 'CLIENT' : 'FREELANCER';
+    if (role != expectedRole) {
+      return const _ActionBarLabel(
+        text: 'Mod paparan read-only. Tukar role untuk tindakan.',
+      );
+    }
+
     if (role == 'FREELANCER' && isJobFreelancer) {
       if (canFreelancerAccept(job.status)) {
         return _ActionBarButton(
@@ -820,12 +827,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
               ),
             ),
-          if (actions.isNotEmpty) ...[
+          if (visibleActions.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.s12),
             Wrap(
               spacing: AppSpacing.s8,
               runSpacing: AppSpacing.s8,
-              children: actions,
+              children: visibleActions,
             ),
           ]
         ],
@@ -879,6 +886,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     } else if (job != null) {
       final statusVisual = _statusVisual(job.status);
       final actions = _buildActions(job);
+      final viewLabel = _isClientView ? 'Client' : 'Freelancer';
+      final roleMismatch = _userRole != null &&
+          ((_isClientView && _userRole!.toUpperCase() != 'CLIENT') ||
+              (!_isClientView && _userRole!.toUpperCase() != 'FREELANCER'));
 
       body = SafeArea(
         child: Padding(
@@ -899,6 +910,61 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         ?.copyWith(fontWeight: FontWeight.w700),
                   ),
                 ],
+              ),
+              const SizedBox(height: AppSpacing.s12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.s12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: AppRadius.mediumRadius,
+                  border: Border.all(color: Colors.blue.shade100),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.badge_outlined, color: AppColors.primary),
+                        const SizedBox(width: AppSpacing.s8),
+                        Text(
+                          'Anda melihat job ini sebagai: $viewLabel',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.s6),
+                    Text(
+                      _isClientView
+                          ? 'Anda boleh semak progress, berhubung dengan freelancer dan sahkan hasil kerja.'
+                          : 'Pastikan anda menyiapkan kerja dan kemas kini status (Terima, Mula, Lengkap) mengikut perkembangan.',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.neutral600,
+                      ),
+                    ),
+                    if (roleMismatch) ...[
+                      const SizedBox(height: AppSpacing.s6),
+                      Row(
+                        children: [
+                          const Icon(Icons.info_outline,
+                              size: 18, color: Colors.redAccent),
+                          const SizedBox(width: AppSpacing.s6),
+                          Expanded(
+                            child: Text(
+                              'Akaun aktif bukan $viewLabel. Paparan adalah read-only untuk elak tindakan tidak sah.',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: Colors.redAccent,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
               ),
               const SizedBox(height: AppSpacing.s16),
               SectionCard(
@@ -989,12 +1055,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             width: 24,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           ),
-                        ] else if (actions.isNotEmpty) ...[
+                        ] else if (visibleActions.isNotEmpty) ...[
                           const SizedBox(width: AppSpacing.s8),
                           Wrap(
                             spacing: AppSpacing.s8,
                             runSpacing: AppSpacing.s8,
-                            children: actions,
+                            children: visibleActions,
                           ),
                         ],
                       ],
