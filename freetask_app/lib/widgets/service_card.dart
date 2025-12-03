@@ -56,7 +56,7 @@ class ServiceCard extends StatelessWidget {
                               service.freelancerName!.isNotEmpty) ...[
                             const SizedBox(width: AppSpacing.s8),
                             Text(
-                              service.freelancerName!,
+                              service.freelancerName ?? '',
                               style: textTheme.labelMedium
                                   ?.copyWith(color: AppColors.neutral400),
                             ),

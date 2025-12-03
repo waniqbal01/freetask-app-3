@@ -106,6 +106,32 @@ describe('ReviewsController', () => {
 
             await expect(controller.create(userId, validDto)).rejects.toThrow(NotFoundException);
         });
+
+        it('should reject negative revieweeId', async () => {
+            const negativeDto: CreateReviewDto = {
+                jobId: 1,
+                revieweeId: -1,
+                rating: 5,
+            };
+
+            // This would be caught by class-validator @IsPositive()
+            mockReviewsService.create.mockRejectedValue(new Error('revieweeId must be positive'));
+
+            await expect(controller.create(userId, negativeDto)).rejects.toThrow();
+        });
+
+        it('should reject zero revieweeId', async () => {
+            const zeroDto: CreateReviewDto = {
+                jobId: 1,
+                revieweeId: 0,
+                rating: 5,
+            };
+
+            // This would be caught by class-validator @IsPositive()
+            mockReviewsService.create.mockRejectedValue(new Error('revieweeId must be positive'));
+
+            await expect(controller.create(userId, zeroDto)).rejects.toThrow();
+        });
     });
 
     describe('findMany', () => {

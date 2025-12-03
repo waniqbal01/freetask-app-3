@@ -40,6 +40,10 @@ class AuthorizedImage extends StatelessWidget {
               _fallbackContainer(icon: Icons.image_not_supported_outlined);
         }
 
+        if (snapshot.data == null) {
+          return placeholder ?? _fallbackContainer();
+        }
+
         final data = snapshot.data!;
         final image = Image.network(
           data.url,
@@ -57,7 +61,7 @@ class AuthorizedImage extends StatelessWidget {
         }
 
         return ClipRRect(
-          borderRadius: borderRadius!,
+          borderRadius: borderRadius ?? BorderRadius.zero,
           child: image,
         );
       },

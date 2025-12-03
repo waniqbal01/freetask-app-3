@@ -29,11 +29,25 @@ class ChatListScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.chat_bubble_outline, size: 48, color: Colors.grey),
+                  const Icon(Icons.chat_bubble_outline,
+                      size: 48, color: Colors.grey),
                   const SizedBox(height: 12),
                   const Text('Tiada perbualan lagi.'),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Mulakan perbualan dengan pekerja bebas',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey.shade600,
+                        ),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    onPressed: () => context.push('/services'),
+                    icon: const Icon(Icons.search),
+                    label: const Text('Mulakan perbualan'),
+                  ),
                   const SizedBox(height: 12),
-                  ElevatedButton(
+                  OutlinedButton(
                     onPressed: () => ref.refresh(
                       chatThreadsProviderWithQuery(
                         (limit: limitQuery, offset: offsetQuery),
@@ -58,7 +72,8 @@ class ChatListScreen extends ConsumerWidget {
                   ? thread.lastMessage!
                   : 'Tiada mesej lagi.';
               final lastAtLabel = thread.lastAt != null
-                  ? DateFormat('dd MMM, h:mm a').format(thread.lastAt!.toLocal())
+                  ? DateFormat('dd MMM, h:mm a')
+                      .format(thread.lastAt!.toLocal())
                   : '—';
               return ListTile(
                 title: Text(thread.jobTitle),
@@ -115,7 +130,8 @@ class ChatListScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline, size: 42, color: Colors.redAccent),
+                  const Icon(Icons.error_outline,
+                      size: 42, color: Colors.redAccent),
                   const SizedBox(height: 12),
                   Text(
                     message,

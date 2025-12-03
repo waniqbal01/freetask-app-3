@@ -178,14 +178,15 @@ export class UploadsService {
    * Check if filename is allowed for public access.
    * Only allows UUID-pattern filenames with image extensions to prevent
    * unauthorized access to private documents.
+   * Enforces RFC 4122 compliance with version and variant field validation.
    */
   static isPublicFile(filename: string): boolean {
     if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
       return false;
     }
 
-    // Only allow UUID-pattern filenames (lowercase hex + hyphens)
-    const uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.(jpg|jpeg|png|gif)$/i;
+    // RFC 4122 compliant UUID pattern: version field (1-5), variant field (8/9/a/b/A/B)
+    const uuidPattern = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}\.(jpg|jpeg|png|gif)$/i;
     return uuidPattern.test(filename);
   }
 

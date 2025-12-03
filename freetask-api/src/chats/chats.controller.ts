@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, UseGuards, Logger } from '@nestjs/common';
 import { ChatsService } from './chats.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { GetUser } from '../auth/get-user.decorator';
@@ -10,6 +10,8 @@ import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 @Controller('chats')
 @UseGuards(JwtAuthGuard)
 export class ChatsController {
+  private readonly logger = new Logger(ChatsController.name);
+
   constructor(private readonly chatsService: ChatsService) { }
 
   @Get()
@@ -41,6 +43,7 @@ export class ChatsController {
     @GetUser('role') role: UserRole,
     @Body() dto: CreateMessageDto,
   ) {
+    this.logger.log(`Message sent by user ${userId} in job ${jobId}`);
     return this.chatsService.postMessage(jobId, userId, role, dto);
   }
 }

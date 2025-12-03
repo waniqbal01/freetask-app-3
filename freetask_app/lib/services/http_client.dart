@@ -14,6 +14,7 @@ import '../core/storage/storage.dart';
 class HttpClient {
   factory HttpClient({AppStorage? storage}) {
     _instance ??= HttpClient._(storage: storage);
+    assert(_instance != null, 'HttpClient instance should not be null');
     return _instance!;
   }
 
@@ -24,7 +25,7 @@ class HttpClient {
     _refreshDio = _createDio(Env.defaultApiBaseUrl);
     _attachInterceptors();
     _baseUrlFuture = _baseUrlManager.getBaseUrl();
-    _baseUrlFuture!.then((value) {
+    _baseUrlFuture?.then((value) {
       _currentBaseUrl = value;
       _applyBaseUrl(value);
     });
@@ -57,6 +58,8 @@ class HttpClient {
 
   Future<String> currentBaseUrl() async {
     _currentBaseUrl ??= await _baseUrlManager.getBaseUrl();
+    assert(_currentBaseUrl != null,
+        'Base URL should not be null after initialization');
     return _currentBaseUrl!;
   }
 
@@ -150,6 +153,8 @@ class HttpClient {
       if (kDebugMode) {
         debugPrint('Reusing in-flight refresh token request');
       }
+      assert(_refreshing != null,
+          'Refreshing future should not be null after null check');
       return _refreshing!;
     }
 

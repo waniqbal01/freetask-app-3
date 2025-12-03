@@ -140,5 +140,61 @@ describe('UploadsController (e2e)', () => {
         .get('/uploads/public/..%2F..%2Fmain.ts')
         .expect(404);
     });
+
+    it('allows valid RFC 4122 UUID v4 pattern', async () => {
+      const service = app.get(UploadsService);
+      service.ensureUploadsDir();
+      // Valid v4 UUID (version=4, variant=8/9/a/b)
+      const uuidFilename = '12345678-1234-4234-8234-123456789abc.jpg';
+      const targetFile = join(uploadsPath, uuidFilename);
+      mkdirSync(uploadsPath, { recursive: true });
+      writeFileSync(targetFile, 'valid-v4-uuid');
+
+      await request(app.getHttpServer())
+        .get(`/uploads/public/${uuidFilename}`)
+        .expect(200);
+    });
+
+    it('blocks invalid UUID version field (version=6)', async () => {
+      const service = app.get(UploadsService);
+      service.ensureUploadsDir();
+      // Invalid version field (6 instead of 1-5)
+      const invalidUuid = '12345678-1234-6234-8234-123456789abc.jpg';
+      const targetFile = join(uploadsPath, invalidUuid);
+      mkdirSync(uploadsPath, { recursive: true });
+      writeFileSync(targetFile, 'invalid-version');
+
+      await request(app.getHttpServer())
+        .get(`/uploads/public/${invalidUuid}`)
+        .expect(404);
+    });
+
+    it('blocks invalid UUID variant field', async () => {
+      const service = app.get(UploadsService);
+      service.ensureUploadsDir();
+      // Invalid variant field (first char should be 8/9/a/b)
+      const invalidUuid = '12345678-1234-4234-1234-123456789abc.jpg';
+      const targetFile = join(uploadsPath, invalidUuid);
+      mkdirSync(uploadsPath, { recursive: true });
+      writeFileSync(targetFile, 'invalid-variant');
+
+      await request(app.getHttpServer())
+        .get(`/uploads/public/${invalidUuid}`)
+        .expect(404);
+    });
+
+    it('allows uppercase UUID pattern', async () => {
+      const service = app.get(UploadsService);
+      service.ensureUploadsDir();
+      // Mixed case should work (regex is case-insensitive)
+      const mixedCaseUuid = '12345678-1234-4234-A234-123456789ABC.PNG';
+      const targetFile = join(uploadsPath, mixedCaseUuid);
+      mkdirSync(uploadsPath, { recursive: true });
+      writeFileSync(targetFile, 'mixed-case');
+
+      await request(app.getHttpServer())
+        .get(`/uploads/public/${mixedCaseUuid}`)
+        .expect(200);
+    });
   });
 });
