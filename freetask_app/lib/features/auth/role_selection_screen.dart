@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/storage/storage.dart';
+
+const String nextStepsDismissedKey = 'role_selection_next_steps_dismissed';
+
 class RoleSelectionScreen extends StatefulWidget {
   const RoleSelectionScreen({super.key});
 
@@ -10,6 +14,21 @@ class RoleSelectionScreen extends StatefulWidget {
 
 class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
   String? _selectedRole;
+  bool _showNextSteps = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBannerState();
+  }
+
+  Future<void> _loadBannerState() async {
+    final dismissed = await appStorage.read(nextStepsDismissedKey);
+    if (!mounted) return;
+    setState(() {
+      _showNextSteps = dismissed != 'true';
+    });
+  }
 
   void _onRoleTap(String role) {
     setState(() {
@@ -116,15 +135,58 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Anda ingin mendaftar sebagai?',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+          Text(
+            'Anda ingin mendaftar sebagai?',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 12),
+          if (_showNextSteps)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.indigo.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.indigo.shade100),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.flag_rounded, color: Colors.indigo),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'Langkah seterusnya:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text('1. Daftar akaun atau log masuk'),
+                        Text('2. Lengkapkan profil anda'),
+                        Text('3. (Client) Pilih servis atau post job pertama'),
+                        Text('4. (Freelancer) Tetapkan servis/skill anda'),
+                      ],
+                    ),
                   ),
+                  IconButton(
+                    onPressed: () async {
+                      setState(() => _showNextSteps = false);
+                      await appStorage.write(nextStepsDismissedKey, 'true');
+                    },
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 24),
-            Expanded(
-              child: GridView.count(
+          const SizedBox(height: 24),
+          Expanded(
+            child: GridView.count(
                 crossAxisCount: 2,
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,

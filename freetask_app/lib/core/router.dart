@@ -47,16 +47,23 @@ final appRouter = GoRouter(
   initialLocation: '/startup',
   refreshListenable: authRefreshNotifier,
   redirect: (context, state) async {
-  final location = state.uri.path;
-  final isAuthPage = ['/login', '/register', '/role-selection'].contains(location);
-  final isStartup = location == '/startup' || location == '/';
-  final isAdminUnauthorized = location == '/admin/unauthorized';
-  final needsAuth = location.startsWith('/jobs') ||
-      location.startsWith('/chats') ||
-      location.startsWith('/admin') ||
-      location.startsWith('/settings');
+    final location = state.uri.path;
+    final isAuthPage = ['/login', '/register', '/role-selection']
+        .contains(location);
+    final isStartup = location == '/startup' || location == '/';
+    final isAdminUnauthorized = location == '/admin/unauthorized';
+    final needsAuth = location.startsWith('/jobs') ||
+        location.startsWith('/chats') ||
+        location.startsWith('/admin') ||
+        location.startsWith('/settings');
+    final onboardingDone =
+        (await _storage.read(onboardingCompletedKey)) == 'true';
 
     final tokenExists = await hasToken();
+
+    if (!onboardingDone && !isStartup && !location.startsWith('/onboarding')) {
+      return '/onboarding';
+    }
 
   if (!tokenExists && needsAuth) {
     final encoded = Uri.encodeComponent(state.uri.toString());

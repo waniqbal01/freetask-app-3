@@ -27,6 +27,9 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
   String? _errorMessage;
   String? _descriptionError;
   String? _amountError;
+  late final TextEditingController _descriptionController;
+  late final TextEditingController _amountController;
+  late final bool _allowEditing;
 
   @override
   void initState() {
@@ -47,6 +50,21 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
         }
       }
     });
+
+    _descriptionController = TextEditingController(
+      text: _description.isNotEmpty ? _description : _serviceDescription,
+    );
+    _amountController = TextEditingController(
+      text: _amount != null && _amount! > 0 ? _amount!.toStringAsFixed(2) : '',
+    );
+    _allowEditing = _hasPriceIssue || _amount == null || _amount! <= 0;
+  }
+
+  @override
+  void dispose() {
+    _descriptionController.dispose();
+    _amountController.dispose();
+    super.dispose();
   }
 
   Map<String, dynamic> get _summary =>
@@ -78,9 +96,14 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
 
   Future<void> _createOrder() async {
     final serviceId = _serviceId;
-    final amount = _amount;
-    final description =
-        _description.isNotEmpty ? _description : _serviceDescription;
+    final descriptionInput = _descriptionController.text.trim();
+    final description = descriptionInput.isNotEmpty
+        ? descriptionInput
+        : (_description.isNotEmpty ? _description : _serviceDescription);
+    final amountInput = _amountController.text.trim();
+    final parsedAmount = amountInput.isNotEmpty
+        ? double.tryParse(amountInput)
+        : _amount;
 
     setState(() {
       _errorMessage = null;
@@ -88,28 +111,23 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       _amountError = null;
     });
 
-    if (serviceId.isEmpty ||
-        amount == null ||
-        description.isEmpty ||
-        _hasPriceIssue) {
+    if (serviceId.isEmpty || description.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_hasPriceIssue
-              ? 'Harga servis belum tersedia. Sila cuba lagi selepas refresh.'
-              : 'Maklumat servis tidak lengkap.'),
-        ),
+        const SnackBar(content: Text('Maklumat servis tidak lengkap.')),
       );
       return;
     }
 
     final trimmedDescription = description.trim();
 
-    if (trimmedDescription.length < jobMinDescLen || amount < jobMinAmount) {
+    if (trimmedDescription.length < jobMinDescLen ||
+        parsedAmount == null ||
+        parsedAmount < jobMinAmount) {
       setState(() {
         _descriptionError = trimmedDescription.length < jobMinDescLen
             ? 'Minimum $jobMinDescLen aksara diperlukan.'
             : null;
-        _amountError = amount < jobMinAmount
+        _amountError = parsedAmount == null || parsedAmount < jobMinAmount
             ? 'Minimum RM${jobMinAmount.toStringAsFixed(2)} diperlukan.'
             : null;
       });
@@ -124,7 +142,7 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
     try {
       final job = await jobsRepository.createOrder(
         serviceId,
-        amount,
+        parsedAmount!,
         description,
         serviceTitle:
             _title.isEmpty ? _summary['serviceTitle']?.toString() : _title,
@@ -252,10 +270,6 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     final title = _summary['title']?.toString();
-    final amount = _amount;
-    final amountText = amount == null || amount <= 0 || _hasPriceIssue
-        ? 'Harga belum tersedia'
-        : 'RM${amount.toStringAsFixed(2)}';
 
     return Scaffold(
       body: Container(
@@ -304,30 +318,53 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
                                 ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 12),
-                          Text(
-                              'Penerangan: ${_description.isNotEmpty ? _description : _serviceDescription}'),
-                          const SizedBox(height: 4),
-                          Text(
-                            _descriptionError ??
-                                'Minimum $jobMinDescLen aksara.',
-                            style: TextStyle(
-                              color: _descriptionError != null
-                                  ? AppColors.error
-                                  : AppColors.neutral400,
+                          TextField(
+                            controller: _descriptionController,
+                            maxLines: 3,
+                            decoration: InputDecoration(
+                              labelText: 'Penerangan job',
+                              helperText:
+                                  _descriptionError ?? 'Minimum $jobMinDescLen aksara.',
+                              helperStyle: TextStyle(
+                                color: _descriptionError != null
+                                    ? AppColors.error
+                                    : AppColors.neutral400,
+                              ),
+                              errorText: _descriptionError,
+                              alignLabelWithHint: true,
                             ),
                           ),
-                          const SizedBox(height: 12),
-                          Text('Jumlah: $amountText'),
-                          const SizedBox(height: 4),
-                          Text(
-                            _amountError ??
-                                'Minimum RM${jobMinAmount.toStringAsFixed(2)}.',
-                            style: TextStyle(
-                              color: _amountError != null
-                                  ? AppColors.error
-                                  : AppColors.neutral400,
+                          const SizedBox(height: AppSpacing.s12),
+                          TextField(
+                            controller: _amountController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            readOnly: !_allowEditing,
+                            decoration: InputDecoration(
+                              labelText: _allowEditing
+                                  ? 'Anggaran harga (RM)'
+                                  : 'Jumlah (RM)',
+                              helperText: _amountError ??
+                                  'Minimum RM${jobMinAmount.toStringAsFixed(2)}.',
+                              helperStyle: TextStyle(
+                                color: _amountError != null
+                                    ? AppColors.error
+                                    : AppColors.neutral400,
+                              ),
+                              errorText: _amountError,
+                              suffixIcon: _allowEditing
+                                  ? const Icon(Icons.edit_outlined)
+                                  : const Icon(Icons.lock_outline),
                             ),
                           ),
+                          if (_allowEditing) ...[
+                            const SizedBox(height: AppSpacing.s8),
+                            const Text(
+                              'Harga servis belum tersedia. Masukkan anggaran untuk minta sebut harga.',
+                              style: AppTextStyles.bodySmall,
+                            ),
+                          ],
                         ],
                       ),
                     ),

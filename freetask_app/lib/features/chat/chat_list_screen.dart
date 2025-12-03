@@ -5,9 +5,19 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/utils/error_utils.dart';
+import '../../models/user.dart';
 import 'chat_models.dart';
 import 'chat_repository.dart';
 import '../../widgets/app_bottom_nav.dart';
+import '../auth/auth_repository.dart';
+
+final _currentUserProvider = FutureProvider<AppUser?>((ref) async {
+  try {
+    return authRepository.getCurrentUser();
+  } catch (_) {
+    return null;
+  }
+});
 
 class ChatListScreen extends ConsumerWidget {
   const ChatListScreen({super.key, this.limitQuery, this.offsetQuery});
@@ -17,6 +27,8 @@ class ChatListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final userAsync = ref.watch(_currentUserProvider);
+    final role = userAsync.asData?.value?.role.toUpperCase();
     final threadsAsync = ref.watch(
       chatThreadsProviderWithQuery((limit: limitQuery, offset: offsetQuery)),
     );
@@ -24,6 +36,21 @@ class ChatListScreen extends ConsumerWidget {
     return threadsAsync.when(
       data: (List<ChatThread> threads) {
         if (threads.isEmpty) {
+          final isClient = role == 'CLIENT';
+          final title = isClient
+              ? 'Belum ada chat lagi.'
+              : 'Belum ada chat sebagai freelancer.';
+          final subtitle = isClient
+              ? 'Tempah servis atau post job untuk mulakan perbualan.'
+              : 'Terima job atau cipta servis untuk berhubung dengan client.';
+          final primaryCta = isClient ? 'Pergi ke Home' : 'Pergi ke Jobs';
+          final primaryAction = isClient
+              ? () => context.go('/home')
+              : () => context.go('/jobs');
+          final secondaryLabel =
+              isClient ? 'Lihat servis' : 'Cipta Servis';
+          final secondaryAction = () => context.go('/home');
+
           return Scaffold(
             appBar: AppBar(title: const Text('Chat')),
             bottomNavigationBar:
@@ -35,29 +62,35 @@ class ChatListScreen extends ConsumerWidget {
                   const Icon(Icons.chat_bubble_outline,
                       size: 48, color: Colors.grey),
                   const SizedBox(height: 12),
-                  const Text('Tiada perbualan lagi.'),
+                  Text(title),
                   const SizedBox(height: 8),
                   Text(
-                    'Buka servis yang anda tempah untuk berbual',
+                    subtitle,
+                    textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.grey.shade600,
                         ),
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton.icon(
-                    onPressed: () => context.go('/home'),
+                    onPressed: primaryAction,
                     icon: const Icon(Icons.search),
-                    label: const Text('Pergi ke Home'),
+                    label: Text(primaryCta),
                   ),
                   const SizedBox(height: 12),
-                  OutlinedButton(
+                  OutlinedButton.icon(
+                    onPressed: secondaryAction,
+                    icon: Icon(isClient ? Icons.store_mall_directory : Icons.add),
+                    label: Text(secondaryLabel),
+                  ),
+                  TextButton(
                     onPressed: () => ref.refresh(
                       chatThreadsProviderWithQuery(
                         (limit: limitQuery, offset: offsetQuery),
                       ),
                     ),
                     child: const Text('Muat Semula'),
-                  ),
+                  )
                 ],
               ),
             ),
