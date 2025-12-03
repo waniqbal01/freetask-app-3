@@ -7,8 +7,12 @@ import 'package:go_router/go_router.dart';
 import '../../core/utils/error_utils.dart';
 import '../../core/widgets/ft_button.dart';
 import '../../models/service.dart';
+import '../../models/user.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/service_card.dart';
+import '../../widgets/active_role_banner.dart';
+import '../../widgets/app_bottom_nav.dart';
+import '../auth/auth_repository.dart';
 import 'services_repository.dart';
 
 class ServiceListScreen extends StatefulWidget {
@@ -26,12 +30,14 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
   List<String> _categories = const <String>['Semua'];
   String _selectedCategory = 'Semua';
   Timer? _debounce;
+  AppUser? _currentUser;
 
   @override
   void initState() {
     super.initState();
     _fetchServices();
     _loadCategories();
+    _loadCurrentUser();
     _searchController.addListener(_onSearchChanged);
   }
 
@@ -109,9 +115,43 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
     }
   }
 
+  Future<void> _loadCurrentUser() async {
+    try {
+      final user = await authRepository.getCurrentUser();
+      if (!mounted) return;
+      setState(() {
+        _currentUser = user;
+      });
+    } catch (_) {
+      // keep browsing experience even if profile fails to load
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final role = _currentUser?.role.toUpperCase();
+    final bool isClient = role == 'CLIENT';
+    final bool isAdmin = role == 'ADMIN';
+    String? actionLabel;
+    VoidCallback? onAction;
+    String? subtitle;
+
+    if (isClient) {
+      actionLabel = 'Lihat Jobs';
+      onAction = () => context.go('/jobs');
+      subtitle = 'Terus pantau tempahan anda atau buka chat.';
+    } else if (role == 'FREELANCER') {
+      actionLabel = 'Job Board';
+      onAction = () => context.go('/jobs');
+      subtitle = 'Semak job masuk dan kekal responsif.';
+    } else if (isAdmin) {
+      actionLabel = 'Buka Admin';
+      onAction = () => context.go('/admin');
+      subtitle = 'Akses pantas ke dashboard pentadbir.';
+    }
+
     return Scaffold(
+      bottomNavigationBar: const AppBottomNav(currentTab: AppTab.home),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -131,15 +171,29 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                       SliverToBoxAdapter(
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                          child: _MarketplaceHero(
-                            searchController: _searchController,
-                            onSearchChanged: _onSearchChanged,
-                            categories: _categories,
-                            selectedCategory: _selectedCategory,
-                            onCategorySelected: (String value) {
-                              setState(() => _selectedCategory = value);
-                              _fetchServices();
-                            },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (_currentUser != null) ...[
+                                ActiveRoleBanner(
+                                  user: _currentUser,
+                                  actionLabel: actionLabel,
+                                  onAction: onAction,
+                                  subtitle: subtitle,
+                                ),
+                                const SizedBox(height: AppSpacing.s12),
+                              ],
+                              _MarketplaceHero(
+                                searchController: _searchController,
+                                onSearchChanged: _onSearchChanged,
+                                categories: _categories,
+                                selectedCategory: _selectedCategory,
+                                onCategorySelected: (String value) {
+                                  setState(() => _selectedCategory = value);
+                                  _fetchServices();
+                                },
+                              ),
+                            ],
                           ),
                         ),
                       ),
