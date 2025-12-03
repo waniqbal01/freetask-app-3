@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../core/utils/error_utils.dart';
 import 'chat_models.dart';
 import 'chat_repository.dart';
+import '../../widgets/app_bottom_nav.dart';
 
 class ChatListScreen extends ConsumerWidget {
   const ChatListScreen({super.key, this.limitQuery, this.offsetQuery});
@@ -25,6 +26,8 @@ class ChatListScreen extends ConsumerWidget {
         if (threads.isEmpty) {
           return Scaffold(
             appBar: AppBar(title: const Text('Chat')),
+            bottomNavigationBar:
+                const AppBottomNav(currentTab: AppTab.chats),
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -35,16 +38,16 @@ class ChatListScreen extends ConsumerWidget {
                   const Text('Tiada perbualan lagi.'),
                   const SizedBox(height: 8),
                   Text(
-                    'Mulakan perbualan dengan pekerja bebas',
+                    'Buka servis yang anda tempah untuk berbual',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.grey.shade600,
                         ),
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton.icon(
-                    onPressed: () => context.push('/services'),
+                    onPressed: () => context.go('/home'),
                     icon: const Icon(Icons.search),
-                    label: const Text('Mulakan perbualan'),
+                    label: const Text('Pergi ke Home'),
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton(
@@ -63,6 +66,7 @@ class ChatListScreen extends ConsumerWidget {
 
         return Scaffold(
           appBar: AppBar(title: const Text('Chat')),
+          bottomNavigationBar: const AppBottomNav(currentTab: AppTab.chats),
           body: ListView.separated(
             itemCount: threads.length,
             separatorBuilder: (_, __) => const Divider(height: 1),
@@ -106,6 +110,7 @@ class ChatListScreen extends ConsumerWidget {
       },
       loading: () => Scaffold(
         appBar: AppBar(title: const Text('Chat')),
+        bottomNavigationBar: const AppBottomNav(currentTab: AppTab.chats),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (Object error, StackTrace stackTrace) {
@@ -124,6 +129,7 @@ class ChatListScreen extends ConsumerWidget {
         }
         return Scaffold(
           appBar: AppBar(title: const Text('Chat')),
+          bottomNavigationBar: const AppBottomNav(currentTab: AppTab.chats),
           body: Center(
             child: Padding(
               padding: const EdgeInsets.all(24),

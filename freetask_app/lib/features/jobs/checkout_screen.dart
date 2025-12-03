@@ -331,6 +331,34 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: AppSpacing.s12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppSpacing.s16),
+                      decoration: BoxDecoration(
+                        color: AppColors.neutral50,
+                        borderRadius: AppRadius.mediumRadius,
+                        border: Border.all(color: AppColors.neutral100),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'Tip checkout',
+                            style: AppTextStyles.titleMedium,
+                          ),
+                          SizedBox(height: AppSpacing.s8),
+                          Text(
+                            'Perincikan skop tambahan dalam ruangan penerangan supaya freelancer jelas tentang tugasan.',
+                          ),
+                          SizedBox(height: AppSpacing.s8),
+                          Text(
+                            'Dana anda akan dipegang secara escrow dan hanya dilepaskan apabila job selesai atau selepas 7 hari.',
+                            style: AppTextStyles.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
                     const Spacer(),
                     if (_errorMessage != null) ...[
                       Container(

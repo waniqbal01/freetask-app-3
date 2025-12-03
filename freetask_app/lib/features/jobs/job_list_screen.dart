@@ -17,6 +17,8 @@ import 'job_transition_rules.dart';
 import 'jobs_repository.dart';
 import 'widgets/job_card_skeleton.dart';
 import 'widgets/job_status_badge.dart';
+import '../../widgets/active_role_banner.dart';
+import '../../widgets/app_bottom_nav.dart';
 
 class JobListScreen extends StatefulWidget {
   const JobListScreen({super.key, this.limitQuery, this.offsetQuery});
@@ -447,6 +449,15 @@ class _JobListScreenState extends State<JobListScreen> {
                 'ID Servis: ${job.serviceId}',
                 style: textTheme.bodySmall,
               ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => context.push('/chats/${job.id}/messages'),
+                  icon: const Icon(Icons.chat_bubble_outline),
+                  label: const Text('Buka Chat'),
+                ),
+              ),
               if (job.isDisputed)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
@@ -759,9 +770,29 @@ class _JobListScreenState extends State<JobListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final role = _currentUser?.role.toUpperCase();
+    String? actionLabel;
+    VoidCallback? onAction;
+    String? subtitle;
+
+    if (role == 'CLIENT') {
+      actionLabel = 'Lihat Home';
+      onAction = () => context.go('/home');
+      subtitle = 'Fokus pada tempahan anda dan teruskan chat.';
+    } else if (role == 'FREELANCER') {
+      actionLabel = 'Browse Services';
+      onAction = () => context.go('/home');
+      subtitle = 'Semak job yang perlu diterima atau ditolak.';
+    } else if (role == 'ADMIN') {
+      actionLabel = 'Admin';
+      onAction = () => context.go('/admin');
+      subtitle = 'Pantau job dan escrow yang aktif.';
+    }
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        bottomNavigationBar: const AppBottomNav(currentTab: AppTab.jobs),
         body: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -798,6 +829,16 @@ class _JobListScreenState extends State<JobListScreen> {
                     ],
                   ),
                 ),
+                if (_currentUser != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: ActiveRoleBanner(
+                      user: _currentUser,
+                      actionLabel: actionLabel,
+                      onAction: onAction,
+                      subtitle: subtitle,
+                    ),
+                  ),
                 const TabBar(
                   tabs: [
                     Tab(text: 'Client Jobs'),

@@ -221,6 +221,10 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                       ],
                     ),
                   ),
+                  if (service.isPriceUnavailable) ...[
+                    AppSpacing.vertical16,
+                    _PriceIssueBlock(onRefresh: _loadService),
+                  ],
                   AppSpacing.vertical24,
                   const Text(
                     'Butiran Servis',
@@ -269,17 +273,9 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                 AppSpacing.s24,
               ),
               child: FTButton(
-                label: 'Hire Sekarang',
+                label: disableHire ? 'Harga belum tersedia' : 'Hire Sekarang',
                 isLoading: _isHireLoading,
-                onPressed: disableHire
-                    ? () => ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Harga servis belum tersedia. Sila cuba lagi selepas refresh.',
-                            ),
-                          ),
-                        )
-                    : () => _handleHire(service),
+                onPressed: disableHire ? null : () => _handleHire(service),
               ),
             ),
           );
@@ -432,6 +428,63 @@ class _FreelancerProfile extends StatelessWidget {
             ),
           ),
           const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.neutral300),
+        ],
+      ),
+    );
+  }
+}
+
+class _PriceIssueBlock extends StatelessWidget {
+  const _PriceIssueBlock({required this.onRefresh});
+
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.s16),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: AppRadius.largeRadius,
+        border: Border.all(color: Colors.orange.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.orange.shade700),
+              const SizedBox(width: AppSpacing.s8),
+              Text(
+                'Harga servis belum tersedia atau tidak sah.',
+                style: AppTextStyles.bodyMedium
+                    .copyWith(color: Colors.orange.shade800, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s8),
+          const Text(
+            'Sila refresh untuk cuba semula atau hubungi sokongan sebelum meneruskan tempahan.',
+            style: AppTextStyles.bodySmall,
+          ),
+          const SizedBox(height: AppSpacing.s12),
+          Row(
+            children: [
+              FTButton(
+                label: 'Refresh',
+                onPressed: onRefresh,
+                expanded: false,
+                size: FTButtonSize.small,
+              ),
+              const SizedBox(width: AppSpacing.s12),
+              TextButton.icon(
+                onPressed: () => GoRouter.of(context).go('/chats'),
+                icon: const Icon(Icons.support_agent_outlined),
+                label: const Text('Hubungi sokongan'),
+              ),
+            ],
+          ),
         ],
       ),
     );

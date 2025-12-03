@@ -13,6 +13,7 @@ import '../features/jobs/checkout_screen.dart';
 import '../features/jobs/job_detail_screen.dart';
 import '../features/jobs/job_list_screen.dart';
 import '../features/settings/api_settings_screen.dart';
+import '../features/settings/settings_screen.dart';
 import '../features/services/service_detail_screen.dart';
 import '../features/services/service_list_screen.dart';
 import '../models/job.dart';
@@ -47,8 +48,10 @@ final appRouter = GoRouter(
     final location = state.uri.path;
     final isAuthPage = ['/login', '/register', '/role-selection'].contains(location);
     final isStartup = location == '/startup' || location == '/';
-    final needsAuth =
-        location.startsWith('/jobs') || location.startsWith('/chats') || location.startsWith('/admin');
+    final needsAuth = location.startsWith('/jobs') ||
+        location.startsWith('/chats') ||
+        location.startsWith('/admin') ||
+        location.startsWith('/settings');
 
     final tokenExists = await hasToken();
 
@@ -67,6 +70,9 @@ final appRouter = GoRouter(
           return '/login';
         }
         if (user.role.toUpperCase() != 'ADMIN') {
+          notificationService.messengerKey.currentState?.showSnackBar(
+            const SnackBar(content: Text('Anda bukan admin.')), 
+          );
           return '/home';
         }
       } catch (_) {
@@ -123,6 +129,12 @@ final appRouter = GoRouter(
       path: '/home',
       builder: (BuildContext context, GoRouterState state) {
         return const ServiceListScreen();
+      },
+    ),
+    GoRoute(
+      path: '/settings',
+      builder: (BuildContext context, GoRouterState state) {
+        return const SettingsScreen();
       },
     ),
     GoRoute(
