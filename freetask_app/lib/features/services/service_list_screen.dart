@@ -141,9 +141,9 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
       onAction = () => context.go('/jobs');
       subtitle = 'Terus pantau tempahan anda atau buka chat.';
     } else if (role == 'FREELANCER') {
-      actionLabel = 'Job Board';
+      actionLabel = 'Pergi ke Job Board';
       onAction = () => context.go('/jobs');
-      subtitle = 'Semak job masuk dan kekal responsif.';
+      subtitle = 'Anda Freelancer – lihat Job Board dan terima job yang sesuai.';
     } else if (isAdmin) {
       actionLabel = 'Buka Admin';
       onAction = () => context.go('/admin');
@@ -264,27 +264,29 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                               ),
                               const SizedBox(height: 8),
                               const Text(
-                                'Cuba tukar kategori atau segar semula carian. Anda juga boleh buang penapis untuk melihat lebih banyak servis.',
+                                'Tiada servis ditemui untuk carian ini. Anda boleh terus post job baru atau minta quote khusus.',
                                 textAlign: TextAlign.center,
                                 style: AppTextStyles.bodySmall,
                               ),
                               const SizedBox(height: 16),
                               FTButton(
+                                label: 'Post job sekarang',
+                                onPressed: () => context.push('/checkout'),
+                                expanded: true,
+                              ),
+                              const SizedBox(height: 8),
+                              FTButton(
+                                label: 'Minta quote',
+                                onPressed: () => context.push('/jobs'),
+                                expanded: true,
+                                variant: FTButtonVariant.outline,
+                              ),
+                              const SizedBox(height: 12),
+                              FTButton(
                                 label: 'Segar semula',
                                 onPressed: _fetchServices,
                                 expanded: false,
-                              ),
-                              const SizedBox(height: 8),
-                              TextButton.icon(
-                                onPressed: () {
-                                  setState(() {
-                                    _selectedCategory = 'Semua';
-                                    _searchController.clear();
-                                  });
-                                  _fetchServices();
-                                },
-                                icon: const Icon(Icons.filter_alt_off_outlined),
-                                label: const Text('Buang penapis & kategori'),
+                                variant: FTButtonVariant.ghost,
                               ),
                             ],
                           ),

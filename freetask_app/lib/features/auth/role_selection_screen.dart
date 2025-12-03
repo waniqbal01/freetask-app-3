@@ -19,7 +19,11 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     context.go('/register', extra: role);
   }
 
-  Widget _buildRoleCard({required String role, required IconData icon}) {
+  Widget _buildRoleCard({
+    required String role,
+    required IconData icon,
+    required List<String> bullets,
+  }) {
     final isSelected = _selectedRole == role;
 
     return GestureDetector(
@@ -58,6 +62,33 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                     color: isSelected ? Colors.white : Colors.black87,
                     fontWeight: FontWeight.bold,
                   ),
+            ),
+            const SizedBox(height: 12),
+            ...bullets.map(
+              (line) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 16,
+                      color: isSelected
+                          ? Colors.white
+                          : Colors.indigo.shade600,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        line,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: isSelected ? Colors.white : Colors.black87,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -99,8 +130,24 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                 mainAxisSpacing: 16,
                 childAspectRatio: 0.9,
                 children: [
-                  _buildRoleCard(role: 'Client', icon: Icons.business_center_outlined),
-                  _buildRoleCard(role: 'Freelancer', icon: Icons.person_outline),
+                  _buildRoleCard(
+                    role: 'Client',
+                    icon: Icons.business_center_outlined,
+                    bullets: const [
+                      'Upah freelancer untuk servis & job custom',
+                      'Bayar guna sistem escrow selamat',
+                      'Jejak status kerja & pembayaran',
+                    ],
+                  ),
+                  _buildRoleCard(
+                    role: 'Freelancer',
+                    icon: Icons.person_outline,
+                    bullets: const [
+                      'Terima job dari client',
+                      'Jana pendapatan dari kemahiran anda',
+                      'Bina reputasi & rating',
+                    ],
+                  ),
                 ],
               ),
             ),
