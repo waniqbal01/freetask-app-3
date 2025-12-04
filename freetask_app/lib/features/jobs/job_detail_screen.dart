@@ -30,11 +30,13 @@ class JobDetailScreen extends StatefulWidget {
     required this.jobId,
     this.initialJob,
     this.isClientView,
+    this.fromCheckout, // UX-C-05: Flag to show success banner
   });
 
   final String jobId;
   final Job? initialJob;
   final bool? isClientView;
+  final bool? fromCheckout;
 
   @override
   State<JobDetailScreen> createState() => _JobDetailScreenState();
@@ -53,6 +55,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   String? _userId;
   bool _isUserLoading = true;
   late bool _isClientView;
+  bool _showSuccessBanner = false; // UX-C-05: Track if from checkout
 
   @override
   void initState() {
@@ -62,6 +65,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       role: null,
     );
     _job = widget.initialJob;
+    _showSuccessBanner = widget.fromCheckout == true; // UX-C-05
     _hydrateUser();
     _loadJobIfNeeded();
     _fetchEscrow();
@@ -586,7 +590,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           onPressed: () => _guardedJobAction(
             allowed: true,
             action: () => jobsRepository.acceptJob(job.id),
-            successMessage: 'Job diterima. Anda boleh mulakan apabila bersedia.',
+            successMessage:
+                'Job diterima. Anda boleh mulakan apabila bersedia.',
           ),
         );
       }
@@ -912,6 +917,57 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 ],
               ),
               const SizedBox(height: AppSpacing.s12),
+              // UX-C-05: Success banner after checkout
+              if (_showSuccessBanner) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppSpacing.s16),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: AppRadius.mediumRadius,
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle_outline,
+                          color: Colors.green.shade700, size: 28),
+                      const SizedBox(width: AppSpacing.s12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Job berjaya dicipta!',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.green,
+                              ).copyWith(color: Colors.green.shade900),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Anda boleh track progress dan chat dengan freelancer di sini.',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: Colors.green.shade800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 20),
+                        color: Colors.green.shade700,
+                        onPressed: () {
+                          setState(() {
+                            _showSuccessBanner = false;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.s12),
+              ],
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(AppSpacing.s12),
@@ -925,7 +981,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.badge_outlined, color: AppColors.primary),
+                        const Icon(Icons.badge_outlined,
+                            color: AppColors.primary),
                         const SizedBox(width: AppSpacing.s8),
                         Text(
                           'Anda melihat job ini sebagai: $viewLabel',
@@ -1008,8 +1065,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                   const SizedBox(width: 6),
                                   Text(
                                     'Status pembayaran / escrow:',
-                                    style:
-                                        textTheme.bodyMedium?.copyWith(
+                                    style: textTheme.bodyMedium?.copyWith(
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -1032,11 +1088,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                     )
                                   else
                                     Chip(
-                                      label:
-                                          Text(_escrowStatusLabel(_escrow?.status)),
-                                      backgroundColor: _escrowStatusColor(
-                                              _escrow?.status)
-                                          .withOpacity(0.12),
+                                      label: Text(
+                                          _escrowStatusLabel(_escrow?.status)),
+                                      backgroundColor:
+                                          _escrowStatusColor(_escrow?.status)
+                                              .withOpacity(0.12),
                                       labelStyle: TextStyle(
                                         color:
                                             _escrowStatusColor(_escrow?.status),
@@ -1320,7 +1376,8 @@ class _ActionBarLabelButton extends StatelessWidget {
           onPressed: onTap,
           icon: const Icon(Icons.info_outline),
           label: Text(label),
-          style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+          style:
+              ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
         ),
       ),
     );

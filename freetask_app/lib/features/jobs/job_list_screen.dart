@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
+import '../../core/constants/app_formatters.dart';
+import '../../core/constants/app_strings.dart';
 import '../../core/utils/error_utils.dart';
+import '../../core/widgets/confirmation_dialog.dart';
 import '../../core/widgets/ft_button.dart';
 import '../../core/widgets/loading_overlay.dart';
 import '../../models/job.dart';
@@ -59,8 +61,7 @@ class _JobListScreenState extends State<JobListScreen> {
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _userLoadError =
-            'Profil gagal dimuat. Tarik untuk refresh atau log keluar & masuk semula.';
+        _userLoadError = AppStrings.errorLoadingProfile;
       });
       showErrorSnackBar(
         context,
@@ -115,7 +116,7 @@ class _JobListScreenState extends State<JobListScreen> {
       showErrorSnackBar(context, message);
     } catch (error) {
       if (!mounted) return;
-      const message = 'Ralat memuat job pelanggan.';
+      const message = AppStrings.errorLoadingJobs;
       setState(() {
         _clientErrorMessage = message;
       });
@@ -155,7 +156,7 @@ class _JobListScreenState extends State<JobListScreen> {
       showErrorSnackBar(context, message);
     } catch (error) {
       if (!mounted) return;
-      const message = 'Ralat memuat job freelancer.';
+      const message = AppStrings.errorLoadingJobs;
       setState(() {
         _freelancerErrorMessage = message;
       });
@@ -196,7 +197,7 @@ class _JobListScreenState extends State<JobListScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Tindakan tidak berjaya. Cuba lagi.'),
+            content: Text(AppStrings.errorActionFailed),
           ),
         );
       }
@@ -223,7 +224,7 @@ class _JobListScreenState extends State<JobListScreen> {
       setState(() {
         _isProcessing = false;
       });
-      showErrorSnackBar(context, 'Ralat melaksanakan tindakan.');
+      showErrorSnackBar(context, AppStrings.errorGeneric);
     }
   }
 
@@ -237,7 +238,7 @@ class _JobListScreenState extends State<JobListScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Tidak dapat menentukan penerima review.')),
+              content: Text(AppStrings.errorCannotDetermineReviewee)),
         );
       }
       return;
@@ -259,7 +260,7 @@ class _JobListScreenState extends State<JobListScreen> {
       await _loadJobs();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Terima kasih atas review anda!')),
+        const SnackBar(content: Text(AppStrings.successReviewSubmitted)),
       );
     }
   }
@@ -277,7 +278,7 @@ class _JobListScreenState extends State<JobListScreen> {
                 '${trimmed.length}/$jobMaxDisputeReasonLen aksara (min $jobMinDisputeReasonLen)';
 
             return AlertDialog(
-              title: const Text('Nyatakan sebab dispute'),
+              title: const Text(AppStrings.disputeReasonTitle),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -297,7 +298,7 @@ class _JobListScreenState extends State<JobListScreen> {
                         const SizedBox(width: AppSpacing.s8),
                         Expanded(
                           child: Text(
-                            'Dispute anda akan dihantar kepada admin untuk semakan. Sila jelaskan masalah anda dengan jelas.',
+                            AppStrings.disputeReasonInfo,
                             style: AppTextStyles.bodySmall.copyWith(
                               color: Colors.blue.shade900,
                             ),
@@ -308,18 +309,18 @@ class _JobListScreenState extends State<JobListScreen> {
                   ),
                   const SizedBox(height: AppSpacing.s16),
                   const Text(
-                    'Kongsikan ringkasan jelas tentang isu. Sertakan fakta penting tetapi elak maklumat sensitif.',
+                    AppStrings.disputeReasonHelper,
                     style: AppTextStyles.bodySmall,
                   ),
                   const SizedBox(height: AppSpacing.s8),
                   TextField(
                     controller: controller,
                     decoration: InputDecoration(
-                      hintText: 'Contoh: Kerja tidak memenuhi skop.',
+                      hintText: AppStrings.disputeReasonHint,
                       helperText: helper,
                       errorText: controller.text.isEmpty || isValid
                           ? null
-                          : 'Minimum $jobMinDisputeReasonLen aksara diperlukan.',
+                          : AppStrings.disputeReasonMinError,
                     ),
                     maxLength: jobMaxDisputeReasonLen,
                     maxLines: 3,
@@ -333,12 +334,13 @@ class _JobListScreenState extends State<JobListScreen> {
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.neutral600,
                   ),
-                  child: const Text('Batal'),
+                  child: const Text(AppStrings.btnCancel),
                 ),
                 FilledButton(
                   onPressed:
                       isValid ? () => Navigator.of(context).pop(trimmed) : null,
-                  child: const Text('Hantar Dispute'),
+                  child: Text(
+                      '${AppStrings.btnSubmit} ${AppStrings.jobActionDispute}'),
                 ),
               ],
             );
@@ -355,18 +357,13 @@ class _JobListScreenState extends State<JobListScreen> {
   }
 
   String _formatJobDate(DateTime? date) {
-    if (date == null) {
-      return 'Tarikh tidak tersedia';
-    }
-
-    return DateFormat('dd MMM yyyy, h:mm a').format(date.toLocal());
+    return AppFormatters.formatDateTime(date);
   }
 
   String _formatAmount(Job job) {
-    if (job.hasAmountIssue || job.amount <= 0) {
-      return 'Jumlah tidak sah / sila refresh';
-    }
-    return 'RM${job.amount.toStringAsFixed(2)}';
+    return AppFormatters.formatAmount(
+      job.hasAmountIssue || job.amount <= 0 ? null : job.amount,
+    );
   }
 
   void _openJobDetail(Job job, {required bool isClientView}) {
@@ -490,7 +487,7 @@ class _JobListScreenState extends State<JobListScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'ID Servis: ${job.serviceId}',
+                '${AppStrings.serviceIdLabel}: ${job.serviceId}',
                 style: textTheme.bodySmall,
               ),
               const SizedBox(height: 8),
@@ -499,7 +496,7 @@ class _JobListScreenState extends State<JobListScreen> {
                 child: TextButton.icon(
                   onPressed: () => context.push('/chats/${job.id}/messages'),
                   icon: const Icon(Icons.chat_bubble_outline),
-                  label: const Text('Buka Chat'),
+                  label: const Text(AppStrings.btnOpenChat),
                 ),
               ),
               if (job.isDisputed)
@@ -526,7 +523,7 @@ class _JobListScreenState extends State<JobListScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Dispute sedang disemak',
+                                AppStrings.disputeInProgress,
                                 style: textTheme.bodySmall?.copyWith(
                                   color: Colors.orange.shade900,
                                   fontWeight: FontWeight.w700,
@@ -577,12 +574,22 @@ class _JobListScreenState extends State<JobListScreen> {
           .contains(job.status)) {
         actions.add(
           FTButton(
-            label: 'Batalkan',
+            label: AppStrings.jobActionCancel,
             isLoading: _isProcessing,
-            onPressed: () => _handleAction(
-              () => jobsRepository.cancelJob(job.id),
-              'Job dibatalkan.',
-            ),
+            onPressed: () async {
+              final confirmed = await showConfirmationDialog(
+                context: context,
+                title: AppStrings.confirmCancelJobTitle,
+                message: AppStrings.confirmCancelJobMessage,
+                confirmText: AppStrings.jobActionCancel,
+                isDangerous: true,
+              );
+              if (confirmed != true) return;
+              await _handleAction(
+                () => jobsRepository.cancelJob(job.id),
+                AppStrings.successJobCancelled,
+              );
+            },
             expanded: false,
             size: FTButtonSize.small,
           ),
@@ -595,14 +602,14 @@ class _JobListScreenState extends State<JobListScreen> {
         }
         actions.add(
           FTButton(
-            label: 'Dispute',
+            label: AppStrings.jobActionDispute,
             isLoading: _isProcessing,
             onPressed: () async {
               final reason = await _promptDisputeReason();
               if (reason == null) return;
               await _handleAction(
                 () => jobsRepository.disputeJob(job.id, reason),
-                'Dispute telah dihantar. Admin akan menyemak dan menghubungi anda jika perlu.',
+                AppStrings.successDisputeSubmitted,
               );
             },
             expanded: false,
@@ -629,22 +636,32 @@ class _JobListScreenState extends State<JobListScreen> {
       return Row(
         children: [
           FTButton(
-            label: 'Reject',
+            label: AppStrings.jobActionReject,
             isLoading: _isProcessing,
-            onPressed: () => _handleAction(
-              () => jobsRepository.rejectJob(job.id),
-              'Job telah ditolak dan dikemas kini.',
-            ),
+            onPressed: () async {
+              final confirmed = await showConfirmationDialog(
+                context: context,
+                title: AppStrings.confirmRejectJobTitle,
+                message: AppStrings.confirmRejectJobMessage,
+                confirmText: AppStrings.jobActionReject,
+                isDangerous: true,
+              );
+              if (confirmed != true) return;
+              await _handleAction(
+                () => jobsRepository.rejectJob(job.id),
+                AppStrings.successJobRejected,
+              );
+            },
             expanded: false,
             size: FTButtonSize.small,
           ),
           const SizedBox(width: 8),
           FTButton(
-            label: 'Accept',
+            label: AppStrings.jobActionAccept,
             isLoading: _isProcessing,
             onPressed: () => _handleAction(
               () => jobsRepository.acceptJob(job.id),
-              'Job diterima. Anda boleh mulakan apabila bersedia.',
+              AppStrings.successJobAccepted,
             ),
             expanded: false,
             size: FTButtonSize.small,
@@ -660,11 +677,11 @@ class _JobListScreenState extends State<JobListScreen> {
       return Align(
         alignment: Alignment.centerRight,
         child: FTButton(
-          label: 'Start',
+          label: AppStrings.jobActionStart,
           isLoading: _isProcessing,
           onPressed: () => _handleAction(
             () => jobsRepository.startJob(job.id),
-            'Job dimulakan! Status kini In Progress.',
+            AppStrings.successJobStarted,
           ),
           expanded: false,
           size: FTButtonSize.small,
@@ -679,25 +696,25 @@ class _JobListScreenState extends State<JobListScreen> {
       return Row(
         children: [
           FTButton(
-            label: 'Complete',
+            label: AppStrings.jobActionComplete,
             isLoading: _isProcessing,
             onPressed: () => _handleAction(
               () => jobsRepository.markCompleted(job.id),
-              'Job ditandakan selesai. Status kini Completed.',
+              AppStrings.successJobCompleted,
             ),
             expanded: false,
             size: FTButtonSize.small,
           ),
           const SizedBox(width: 8),
           FTButton(
-            label: 'Dispute',
+            label: AppStrings.jobActionDispute,
             isLoading: _isProcessing,
             onPressed: () async {
               final reason = await _promptDisputeReason();
               if (reason == null) return;
               await _handleAction(
                 () => jobsRepository.disputeJob(job.id, reason),
-                'Dispute telah dihantar. Admin akan menyemak dan menghubungi anda jika perlu.',
+                AppStrings.successDisputeSubmitted,
               );
             },
             expanded: false,
@@ -719,10 +736,10 @@ class _JobListScreenState extends State<JobListScreen> {
                   Icons.check_circle,
                   color: Colors.green,
                 ),
-                label: Text('Review dihantar'),
+                label: Text(AppStrings.reviewSubmitted),
               )
             : FTButton(
-                label: 'Tulis review',
+                label: AppStrings.jobActionReview,
                 onPressed: () => _openReviewDialog(job),
                 expanded: false,
                 size: FTButtonSize.small,
@@ -769,7 +786,7 @@ class _JobListScreenState extends State<JobListScreen> {
               ),
               const SizedBox(height: 12),
               FTButton(
-                label: 'Cuba Lagi',
+                label: AppStrings.btnRetry,
                 onPressed: onRefresh,
                 expanded: false,
               ),
@@ -777,7 +794,7 @@ class _JobListScreenState extends State<JobListScreen> {
               TextButton.icon(
                 onPressed: () => context.go('/home'),
                 icon: const Icon(Icons.home_outlined),
-                label: const Text('Pergi ke Home'),
+                label: const Text(AppStrings.btnGoHome),
               ),
             ],
           ),
@@ -787,11 +804,11 @@ class _JobListScreenState extends State<JobListScreen> {
 
     if (jobs.isEmpty) {
       final title = isClientView
-          ? 'Tiada job sebagai client'
-          : 'Tiada job sebagai freelancer';
+          ? AppStrings.emptyJobsClient
+          : AppStrings.emptyJobsFreelancer;
       final subtitle = isClientView
-          ? 'Buka marketplace untuk hire freelancer atau cuba refresh sekiranya anda baru selesai membuat tempahan.'
-          : 'Belum ada job aktif. Semak Job Board atau kekalkan status sedia menerima kerja.';
+          ? AppStrings.emptyJobsClientSubtitle
+          : AppStrings.emptyJobsFreelancerSubtitle;
 
       return Center(
         child: Padding(

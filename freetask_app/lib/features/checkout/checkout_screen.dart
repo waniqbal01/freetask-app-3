@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../escrow/escrow_repository.dart';
 import '../../theme/app_theme.dart';
@@ -20,8 +21,9 @@ class CheckoutScreen extends StatelessWidget {
     } else if (rawPrice is String && rawPrice.isNotEmpty) {
       parsedPrice = double.tryParse(rawPrice);
     }
-    final priceText =
-        parsedPrice == null || parsedPrice <= 0 ? 'Harga belum tersedia / invalid' : 'RM${parsedPrice.toStringAsFixed(2)}';
+    final priceText = parsedPrice == null || parsedPrice <= 0
+        ? 'Harga belum tersedia / invalid'
+        : 'RM${parsedPrice.toStringAsFixed(2)}';
 
     return Scaffold(
       body: Container(
@@ -72,13 +74,15 @@ class CheckoutScreen extends StatelessWidget {
                             const SizedBox(height: 12),
                             Row(
                               children: [
-                                const Icon(Icons.payments_outlined, color: AppColors.neutral300),
+                                const Icon(Icons.payments_outlined,
+                                    color: AppColors.neutral300),
                                 const SizedBox(width: 8),
                                 Text('Harga: $priceText'),
                               ],
                             ),
                             const SizedBox(height: 8),
-                            const Text('Maklumat tambahan tidak tersedia untuk demo ini.'),
+                            const Text(
+                                'Maklumat tambahan tidak tersedia untuk demo ini.'),
                           ],
                         ),
                 ),
@@ -87,13 +91,18 @@ class CheckoutScreen extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () async {
-                      final jobId = (draft['jobId'] ?? draft['serviceId'])?.toString();
+                      final jobId =
+                          (draft['jobId'] ?? draft['serviceId'])?.toString();
                       final price = parsedPrice;
 
-                      if (jobId == null || jobId.isEmpty || price == null || price <= 0) {
+                      if (jobId == null ||
+                          jobId.isEmpty ||
+                          price == null ||
+                          price <= 0) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Maklumat job tidak lengkap untuk demo escrow.'),
+                            content: Text(
+                                'Maklumat job tidak lengkap untuk demo escrow.'),
                           ),
                         );
                         return;
@@ -104,13 +113,20 @@ class CheckoutScreen extends StatelessWidget {
 
                         if (!context.mounted) return;
 
+                        // UX-C-05: Redirect to job detail with success flag
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                              'Dana RM${price.toStringAsFixed(2)} dipegang untuk status Booked job $jobId.',
+                              'Dana RM${price.toStringAsFixed(2)} dipegang untuk job $jobId.',
                             ),
+                            duration: const Duration(seconds: 2),
                           ),
                         );
+
+                        // Navigate to job detail with fromCheckout flag
+                        context.go('/jobs/$jobId', extra: {
+                          'fromCheckout': true,
+                        });
                       } on EscrowUnavailable catch (error) {
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -121,7 +137,8 @@ class CheckoutScreen extends StatelessWidget {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                              error.response?.data.toString() ?? 'Ralat escrow.',
+                              error.response?.data.toString() ??
+                                  'Ralat escrow.',
                             ),
                           ),
                         );

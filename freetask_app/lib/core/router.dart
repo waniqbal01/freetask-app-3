@@ -204,11 +204,13 @@ final appRouter = GoRouter(
         final extras = state.extra as Map<String, dynamic>?;
         final job = extras?['job'] as Job?;
         final isClientView = extras?['isClientView'] as bool?;
+        final fromCheckout = extras?['fromCheckout'] as bool?; // UX-C-05
         final jobId = state.pathParameters['id'] ?? 'unknown';
         return JobDetailScreen(
           jobId: jobId,
           initialJob: job,
           isClientView: isClientView,
+          fromCheckout: fromCheckout,
         );
       },
     ),

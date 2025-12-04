@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_strings.dart';
 import '../../core/storage/storage.dart';
 import '../onboarding/onboarding_screen.dart';
 import 'auth_redirect.dart';
@@ -64,7 +65,7 @@ class _StartupScreenState extends State<StartupScreen> {
           children: <Widget>[
             CircularProgressIndicator(),
             SizedBox(height: 16),
-            Text('Menyediakan aplikasi...'),
+            Text(AppStrings.loadingApp),
           ],
         ),
       ),

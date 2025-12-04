@@ -17,10 +17,10 @@ String resolveDioErrorMessage(
         '3. CORS configuration betul? (untuk Web)';
   }
 
-  // Timeout errors
+  // Timeout errors - UX-G-03: Enhanced message
   if (error.type == DioExceptionType.connectionTimeout ||
       error.type == DioExceptionType.receiveTimeout) {
-    return 'Sambungan terputus. Server tidak bertindak balas.';
+    return 'Sambungan internet bermasalah. Sila periksa rangkaian anda.';
   }
 
   // HTTP error responses (server responded with error)
@@ -28,12 +28,34 @@ String resolveDioErrorMessage(
     return 'Email atau kata laluan salah.';
   }
 
-  if (statusCode == 409 && path.contains('/auth/register')) {
-    return 'Email ini sudah berdaftar. Sila log masuk.';
+  // UX-G-03: Enhanced error messages for common status codes
+  if (statusCode == 401) {
+    return 'Sesi anda tamat. Sila login semula.';
+  }
+
+  if (statusCode == 409) {
+    // Check if it's a registration conflict
+    if (path.contains('/auth/register')) {
+      return 'Email ini sudah berdaftar. Sila log masuk.';
+    }
+    // Generic conflict message
+    return 'Tindakan ini tidak dibenarkan dalam status semasa. Sila refresh dan cuba lagi.';
   }
 
   if (statusCode == 400) {
     return 'Sila semak semula maklumat yang diisi.';
+  }
+
+  if (statusCode == 403) {
+    return 'Anda tidak mempunyai kebenaran untuk tindakan ini.';
+  }
+
+  if (statusCode == 404) {
+    return 'Sumber yang diminta tidak dijumpai.';
+  }
+
+  if (statusCode != null && statusCode >= 500) {
+    return 'Ralat pelayan. Sila cuba sebentar lagi.';
   }
 
   // Extract message from response

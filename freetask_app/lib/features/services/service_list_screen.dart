@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_strings.dart';
 import '../../core/utils/error_utils.dart';
 import '../../core/widgets/ft_button.dart';
 import '../../models/service.dart';
@@ -83,7 +84,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
       showErrorSnackBar(context, message);
     } catch (error) {
       if (!mounted) return;
-      const message = 'Tidak dapat memuatkan servis. Sila cuba lagi.';
+      const message = AppStrings.errorLoadingServices;
       setState(() {
         _errorMessage = message;
       });

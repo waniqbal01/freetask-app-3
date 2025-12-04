@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_strings.dart';
+import '../../core/widgets/confirmation_dialog.dart';
 import '../../core/widgets/ft_button.dart';
 import '../../models/user.dart';
 import '../../theme/app_theme.dart';
@@ -42,6 +44,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _logout() async {
+    final confirmed = await showConfirmationDialog(
+      context: context,
+      title: AppStrings.confirmLogoutTitle,
+      message: AppStrings.confirmLogoutMessage,
+      confirmText: AppStrings.btnLogout,
+      isDangerous: true,
+    );
+    if (confirmed != true) return;
+
     await authRepository.logout();
     if (!mounted) return;
     context.go('/login');
@@ -80,7 +91,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ListTile(
                         leading: const Icon(Icons.settings_ethernet_outlined),
                         title: const Text('API Server'),
-                        subtitle: const Text('Kemaskini URL backend demo/beta.'),
+                        subtitle:
+                            const Text('Kemaskini URL backend demo/beta.'),
                         onTap: () => context.push('/settings/api'),
                         trailing: const Icon(Icons.chevron_right),
                       ),
@@ -89,8 +101,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ListTile(
                           leading: const Icon(Icons.shield_outlined),
                           title: const Text('Admin Dashboard'),
-                          subtitle:
-                              const Text('Akses terus ke paparan admin.'),
+                          subtitle: const Text('Akses terus ke paparan admin.'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () => context.push('/admin'),
                         ),
@@ -122,7 +133,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: AppSpacing.s24),
                 FTButton(
-                  label: 'Log Keluar',
+                  label: AppStrings.btnLogout,
                   onPressed: _logout,
                 ),
               ],

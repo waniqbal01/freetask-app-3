@@ -1,11 +1,14 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
-import '../../models/job.dart';
-import '../jobs/jobs_repository.dart';
-import '../escrow/escrow_repository.dart';
+import '../../core/constants/app_formatters.dart';
+import '../../core/constants/app_strings.dart';
 import '../../core/utils/error_utils.dart';
+import '../../core/widgets/confirmation_dialog.dart';
+import '../../models/job.dart';
 import '../auth/auth_repository.dart';
+import '../escrow/escrow_repository.dart';
+import '../jobs/jobs_repository.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -40,7 +43,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final user = await authRepository.getCurrentUser();
     if (user == null || user.role.toUpperCase() != 'ADMIN') {
       if (mounted) {
-        showErrorSnackBar(context, 'Admin only');
+        showErrorSnackBar(context, AppStrings.adminOnly);
       }
       return <Job>[];
     }
@@ -83,7 +86,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _escrowError = 'Gagal memuat escrow: $error';
+        _escrowError = AppStrings.errorLoadingEscrow;
         _escrowRecords = <EscrowRecord>[];
         _escrowByJob = <String, EscrowRecord>{};
       });
@@ -99,19 +102,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   String _jobStatusLabel(JobStatus status) {
     switch (status) {
       case JobStatus.pending:
-        return 'Pending';
+        return AppStrings.jobStatusPending;
       case JobStatus.accepted:
-        return 'Accepted';
+        return AppStrings.jobStatusAccepted;
       case JobStatus.inProgress:
-        return 'In Progress';
+        return AppStrings.jobStatusInProgress;
       case JobStatus.completed:
-        return 'Completed';
+        return AppStrings.jobStatusCompleted;
       case JobStatus.cancelled:
-        return 'Cancelled';
+        return AppStrings.jobStatusCancelled;
       case JobStatus.rejected:
-        return 'Cancelled/Rejected';
+        return AppStrings.jobStatusRejected;
       case JobStatus.disputed:
-        return 'Disputed';
+        return AppStrings.jobStatusDisputed;
     }
   }
 
@@ -138,17 +141,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   String _escrowStatusLabel(EscrowStatus status) {
     switch (status) {
       case EscrowStatus.pending:
-        return 'Pending';
+        return AppStrings.escrowStatusPending;
       case EscrowStatus.held:
-        return 'Held';
+        return AppStrings.escrowStatusHeld;
       case EscrowStatus.disputed:
-        return 'Disputed';
+        return AppStrings.escrowStatusDisputed;
       case EscrowStatus.released:
-        return 'Released';
+        return AppStrings.escrowStatusReleased;
       case EscrowStatus.refunded:
-        return 'Refunded';
+        return AppStrings.escrowStatusRefunded;
       case EscrowStatus.cancelled:
-        return 'Cancelled';
+        return AppStrings.escrowStatusCancelled;
     }
   }
 
@@ -170,10 +173,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   String _formatAmount(Job job) {
-    if (job.hasAmountIssue || job.amount <= 0) {
-      return 'Jumlah tidak sah / sila refresh';
-    }
-    return 'RM${job.amount.toStringAsFixed(2)}';
+    return AppFormatters.formatAmount(
+      job.hasAmountIssue || job.amount <= 0 ? null : job.amount,
+    );
   }
 
   Widget _buildSectionTitle(String title) {
@@ -305,7 +307,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     // Hold: only from PENDING escrow status
     if (escrow.status == EscrowStatus.pending) {
-      final canHold = {JobStatus.pending, JobStatus.accepted}.contains(jobStatus);
+      final canHold =
+          {JobStatus.pending, JobStatus.accepted}.contains(jobStatus);
       actions.add(
         Tooltip(
           message: canHold
@@ -313,10 +316,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               : 'Hold hanya untuk job PENDING/ACCEPTED',
           child: ElevatedButton.icon(
             onPressed: canHold
-                ? () => _handleEscrowAction(
+                ? () async {
+                    final confirmed = await showConfirmationDialog(
+                      context: context,
+                      title: AppStrings.confirmEscrowActionTitle,
+                      message: AppStrings.confirmEscrowHoldMessage,
+                      confirmText: 'Hold',
+                      isDangerous: false,
+                    );
+                    if (confirmed != true) return;
+                    await _handleEscrowAction(
                       () => escrowRepository.hold(job.id),
                       job.id,
-                    )
+                    );
+                  }
                 : null,
             icon: const Icon(Icons.pause_circle, size: 16),
             label: const Text('Hold'),
@@ -332,7 +345,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     // Release & Refund: only from HELD escrow status
     if (escrow.status == EscrowStatus.held) {
-      final canRelease = {JobStatus.completed, JobStatus.disputed}.contains(jobStatus);
+      final canRelease =
+          {JobStatus.completed, JobStatus.disputed}.contains(jobStatus);
       final canRefund = {
         JobStatus.cancelled,
         JobStatus.rejected,
@@ -346,10 +360,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               : 'Release untuk job COMPLETED/DISPUTED',
           child: ElevatedButton.icon(
             onPressed: canRelease
-                ? () => _handleEscrowAction(
+                ? () async {
+                    final confirmed = await showConfirmationDialog(
+                      context: context,
+                      title: AppStrings.confirmEscrowActionTitle,
+                      message: AppStrings.confirmEscrowReleaseMessage,
+                      confirmText: 'Release',
+                      isDangerous: true,
+                    );
+                    if (confirmed != true) return;
+                    await _handleEscrowAction(
                       () => escrowRepository.release(job.id),
                       job.id,
-                    )
+                    );
+                  }
                 : null,
             icon: const Icon(Icons.check_circle, size: 16),
             label: const Text('Release'),
@@ -371,10 +395,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               : 'Refund untuk job CANCELLED/REJECTED/DISPUTED',
           child: ElevatedButton.icon(
             onPressed: canRefund
-                ? () => _handleEscrowAction(
+                ? () async {
+                    final confirmed = await showConfirmationDialog(
+                      context: context,
+                      title: AppStrings.confirmEscrowActionTitle,
+                      message: AppStrings.confirmEscrowRefundMessage,
+                      confirmText: 'Refund',
+                      isDangerous: true,
+                    );
+                    if (confirmed != true) return;
+                    await _handleEscrowAction(
                       () => escrowRepository.refund(job.id),
                       job.id,
-                    )
+                    );
+                  }
                 : null,
             icon: const Icon(Icons.undo, size: 16),
             label: const Text('Refund'),
@@ -420,7 +454,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Escrow status dikemas kini: ${_escrowStatusLabel(updated.status)}'),
+            content: Text(
+                'Escrow status dikemas kini: ${_escrowStatusLabel(updated.status)}'),
           ),
         );
         await _refreshDashboard();
@@ -505,8 +540,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   children: [
                     Chip(
                       label: Text(_escrowStatusLabel(record.status)),
-                      backgroundColor:
-                          _escrowStatusColor(record.status).withValues(alpha: 0.15),
+                      backgroundColor: _escrowStatusColor(record.status)
+                          .withValues(alpha: 0.15),
                       labelStyle: TextStyle(
                         color: _escrowStatusColor(record.status),
                         fontWeight: FontWeight.w600,
@@ -610,7 +645,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           final messenger = ScaffoldMessenger.maybeOf(context);
                           if (messenger != null) {
                             messenger.showSnackBar(
-                              SnackBar(content: Text(resolveDioErrorMessage(error))),
+                              SnackBar(
+                                  content: Text(resolveDioErrorMessage(error))),
                             );
                           }
                         });
