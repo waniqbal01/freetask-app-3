@@ -282,6 +282,31 @@ class _JobListScreenState extends State<JobListScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.s12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: AppRadius.mediumRadius,
+                      border: Border.all(color: Colors.blue.shade200),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.info_outline,
+                            color: Colors.blue.shade700, size: 20),
+                        const SizedBox(width: AppSpacing.s8),
+                        Expanded(
+                          child: Text(
+                            'Dispute anda akan dihantar kepada admin untuk semakan. Sila jelaskan masalah anda dengan jelas.',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: Colors.blue.shade900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.s16),
                   const Text(
                     'Kongsikan ringkasan jelas tentang isu. Sertakan fakta penting tetapi elak maklumat sensitif.',
                     style: AppTextStyles.bodySmall,
@@ -480,25 +505,47 @@ class _JobListScreenState extends State<JobListScreen> {
               if (job.isDisputed)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.report_problem_outlined,
-                        color: Colors.orange.shade700,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          'Dispute: ${job.disputeReason ?? 'Tiada maklumat tambahan.'}',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: Colors.orange.shade700,
-                            fontWeight: FontWeight.w600,
+                  child: Container(
+                    padding: const EdgeInsets.all(AppSpacing.s8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: AppRadius.mediumRadius,
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.report_problem_outlined,
+                          color: Colors.orange.shade700,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Dispute sedang disemak',
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: Colors.orange.shade900,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              if (job.disputeReason != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Sebab: ${job.disputeReason}',
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: Colors.orange.shade700,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               const SizedBox(height: 12),
@@ -555,7 +602,7 @@ class _JobListScreenState extends State<JobListScreen> {
               if (reason == null) return;
               await _handleAction(
                 () => jobsRepository.disputeJob(job.id, reason),
-                'Dispute dihantar.',
+                'Dispute telah dihantar. Admin akan menyemak dan menghubungi anda jika perlu.',
               );
             },
             expanded: false,
@@ -650,7 +697,7 @@ class _JobListScreenState extends State<JobListScreen> {
               if (reason == null) return;
               await _handleAction(
                 () => jobsRepository.disputeJob(job.id, reason),
-                'Dispute dihantar.',
+                'Dispute telah dihantar. Admin akan menyemak dan menghubungi anda jika perlu.',
               );
             },
             expanded: false,
@@ -739,8 +786,9 @@ class _JobListScreenState extends State<JobListScreen> {
     }
 
     if (jobs.isEmpty) {
-      final title =
-          isClientView ? 'Tiada job sebagai client' : 'Tiada job sebagai freelancer';
+      final title = isClientView
+          ? 'Tiada job sebagai client'
+          : 'Tiada job sebagai freelancer';
       final subtitle = isClientView
           ? 'Buka marketplace untuk hire freelancer atau cuba refresh sekiranya anda baru selesai membuat tempahan.'
           : 'Belum ada job aktif. Semak Job Board atau kekalkan status sedia menerima kerja.';
@@ -820,8 +868,12 @@ class _JobListScreenState extends State<JobListScreen> {
       subtitle = 'Pantau job dan escrow yang aktif.';
     }
 
+    // UX-F-04: Make tabs conditional based on role
+    final isFreelancer = role == 'FREELANCER';
+    final tabCount = isFreelancer ? 2 : 1;
+
     return DefaultTabController(
-      length: 2,
+      length: tabCount,
       child: Scaffold(
         bottomNavigationBar: const AppBottomNav(currentTab: AppTab.jobs),
         body: Container(
@@ -920,12 +972,19 @@ class _JobListScreenState extends State<JobListScreen> {
                       onSwitch: () => context.go('/settings'),
                     ),
                   ),
-                const TabBar(
-                  tabs: [
-                    Tab(text: 'Sebagai Client'),
-                    Tab(text: 'Sebagai Freelancer'),
-                  ],
-                ),
+                if (isFreelancer)
+                  const TabBar(
+                    tabs: [
+                      Tab(text: 'Sebagai Client'),
+                      Tab(text: 'Sebagai Freelancer'),
+                    ],
+                  )
+                else
+                  const TabBar(
+                    tabs: [
+                      Tab(text: 'Sebagai Client'),
+                    ],
+                  ),
                 Padding(
                   padding:
                       const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
@@ -940,24 +999,37 @@ class _JobListScreenState extends State<JobListScreen> {
                 Expanded(
                   child: Stack(
                     children: [
-                      TabBarView(
-                        children: [
-                          _buildJobsTab(
-                            jobs: _clientJobs,
-                            isClientView: true,
-                            isLoading: _isLoadingClient,
-                            errorMessage: _clientErrorMessage,
-                            onRefresh: _refreshClientJobs,
-                          ),
-                          _buildJobsTab(
-                            jobs: _freelancerJobs,
-                            isClientView: false,
-                            isLoading: _isLoadingFreelancer,
-                            errorMessage: _freelancerErrorMessage,
-                            onRefresh: _refreshFreelancerJobs,
-                          ),
-                        ],
-                      ),
+                      if (isFreelancer)
+                        TabBarView(
+                          children: [
+                            _buildJobsTab(
+                              jobs: _clientJobs,
+                              isClientView: true,
+                              isLoading: _isLoadingClient,
+                              errorMessage: _clientErrorMessage,
+                              onRefresh: _refreshClientJobs,
+                            ),
+                            _buildJobsTab(
+                              jobs: _freelancerJobs,
+                              isClientView: false,
+                              isLoading: _isLoadingFreelancer,
+                              errorMessage: _freelancerErrorMessage,
+                              onRefresh: _refreshFreelancerJobs,
+                            ),
+                          ],
+                        )
+                      else
+                        TabBarView(
+                          children: [
+                            _buildJobsTab(
+                              jobs: _clientJobs,
+                              isClientView: true,
+                              isLoading: _isLoadingClient,
+                              errorMessage: _clientErrorMessage,
+                              onRefresh: _refreshClientJobs,
+                            ),
+                          ],
+                        ),
                       if (_isProcessing)
                         const LoadingOverlay(
                           message: 'Memproses tindakan...',

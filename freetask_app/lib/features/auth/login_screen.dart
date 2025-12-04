@@ -66,7 +66,12 @@ class _LoginScreenState extends State<LoginScreen> {
             context.go(widget.returnTo!);
             return;
           }
-          goToRoleHome(context, user.role);
+          // UX-A-08: Admin redirect after login
+          if (user.role.toUpperCase() == 'ADMIN') {
+            context.go('/admin');
+          } else {
+            goToRoleHome(context, user.role);
+          }
         } else {
           context.go('/home');
         }
@@ -82,11 +87,10 @@ class _LoginScreenState extends State<LoginScreen> {
         final message = resolveDioErrorMessage(error);
         if (mounted) {
           setState(() {
-            _errorMessage =
-                error.response?.statusCode == 401 ||
-                        message.toLowerCase().contains('unauthorized')
-                    ? 'Email atau kata laluan tidak sah. Sila cuba lagi.'
-                    : message;
+            _errorMessage = error.response?.statusCode == 401 ||
+                    message.toLowerCase().contains('unauthorized')
+                ? 'Email atau kata laluan tidak sah. Sila cuba lagi.'
+                : message;
           });
           showErrorSnackBar(context, message);
         }
@@ -176,22 +180,21 @@ class _LoginScreenState extends State<LoginScreen> {
                                 OutlinedButton.icon(
                                   onPressed: _isSubmitting
                                       ? null
-                                      : () =>
-                                          _fillDemoCredentials('client1@example.com'),
+                                      : () => _fillDemoCredentials(
+                                          'client1@example.com'),
                                   icon: const Icon(
                                       Icons.person_pin_circle_outlined),
-                                  label:
-                                      const Text('Guna akaun demo Client'),
+                                  label: const Text('Guna akaun demo Client'),
                                 ),
                                 OutlinedButton.icon(
                                   onPressed: _isSubmitting
                                       ? null
                                       : () => _fillDemoCredentials(
                                           'freelancer1@example.com'),
-                                  icon:
-                                      const Icon(Icons.workspace_premium_outlined),
-                                  label: const Text(
-                                      'Guna akaun demo Freelancer'),
+                                  icon: const Icon(
+                                      Icons.workspace_premium_outlined),
+                                  label:
+                                      const Text('Guna akaun demo Freelancer'),
                                 ),
                               ],
                             ),

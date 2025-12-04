@@ -23,6 +23,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     context.go('/role-selection');
   }
 
+  Future<void> _skipToLogin() async {
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
+    await appStorage.write(onboardingCompletedKey, 'true');
+    if (!mounted) return;
+    context.go('/login');
+  }
+
   Widget _buildSection({
     required String title,
     required String subtitle,
@@ -144,7 +152,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     const SizedBox(height: 16),
                     _buildSection(
                       title: 'Untuk siapa?',
-                      subtitle: 'Client dan Freelancer masing-masing ada laluan mudah.',
+                      subtitle:
+                          'Client dan Freelancer masing-masing ada laluan mudah.',
                       bullets: const [
                         'Client: Upah freelancer dengan selamat dan pantau job.',
                         'Freelancer: Terima job, jana pendapatan, bina reputasi.',
@@ -169,7 +178,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       child: ElevatedButton.icon(
                         onPressed: _isSaving ? null : _completeOnboarding,
                         icon: const Icon(Icons.arrow_forward_rounded),
-                        label: Text(_isSaving ? 'Memproses...' : 'Saya faham, mulakan'),
+                        label: Text(
+                            _isSaving ? 'Memproses...' : 'Saya faham, mulakan'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _isSaving ? null : _skipToLogin,
+                        icon: const Icon(Icons.login_rounded),
+                        label: const Text('Teruskan ke Login'),
                       ),
                     ),
                     const SizedBox(height: 12),

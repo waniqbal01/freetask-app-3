@@ -36,25 +36,26 @@ class ChatListScreen extends ConsumerWidget {
     return threadsAsync.when(
       data: (List<ChatThread> threads) {
         if (threads.isEmpty) {
+          // UX-G-07: Role-aware chat empty state
           final isClient = role == 'CLIENT';
           final title = isClient
               ? 'Belum ada chat lagi.'
               : 'Belum ada chat sebagai freelancer.';
           final subtitle = isClient
-              ? 'Tempah servis atau post job untuk mulakan perbualan.'
-              : 'Terima job atau cipta servis untuk berhubung dengan client.';
-          final primaryCta = isClient ? 'Pergi ke Home' : 'Pergi ke Jobs';
-          final primaryAction = isClient
-              ? () => context.go('/home')
-              : () => context.go('/jobs');
+              ? 'Chat akan muncul apabila anda menempah servis atau memulakan job dengan freelancer.'
+              : 'Chat akan muncul apabila client menempah servis anda atau memberikan job kepada anda.';
+          final primaryCta = isClient
+              ? 'Pergi ke Home untuk cari servis'
+              : 'Pergi ke Job Board';
+          final primaryAction =
+              isClient ? () => context.go('/home') : () => context.go('/jobs');
           final secondaryLabel =
-              isClient ? 'Lihat servis' : 'Cipta Servis';
+              isClient ? 'Lihat servis' : 'Pergi ke Servis saya';
           final secondaryAction = () => context.go('/home');
 
           return Scaffold(
             appBar: AppBar(title: const Text('Chat')),
-            bottomNavigationBar:
-                const AppBottomNav(currentTab: AppTab.chats),
+            bottomNavigationBar: const AppBottomNav(currentTab: AppTab.chats),
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -64,12 +65,15 @@ class ChatListScreen extends ConsumerWidget {
                   const SizedBox(height: 12),
                   Text(title),
                   const SizedBox(height: 8),
-                  Text(
-                    subtitle,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey.shade600,
-                        ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      subtitle,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.grey.shade600,
+                          ),
+                    ),
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton.icon(
@@ -80,7 +84,8 @@ class ChatListScreen extends ConsumerWidget {
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: secondaryAction,
-                    icon: Icon(isClient ? Icons.store_mall_directory : Icons.add),
+                    icon:
+                        Icon(isClient ? Icons.store_mall_directory : Icons.add),
                     label: Text(secondaryLabel),
                   ),
                   TextButton(

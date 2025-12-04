@@ -13,6 +13,7 @@ import '../../widgets/authorized_image.dart';
 import 'auth_redirect.dart';
 import 'auth_repository.dart';
 import '../users/users_repository.dart';
+import '../../core/storage/storage.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key, this.role});
@@ -116,6 +117,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final success = await authRepository.register(payload);
       if (success && mounted) {
         await _uploadAvatarAfterAuth();
+
+        // UX-C-05: Set first-time client flag
+        if (apiRole == 'CLIENT') {
+          await appStorage.write('client_first_time', 'true');
+        }
 
         final user = authRepository.currentUser;
         if (user != null && mounted) {
@@ -480,6 +486,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 decoration: const InputDecoration(
                                   labelText: 'Bio',
                                   prefixIcon: Icon(Icons.badge_outlined),
+                                  helperText:
+                                      'Bio membantu client memahami pengalaman anda. Disarankan minimum 30 aksara.',
+                                  helperMaxLines: 2,
                                 ),
                                 maxLines: 3,
                               ),
@@ -489,6 +498,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 decoration: const InputDecoration(
                                   labelText: 'Kemahiran (dipisah dengan koma)',
                                   prefixIcon: Icon(Icons.handyman_outlined),
+                                  helperText:
+                                      'Nyatakan kemahiran utama anda (contoh: design logo, sunting video).',
+                                  helperMaxLines: 2,
                                 ),
                               ),
                               const SizedBox(height: AppSpacing.s16),
@@ -498,6 +510,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 decoration: const InputDecoration(
                                   labelText: 'Kadar (contoh: 50.0)',
                                   prefixIcon: Icon(Icons.payments_outlined),
+                                  helperText:
+                                      'Kadar anggaran membantu client menilai bajet.',
                                 ),
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {

@@ -48,8 +48,8 @@ final appRouter = GoRouter(
   refreshListenable: authRefreshNotifier,
   redirect: (context, state) async {
     final location = state.uri.path;
-    final isAuthPage = ['/login', '/register', '/role-selection']
-        .contains(location);
+    final isAuthPage =
+        ['/login', '/register', '/role-selection'].contains(location);
     final isStartup = location == '/startup' || location == '/';
     final isAdminUnauthorized = location == '/admin/unauthorized';
     final needsAuth = location.startsWith('/jobs') ||
@@ -61,37 +61,42 @@ final appRouter = GoRouter(
 
     final tokenExists = await hasToken();
 
-    if (!onboardingDone && !isStartup && !location.startsWith('/onboarding')) {
+    // Fix UX-G-01: Prioritize auth status over onboarding flag
+    // If user has valid token, skip onboarding even if flag is missing
+    if (!onboardingDone &&
+        !tokenExists &&
+        !isStartup &&
+        !location.startsWith('/onboarding')) {
       return '/onboarding';
     }
 
-  if (!tokenExists && needsAuth) {
-    final encoded = Uri.encodeComponent(state.uri.toString());
-    return '/login?returnTo=$encoded';
-  }
-
-  if (tokenExists && (isAuthPage || isStartup)) {
-    final returnTo = state.uri.queryParameters['returnTo'];
-    if (returnTo != null && returnTo.isNotEmpty) {
-      return returnTo;
+    if (!tokenExists && needsAuth) {
+      final encoded = Uri.encodeComponent(state.uri.toString());
+      return '/login?returnTo=$encoded';
     }
-    return '/home';
-  }
 
-  if (location.startsWith('/admin') && !isAdminUnauthorized) {
-    try {
-      final user = await authRepository.getCurrentUser();
-      if (user == null) {
+    if (tokenExists && (isAuthPage || isStartup)) {
+      final returnTo = state.uri.queryParameters['returnTo'];
+      if (returnTo != null && returnTo.isNotEmpty) {
+        return returnTo;
+      }
+      return '/home';
+    }
+
+    if (location.startsWith('/admin') && !isAdminUnauthorized) {
+      try {
+        final user = await authRepository.getCurrentUser();
+        if (user == null) {
+          return '/login';
+        }
+        if (user.role.toUpperCase() != 'ADMIN') {
+          final encoded = Uri.encodeComponent(state.uri.toString());
+          return '/admin/unauthorized?from=$encoded';
+        }
+      } catch (_) {
         return '/login';
       }
-      if (user.role.toUpperCase() != 'ADMIN') {
-        final encoded = Uri.encodeComponent(state.uri.toString());
-        return '/admin/unauthorized?from=$encoded';
-      }
-    } catch (_) {
-      return '/login';
     }
-  }
 
     if (location.startsWith('/jobs')) {
       final filter = state.uri.queryParameters['filter'];
