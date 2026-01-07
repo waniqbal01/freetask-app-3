@@ -14,7 +14,8 @@
     "prisma:generate": "npm exec prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "seed": "ts-node -r tsconfig-paths/register src/seed.ts",
-    "prisma:seed": "ts-node src/seed.ts"
+    "prisma:seed": "ts-node src/seed.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
