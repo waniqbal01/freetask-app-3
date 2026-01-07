@@ -6,3 +6,8 @@ dist
 !/uploads/.gitkeep
 src/uploads/
 !src/uploads/.gitkeep
+
+# Environment variables
+.env
+.env.*
+!.env.example
