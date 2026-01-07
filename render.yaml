@@ -6,7 +6,7 @@ services:
     plan: free
     rootDir: freetask-api
     buildCommand: "npm install && npm run build"
-    startCommand: "npm exec prisma migrate deploy && npm run start:prod"
+    startCommand: "npm exec prisma migrate resolve --rolled-back 20240521000000_add-user-profile-fields || true && npm exec prisma migrate deploy && npm run start:prod"
     envVars:
       - key: NODE_ENV
         value: production
