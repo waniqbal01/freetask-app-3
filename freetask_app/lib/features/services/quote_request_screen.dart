@@ -170,20 +170,30 @@ class _QuoteRequestScreenState extends State<QuoteRequestScreen> {
                 ),
               ),
               const SizedBox(height: 8),
+              // ignore: deprecated_member_use
               RadioListTile<String>(
                 title: const Text('Chat dalam aplikasi'),
                 value: 'chat',
+                // ignore: deprecated_member_use
                 groupValue: _contactPreference,
+                // ignore: deprecated_member_use
                 onChanged: (value) {
-                  setState(() => _contactPreference = value!);
+                  if (value != null) {
+                    setState(() => _contactPreference = value);
+                  }
                 },
               ),
+              // ignore: deprecated_member_use
               RadioListTile<String>(
                 title: const Text('Notifikasi'),
                 value: 'notification',
+                // ignore: deprecated_member_use
                 groupValue: _contactPreference,
+                // ignore: deprecated_member_use
                 onChanged: (value) {
-                  setState(() => _contactPreference = value!);
+                  if (value != null) {
+                    setState(() => _contactPreference = value);
+                  }
                 },
               ),
               const SizedBox(height: 32),

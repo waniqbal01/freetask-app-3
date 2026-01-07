@@ -339,7 +339,7 @@ class _JobListScreenState extends State<JobListScreen> {
                 FilledButton(
                   onPressed:
                       isValid ? () => Navigator.of(context).pop(trimmed) : null,
-                  child: Text(
+                  child: const Text(
                       '${AppStrings.btnSubmit} ${AppStrings.jobActionDispute}'),
                 ),
               ],

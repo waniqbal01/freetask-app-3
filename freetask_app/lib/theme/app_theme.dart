@@ -12,6 +12,7 @@ class AppColors {
   static const Color neutral300 = Color(0xFF98A2B3);
   static const Color neutral400 = Color(0xFF667085);
   static const Color neutral500 = Color(0xFF344054);
+  static const Color neutral600 = Color(0xFF475467);
   static const Color neutral900 = Color(0xFF101828);
 
   static const Color success = Color(0xFF27AE60);
@@ -22,6 +23,7 @@ class AppSpacing {
   AppSpacing._();
 
   static const double s4 = 4;
+  static const double s6 = 6;
   static const double s8 = 8;
   static const double s12 = 12;
   static const double s16 = 16;
@@ -42,8 +44,10 @@ class AppRadius {
   static const double medium = 12;
   static const double large = 16;
 
-  static const BorderRadius mediumRadius = BorderRadius.all(Radius.circular(medium));
-  static const BorderRadius largeRadius = BorderRadius.all(Radius.circular(large));
+  static const BorderRadius mediumRadius =
+      BorderRadius.all(Radius.circular(medium));
+  static const BorderRadius largeRadius =
+      BorderRadius.all(Radius.circular(large));
 }
 
 class AppShadows {
@@ -83,6 +87,12 @@ class AppTextStyles {
 
   static const TextStyle headlineSmall = TextStyle(
     fontSize: 24,
+    fontWeight: FontWeight.w600,
+    color: AppColors.neutral900,
+  );
+
+  static const TextStyle titleMedium = TextStyle(
+    fontSize: 20,
     fontWeight: FontWeight.w600,
     color: AppColors.neutral900,
   );
@@ -129,6 +139,7 @@ class AppTheme {
       headlineLarge: AppTextStyles.headlineLarge,
       headlineMedium: AppTextStyles.headlineMedium,
       headlineSmall: AppTextStyles.headlineSmall,
+      titleMedium: AppTextStyles.titleMedium,
       bodyLarge: AppTextStyles.bodyLarge,
       bodyMedium: AppTextStyles.bodyMedium,
       bodySmall: AppTextStyles.bodySmall,
@@ -161,8 +172,11 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.disabled)) return ButtonStateColors.disabled;
-            if (states.contains(WidgetState.pressed) || states.contains(WidgetState.hovered)) {
+            if (states.contains(WidgetState.disabled)) {
+              return ButtonStateColors.disabled;
+            }
+            if (states.contains(WidgetState.pressed) ||
+                states.contains(WidgetState.hovered)) {
               return ButtonStateColors.loading;
             }
             return ButtonStateColors.normal;
@@ -204,7 +218,8 @@ class AppTheme {
           borderRadius: AppRadius.mediumRadius,
           borderSide: BorderSide(color: AppColors.error, width: 1.4),
         ),
-        hintStyle: AppTextStyles.bodySmall.copyWith(color: AppColors.neutral300),
+        hintStyle:
+            AppTextStyles.bodySmall.copyWith(color: AppColors.neutral300),
         labelStyle: AppTextStyles.bodySmall,
       ),
       dividerColor: AppColors.neutral100,

@@ -83,7 +83,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: AppSpacing.s16),
                 Card(
-                  shape: RoundedRectangleBorder(
+                  shape: const RoundedRectangleBorder(
                     borderRadius: AppRadius.largeRadius,
                   ),
                   child: Column(
@@ -110,15 +110,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.s16),
-                Card(
+                const Card(
                   shape: RoundedRectangleBorder(
                     borderRadius: AppRadius.largeRadius,
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.s16),
+                    padding: EdgeInsets.all(AppSpacing.s16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
                           'Pembayaran & Escrow',
                           style: AppTextStyles.titleMedium,

@@ -101,9 +101,8 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
         ? descriptionInput
         : (_description.isNotEmpty ? _description : _serviceDescription);
     final amountInput = _amountController.text.trim();
-    final parsedAmount = amountInput.isNotEmpty
-        ? double.tryParse(amountInput)
-        : _amount;
+    final parsedAmount =
+        amountInput.isNotEmpty ? double.tryParse(amountInput) : _amount;
 
     setState(() {
       _errorMessage = null;
@@ -142,7 +141,7 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
     try {
       final job = await jobsRepository.createOrder(
         serviceId,
-        parsedAmount!,
+        parsedAmount,
         description,
         serviceTitle:
             _title.isEmpty ? _summary['serviceTitle']?.toString() : _title,
@@ -323,8 +322,8 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
                             maxLines: 3,
                             decoration: InputDecoration(
                               labelText: 'Penerangan job',
-                              helperText:
-                                  _descriptionError ?? 'Minimum $jobMinDescLen aksara.',
+                              helperText: _descriptionError ??
+                                  'Minimum $jobMinDescLen aksara.',
                               helperStyle: TextStyle(
                                 color: _descriptionError != null
                                     ? AppColors.error
@@ -377,9 +376,9 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
                         borderRadius: AppRadius.mediumRadius,
                         border: Border.all(color: AppColors.neutral100),
                       ),
-                      child: Column(
+                      child: const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text(
                             'Tip checkout',
                             style: AppTextStyles.titleMedium,

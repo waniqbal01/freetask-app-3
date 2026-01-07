@@ -51,7 +51,7 @@ class ChatListScreen extends ConsumerWidget {
               isClient ? () => context.go('/home') : () => context.go('/jobs');
           final secondaryLabel =
               isClient ? 'Lihat servis' : 'Pergi ke Servis saya';
-          final secondaryAction = () => context.go('/home');
+          void secondaryAction() => context.go('/home');
 
           return Scaffold(
             appBar: AppBar(title: const Text('Chat')),

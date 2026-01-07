@@ -64,7 +64,7 @@ class ConfirmationDialog extends StatelessWidget {
         (isDangerous ? Icons.warning_amber_rounded : Icons.help_outline);
 
     return AlertDialog(
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: AppRadius.largeRadius,
       ),
       title: Row(

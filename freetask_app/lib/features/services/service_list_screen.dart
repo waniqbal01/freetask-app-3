@@ -144,7 +144,8 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
     } else if (role == 'FREELANCER') {
       actionLabel = 'Pergi ke Job Board';
       onAction = () => context.go('/jobs');
-      subtitle = 'Anda Freelancer – lihat Job Board dan terima job yang sesuai.';
+      subtitle =
+          'Anda Freelancer – lihat Job Board dan terima job yang sesuai.';
     } else if (isAdmin) {
       actionLabel = 'Buka Admin';
       onAction = () => context.go('/admin');
@@ -200,129 +201,127 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                           ),
                         ),
                       ),
-                    if (_isLoading)
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (BuildContext context, int index) {
-                              if (index.isOdd) {
-                                return const SizedBox(height: 12);
-                              }
-                              return const ServiceCardSkeleton();
-                            },
-                            childCount: (6 * 2) - 1,
+                      if (_isLoading)
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (BuildContext context, int index) {
+                                if (index.isOdd) {
+                                  return const SizedBox(height: 12);
+                                }
+                                return const ServiceCardSkeleton();
+                              },
+                              childCount: (6 * 2) - 1,
+                            ),
                           ),
-                        ),
-                      )
-                    else if (_errorMessage != null)
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: <Widget>[
-                              Icon(
-                                Icons.error_outline,
-                                size: 42,
-                                color: Theme.of(context).colorScheme.error,
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                _errorMessage!,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color:
-                                      Theme.of(context).colorScheme.error,
+                        )
+                      else if (_errorMessage != null)
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: <Widget>[
+                                Icon(
+                                  Icons.error_outline,
+                                  size: 42,
+                                  color: Theme.of(context).colorScheme.error,
                                 ),
-                              ),
-                              const SizedBox(height: 12),
-                              FTButton(
-                                label: 'Cuba Lagi',
-                                onPressed: _fetchServices,
-                                expanded: false,
-                              ),
-                            ],
+                                const SizedBox(height: 12),
+                                Text(
+                                  _errorMessage!,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                FTButton(
+                                  label: 'Cuba Lagi',
+                                  onPressed: _fetchServices,
+                                  expanded: false,
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else if (_services.isEmpty)
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                const Icon(Icons.store_mall_directory_outlined,
+                                    size: 52, color: Colors.grey),
+                                const SizedBox(height: 12),
+                                const Text(
+                                  'Tiada servis ditemui',
+                                  style: AppTextStyles.titleMedium,
+                                ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Tiada servis ditemui untuk carian ini. Anda boleh terus post job baru atau minta quote khusus.',
+                                  textAlign: TextAlign.center,
+                                  style: AppTextStyles.bodySmall,
+                                ),
+                                const SizedBox(height: 16),
+                                FTButton(
+                                  label: 'Post job sekarang',
+                                  onPressed: () => context.push('/checkout'),
+                                  expanded: true,
+                                ),
+                                const SizedBox(height: 8),
+                                FTButton(
+                                  label: 'Minta quote',
+                                  onPressed: () => context.push('/jobs'),
+                                  expanded: true,
+                                  variant: FTButtonVariant.outline,
+                                ),
+                                const SizedBox(height: 12),
+                                FTButton(
+                                  label: 'Segar semula',
+                                  onPressed: _fetchServices,
+                                  expanded: false,
+                                  variant: FTButtonVariant.ghost,
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (BuildContext context, int index) {
+                                if (index.isOdd) {
+                                  return const SizedBox(height: 12);
+                                }
+                                final service = _services[index ~/ 2];
+                                return ServiceCard(
+                                  service: service,
+                                  onTap: () =>
+                                      context.push('/service/${service.id}'),
+                                );
+                              },
+                              childCount: (_services.length * 2) - 1,
+                            ),
                           ),
                         ),
-                      )
-                    else if (_services.isEmpty)
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              const Icon(Icons.store_mall_directory_outlined,
-                                  size: 52, color: Colors.grey),
-                              const SizedBox(height: 12),
-                              const Text(
-                                'Tiada servis ditemui',
-                                style: AppTextStyles.titleMedium,
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Tiada servis ditemui untuk carian ini. Anda boleh terus post job baru atau minta quote khusus.',
-                                textAlign: TextAlign.center,
-                                style: AppTextStyles.bodySmall,
-                              ),
-                              const SizedBox(height: 16),
-                              FTButton(
-                                label: 'Post job sekarang',
-                                onPressed: () => context.push('/checkout'),
-                                expanded: true,
-                              ),
-                              const SizedBox(height: 8),
-                              FTButton(
-                                label: 'Minta quote',
-                                onPressed: () => context.push('/jobs'),
-                                expanded: true,
-                                variant: FTButtonVariant.outline,
-                              ),
-                              const SizedBox(height: 12),
-                              FTButton(
-                                label: 'Segar semula',
-                                onPressed: _fetchServices,
-                                expanded: false,
-                                variant: FTButtonVariant.ghost,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      )
-                    else
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (BuildContext context, int index) {
-                              if (index.isOdd) {
-                                return const SizedBox(height: 12);
-                              }
-                              final service = _services[index ~/ 2];
-                              return ServiceCard(
-                                service: service,
-                                onTap: () =>
-                                    context.push('/service/${service.id}'),
-                              );
-                            },
-                            childCount: (_services.length * 2) - 1,
-                          ),
-                        ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
-    ),
-  );
+    );
   }
 }
 
@@ -362,7 +361,8 @@ class _MarketplaceHero extends StatelessWidget {
                   color: AppColors.primary.withValues(alpha: 0.08),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.store_mall_directory_outlined, color: AppColors.primary),
+                child: const Icon(Icons.store_mall_directory_outlined,
+                    color: AppColors.primary),
               ),
               const SizedBox(width: AppSpacing.s12),
               Expanded(
@@ -418,18 +418,22 @@ class _MarketplaceHero extends StatelessWidget {
                   onSelected: (_) => onCategorySelected(category),
                   selectedColor: AppColors.primary.withValues(alpha: 0.12),
                   labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: isSelected ? AppColors.primary : AppColors.neutral400,
+                        color: isSelected
+                            ? AppColors.primary
+                            : AppColors.neutral400,
                         fontWeight: FontWeight.w600,
                       ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(999),
                     side: BorderSide(
-                      color: isSelected ? AppColors.primary : AppColors.neutral100,
+                      color:
+                          isSelected ? AppColors.primary : AppColors.neutral100,
                     ),
                   ),
                 );
               },
-              separatorBuilder: (BuildContext context, int _) => const SizedBox(width: 8),
+              separatorBuilder: (BuildContext context, int _) =>
+                  const SizedBox(width: 8),
               itemCount: categories.length,
             ),
           ),

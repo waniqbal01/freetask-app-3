@@ -92,9 +92,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                     Icon(
                       Icons.check_circle_outline,
                       size: 16,
-                      color: isSelected
-                          ? Colors.white
-                          : Colors.indigo.shade600,
+                      color: isSelected ? Colors.white : Colors.indigo.shade600,
                     ),
                     const SizedBox(width: 6),
                     Expanded(
@@ -135,58 +133,59 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-          Text(
-            'Anda ingin mendaftar sebagai?',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 12),
-          if (_showNextSteps)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.indigo.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.indigo.shade100),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.flag_rounded, color: Colors.indigo),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'Langkah seterusnya:',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text('1. Daftar akaun atau log masuk'),
-                        Text('2. Lengkapkan profil anda'),
-                        Text('3. (Client) Pilih servis atau post job pertama'),
-                        Text('4. (Freelancer) Tetapkan servis/skill anda'),
-                      ],
-                    ),
+            Text(
+              'Anda ingin mendaftar sebagai?',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
-                  IconButton(
-                    onPressed: () async {
-                      setState(() => _showNextSteps = false);
-                      await appStorage.write(nextStepsDismissedKey, 'true');
-                    },
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
             ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: GridView.count(
+            const SizedBox(height: 12),
+            if (_showNextSteps)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.indigo.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.indigo.shade100),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.flag_rounded, color: Colors.indigo),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Langkah seterusnya:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text('1. Daftar akaun atau log masuk'),
+                          Text('2. Lengkapkan profil anda'),
+                          Text(
+                              '3. (Client) Pilih servis atau post job pertama'),
+                          Text('4. (Freelancer) Tetapkan servis/skill anda'),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () async {
+                        setState(() => _showNextSteps = false);
+                        await appStorage.write(nextStepsDismissedKey, 'true');
+                      },
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 24),
+            Expanded(
+              child: GridView.count(
                 crossAxisCount: 2,
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,

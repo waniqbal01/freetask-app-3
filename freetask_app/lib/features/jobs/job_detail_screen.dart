@@ -753,6 +753,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       }
     }
 
+    final List<Widget> visibleActions = actions;
+
     return SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1092,7 +1094,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                           _escrowStatusLabel(_escrow?.status)),
                                       backgroundColor:
                                           _escrowStatusColor(_escrow?.status)
-                                              .withOpacity(0.12),
+                                              .withValues(alpha: 0.12),
                                       labelStyle: TextStyle(
                                         color:
                                             _escrowStatusColor(_escrow?.status),
@@ -1111,12 +1113,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             width: 24,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           ),
-                        ] else if (visibleActions.isNotEmpty) ...[
+                        ] else if (actions.isNotEmpty) ...[
                           const SizedBox(width: AppSpacing.s8),
                           Wrap(
                             spacing: AppSpacing.s8,
                             runSpacing: AppSpacing.s8,
-                            children: visibleActions,
+                            children: actions,
                           ),
                         ],
                       ],
@@ -1313,9 +1315,9 @@ class _ActionBarButton extends StatelessWidget {
     return SafeArea(
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: Colors.white,
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
               color: Color(0x11000000),
               blurRadius: 12,

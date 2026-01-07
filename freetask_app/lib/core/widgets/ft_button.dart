@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 enum FTButtonSize { small, medium, large }
 
+enum FTButtonVariant { filled, outline, ghost }
+
 class FTButton extends StatelessWidget {
   const FTButton({
     super.key,
@@ -10,6 +12,7 @@ class FTButton extends StatelessWidget {
     this.isLoading = false,
     this.expanded = true,
     this.size = FTButtonSize.medium,
+    this.variant = FTButtonVariant.filled,
   });
 
   final String label;
@@ -17,6 +20,7 @@ class FTButton extends StatelessWidget {
   final bool isLoading;
   final bool expanded;
   final FTButtonSize size;
+  final FTButtonVariant variant;
 
   @override
   Widget build(BuildContext context) {
@@ -40,19 +44,47 @@ class FTButton extends StatelessWidget {
       FTButtonSize.large => 18.0,
     };
 
-    final button = ElevatedButton(
-      onPressed: isLoading ? null : onPressed,
-      style: ElevatedButton.styleFrom(
-        padding: EdgeInsets.symmetric(
-          vertical: verticalPadding,
-          horizontal: horizontalPadding,
+    final button = switch (variant) {
+      FTButtonVariant.filled => ElevatedButton(
+          onPressed: isLoading ? null : onPressed,
+          style: ElevatedButton.styleFrom(
+            padding: EdgeInsets.symmetric(
+              vertical: verticalPadding,
+              horizontal: horizontalPadding,
+            ),
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+            ),
+          ),
+          child: child,
         ),
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
+      FTButtonVariant.outline => OutlinedButton(
+          onPressed: isLoading ? null : onPressed,
+          style: OutlinedButton.styleFrom(
+            padding: EdgeInsets.symmetric(
+              vertical: verticalPadding,
+              horizontal: horizontalPadding,
+            ),
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+            ),
+          ),
+          child: child,
         ),
-      ),
-      child: child,
-    );
+      FTButtonVariant.ghost => TextButton(
+          onPressed: isLoading ? null : onPressed,
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.symmetric(
+              vertical: verticalPadding,
+              horizontal: horizontalPadding,
+            ),
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+            ),
+          ),
+          child: child,
+        ),
+    };
 
     if (expanded) {
       return SizedBox(width: double.infinity, child: button);
