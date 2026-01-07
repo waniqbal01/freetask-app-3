@@ -15,7 +15,7 @@
     "prisma:migrate": "prisma migrate dev",
     "seed": "ts-node -r tsconfig-paths/register src/seed.ts",
     "prisma:seed": "ts-node src/seed.ts",
-    "postinstall": "npm rebuild bcrypt && chmod +x node_modules/.bin/prisma node_modules/prisma/build/index.js 2>/dev/null || true && prisma generate"
+    "postinstall": "chmod +x node_modules/.bin/prisma node_modules/prisma/build/index.js 2>/dev/null || true && prisma generate"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
