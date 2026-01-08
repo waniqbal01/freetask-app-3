@@ -13,6 +13,9 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { EscrowModule } from './escrow/escrow.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { PaymentsModule } from './payments/payments.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -32,6 +35,9 @@ import { EscrowModule } from './escrow/escrow.module';
     UploadsModule,
     ReviewsModule,
     EscrowModule,
+    NotificationsModule,
+    PaymentsModule,
+    AdminModule,
   ],
   controllers: [HealthController],
   providers: [
@@ -42,3 +48,4 @@ import { EscrowModule } from './escrow/escrow.module';
   ],
 })
 export class AppModule { }
+

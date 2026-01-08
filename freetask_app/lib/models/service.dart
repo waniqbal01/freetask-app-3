@@ -7,6 +7,7 @@ class Service {
     required this.price,
     required this.freelancerId,
     this.freelancerName,
+    this.freelancerAvatarUrl,
     this.hasPriceIssue = false,
   });
 
@@ -25,6 +26,7 @@ class Service {
           freelancer?['id']?.toString() ??
           '',
       freelancerName: freelancer?['name']?.toString(),
+      freelancerAvatarUrl: freelancer?['avatarUrl']?.toString(),
     );
   }
 
@@ -34,6 +36,7 @@ class Service {
   final String description;
   final String freelancerId;
   final String? freelancerName;
+  final String? freelancerAvatarUrl;
   final double price;
   final bool hasPriceIssue;
 

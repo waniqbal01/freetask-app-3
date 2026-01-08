@@ -32,6 +32,14 @@ enum EscrowStatus {
   CANCELLED
 }
 
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
 model User {
   id           Int           @id @default(autoincrement())
   createdAt    DateTime      @default(now())
@@ -51,6 +59,9 @@ model User {
   reviewsGiven Review[]      @relation("ReviewerReviews")
   reviewsReceived Review[]   @relation("RevieweeReviews")
   sessions     Session[]
+  notifications Notification[]
+  deviceTokens DeviceToken[]
+  adminLogs    AdminLog[]
 }
 
 model Service {
@@ -61,6 +72,7 @@ model Service {
   description  String
   price        Decimal   @db.Decimal(10, 2)
   category     String
+  thumbnailUrl String?
   freelancer   User      @relation(fields: [freelancerId], references: [id])
   freelancerId Int
   jobs         Job[]
@@ -82,9 +94,9 @@ model Job {
   freelancer     User        @relation("FreelancerJobs", fields: [freelancerId], references: [id])
   freelancerId   Int
   messages       ChatMessage[]
-
   reviews        Review[]
   escrow         Escrow?
+  payment        Payment?
 }
 
 model ChatMessage {
@@ -135,3 +147,56 @@ model Session {
   lastIp                 String?
   userAgent              String?
 }
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  type      String?
+  data      Json?
+
+  @@index([userId])
+}
+
+model DeviceToken {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  platform  String?
+
+  @@index([userId])
+}
+
+model Payment {
+  id              Int           @id @default(autoincrement())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  jobId           Int           @unique
+  job             Job           @relation(fields: [jobId], references: [id])
+  amount          Decimal       @db.Decimal(10, 2)
+  status          PaymentStatus @default(PENDING)
+  paymentMethod   String?
+  transactionId   String?       @unique
+  paymentGateway  String?
+}
+
+model AdminLog {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  adminId   Int
+  admin     User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  action    String
+  resource  String?
+  details   Json?
+
+  @@index([adminId])
+  @@index([createdAt])
+}
+

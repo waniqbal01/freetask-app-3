@@ -1,0 +1,142 @@
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { RegisterTokenDto } from './dto/register-token.dto';
+import { CreateNotificationDto, SendNotificationDto } from './dto/notification.dto';
+
+@Injectable()
+export class NotificationsService {
+    private readonly logger = new Logger(NotificationsService.name);
+
+    constructor(private prisma: PrismaService) { }
+
+    async registerToken(userId: number, dto: RegisterTokenDto) {
+        // Check if token already exists
+        const existing = await this.prisma.deviceToken.findUnique({
+            where: { token: dto.token },
+        });
+
+        if (existing) {
+            // Update if token belongs to different user
+            if (existing.userId !== userId) {
+                return this.prisma.deviceToken.update({
+                    where: { token: dto.token },
+                    data: {
+                        userId,
+                        platform: dto.platform,
+                        updatedAt: new Date(),
+                    },
+                });
+            }
+            return existing;
+        }
+
+        // Create new token
+        return this.prisma.deviceToken.create({
+            data: {
+                userId,
+                token: dto.token,
+                platform: dto.platform,
+            },
+        });
+    }
+
+    async getUserNotifications(userId: number, limit = 50, offset = 0) {
+        const notifications = await this.prisma.notification.findMany({
+            where: { userId },
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+            skip: offset,
+        });
+
+        const total = await this.prisma.notification.count({
+            where: { userId },
+        });
+
+        const unreadCount = await this.prisma.notification.count({
+            where: { userId, read: false },
+        });
+
+        return {
+            notifications,
+            total,
+            unreadCount,
+        };
+    }
+
+    async markAsRead(userId: number, notificationId: number) {
+        const notification = await this.prisma.notification.findUnique({
+            where: { id: notificationId },
+        });
+
+        if (!notification) {
+            throw new NotFoundException('Notification not found');
+        }
+
+        if (notification.userId !== userId) {
+            throw new NotFoundException('Notification not found');
+        }
+
+        return this.prisma.notification.update({
+            where: { id: notificationId },
+            data: { read: true },
+        });
+    }
+
+    async markAllAsRead(userId: number) {
+        return this.prisma.notification.updateMany({
+            where: { userId, read: false },
+            data: { read: true },
+        });
+    }
+
+    async createNotification(dto: CreateNotificationDto) {
+        return this.prisma.notification.create({
+            data: {
+                userId: dto.userId,
+                title: dto.title,
+                body: dto.body,
+                type: dto.type,
+                data: dto.data,
+            },
+        });
+    }
+
+    async sendNotification(dto: SendNotificationDto) {
+        // Create notification in database
+        const notification = await this.createNotification({
+            userId: dto.userId,
+            title: dto.title,
+            body: dto.body,
+            data: dto.data,
+        });
+
+        // Get user's device tokens
+        const tokens = await this.prisma.deviceToken.findMany({
+            where: { userId: dto.userId },
+        });
+
+        if (tokens.length > 0) {
+            // TODO: Send push notification via FCM
+            // This would require Firebase Admin SDK integration
+            this.logger.log(
+                `Would send push notification to ${tokens.length} device(s) for user ${dto.userId}`,
+            );
+        }
+
+        return notification;
+    }
+
+    async deleteToken(userId: number, token: string) {
+        const deviceToken = await this.prisma.deviceToken.findUnique({
+            where: { token },
+        });
+
+        if (!deviceToken || deviceToken.userId !== userId) {
+            throw new NotFoundException('Token not found');
+        }
+
+        return this.prisma.deviceToken.delete({
+            where: { token },
+        });
+    }
+}

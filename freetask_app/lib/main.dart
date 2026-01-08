@@ -1,10 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import 'app.dart';
+import 'core/notifications/fcm_service.dart';
+import 'core/storage/storage.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize storage
+  await initStorage();
+
+  // Initialize Firebase
+  try {
+    await Firebase.initializeApp();
+    debugPrint('Firebase initialized successfully');
+
+    // Initialize FCM service
+    await fcmService.initialize();
+  } catch (e) {
+    debugPrint('Firebase initialization error: $e');
+    // Continue without Firebase if initialization fails
+  }
 
   // Global error boundary for unhandled errors
   ErrorWidget.builder = (FlutterErrorDetails details) {

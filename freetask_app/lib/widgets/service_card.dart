@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/service.dart';
 import '../theme/app_theme.dart';
+import 'freelancer_avatar.dart';
 
 class ServiceCard extends StatelessWidget {
   const ServiceCard({
@@ -33,7 +34,13 @@ class ServiceCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const _ServiceThumbnail(),
+                FreelancerAvatar(
+                  avatarUrl: service.freelancerAvatarUrl,
+                  size: 90,
+                  onTap: () {
+                    // TODO: Navigate to freelancer profile
+                  },
+                ),
                 const SizedBox(width: AppSpacing.s16),
                 Expanded(
                   child: Column(
@@ -200,33 +207,6 @@ class _SkeletonLine extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _ServiceThumbnail extends StatelessWidget {
-  const _ServiceThumbnail();
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        height: 90,
-        width: 90,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppColors.primary.withValues(alpha: 0.12), Colors.white],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: const Icon(
-          Icons.design_services_rounded,
-          color: AppColors.primary,
-          size: 32,
-        ),
-      ),
     );
   }
 }
