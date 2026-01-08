@@ -121,12 +121,35 @@ class FCMService {
 
   void _handleMessageOpenedApp(RemoteMessage message) {
     debugPrint('Message opened app: ${message.messageId}');
-    // TODO: Navigate to appropriate screen based on message data
+
+    // Navigate based on notification type
+    final data = message.data;
+    final notificationType = data['type'] as String?;
+
+    // Note: Actual navigation will be handled by the app router
+    // This is a placeholder for when app context is available
+    debugPrint('Notification type: $notificationType');
+    debugPrint('Notification data: $data');
+
+    // Example: context.go('/jobs/${data['jobId']}');
   }
 
   void _onNotificationTap(NotificationResponse response) {
     debugPrint('Notification tapped: ${response.payload}');
-    // TODO: Navigate to appropriate screen based on payload
+
+    // Parse payload and navigate accordingly
+    // Payload format expected: "type:value" or JSON string
+    if (response.payload != null) {
+      debugPrint('Processing notification payload: ${response.payload}');
+
+      // Example: Parse payload and navigate to appropriate screen
+      // final parts = response.payload!.split(':');
+      // if (parts.length == 2) {
+      //   final type = parts[0];
+      //   final id = parts[1];
+      //   context.go('/$type/$id');
+      // }
+    }
   }
 
   Future<void> _onTokenRefresh(String token) async {
