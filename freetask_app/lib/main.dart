@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_core/firebase_core.dart';
 
 import 'app.dart';
-import 'core/notifications/fcm_service.dart';
+import 'core/notifications/fcm_service_web.dart'
+    if (dart.library.io) 'core/notifications/fcm_service.dart';
 import 'core/storage/storage.dart';
 
 void main() async {
@@ -12,16 +12,11 @@ void main() async {
   // Initialize storage
   await initStorage();
 
-  // Initialize Firebase
+  // Initialize FCM service (automatically handles web vs mobile)
   try {
-    await Firebase.initializeApp();
-    debugPrint('Firebase initialized successfully');
-
-    // Initialize FCM service
     await fcmService.initialize();
   } catch (e) {
-    debugPrint('Firebase initialization error: $e');
-    // Continue without Firebase if initialization fails
+    debugPrint('FCM initialization error: $e');
   }
 
   // Global error boundary for unhandled errors
