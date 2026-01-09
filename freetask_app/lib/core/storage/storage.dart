@@ -84,13 +84,3 @@ class WebPreferencesStorage implements AppStorage {
 }
 
 final AppStorage appStorage = PlatformStorage();
-
-/// Initialize storage on app startup
-/// This ensures SharedPreferences is loaded for web platform
-Future<void> initStorage() async {
-  if (kIsWeb) {
-    // Pre-initialize SharedPreferences for web
-    await SharedPreferences.getInstance();
-  }
-  // For other platforms, FlutterSecureStorage initializes on first use
-}

@@ -38,9 +38,7 @@ class ServiceCard extends StatelessWidget {
                   avatarUrl: service.freelancerAvatarUrl,
                   size: 90,
                   onTap: () {
-                    // Navigate to freelancer profile when feature is implemented
-                    debugPrint(
-                        'Navigate to freelancer ID: ${service.freelancerId}');
+                    // TODO: Navigate to freelancer profile
                   },
                 ),
                 const SizedBox(width: AppSpacing.s16),

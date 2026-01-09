@@ -3,8 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 import 'app.dart';
-import 'core/notifications/fcm_service_web.dart'
-    if (dart.library.io) 'core/notifications/fcm_service.dart';
+import 'core/notifications/fcm_service.dart';
 import 'core/storage/storage.dart';
 
 void main() async {
