@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "967712688614",
+    "project_id": "freetask-ae926",
+    "storage_bucket": "freetask-ae926.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:967712688614:android:260f852d7382faec9eae27",
+        "android_client_info": {
+          "package_name": "com.freetask.apps"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBlfAJc2hNUSH_ZihtRvuGa3Pmd_i98yXc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

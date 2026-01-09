@@ -4,13 +4,9 @@ import 'package:firebase_core/firebase_core.dart';
 
 import 'app.dart';
 import 'core/notifications/fcm_service.dart';
-import 'core/storage/storage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize storage
-  await initStorage();
 
   // Initialize Firebase
   try {

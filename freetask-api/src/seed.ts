@@ -236,7 +236,7 @@ async function main() {
     jobs.map((job) =>
       prisma.$executeRaw`
         INSERT INTO "Escrow" ("jobId", status, amount, "createdAt", "updatedAt")
-        VALUES (${job.id}, 'PENDING', ${job.amount.toString()}, NOW(), NOW())
+        VALUES (${job.id}, 'PENDING', CAST(${job.amount.toString()} AS DECIMAL(10,2)), NOW(), NOW())
         ON CONFLICT ("jobId") DO NOTHING
       `,
     ),
