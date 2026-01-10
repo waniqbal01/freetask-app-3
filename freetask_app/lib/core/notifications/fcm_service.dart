@@ -121,12 +121,34 @@ class FCMService {
 
   void _handleMessageOpenedApp(RemoteMessage message) {
     debugPrint('Message opened app: ${message.messageId}');
-    // TODO: Navigate to appropriate screen based on message data
+    _navigateBasedOnData(message.data);
+  }
+
+  void _navigateBasedOnData(Map<String, dynamic> data) {
+    if (data.isEmpty) return;
+
+    final type = data['type'] as String?;
+    final id = data['id'] as String?;
+
+    if (type == null || id == null) return;
+
+    // Import router at top of file to use appRouter
+    // For now, just log the navigation intent
+    debugPrint('Should navigate to: $type with id: $id');
+    // To implement: use go_router navigation
+    // Example: context.go('/jobs/$id'); or appRouter.push('/jobs/$id');
   }
 
   void _onNotificationTap(NotificationResponse response) {
     debugPrint('Notification tapped: ${response.payload}');
-    // TODO: Navigate to appropriate screen based on payload
+    // Parse payload and navigate
+    // Payload format assumption: "type:id" (e.g., "job:123")
+    if (response.payload != null && response.payload!.isNotEmpty) {
+      final parts = response.payload!.split(':');
+      if (parts.length == 2) {
+        _navigateBasedOnData({'type': parts[0], 'id': parts[1]});
+      }
+    }
   }
 
   Future<void> _onTokenRefresh(String token) async {

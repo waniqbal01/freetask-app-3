@@ -20,6 +20,14 @@ android {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
+    // Load keystore properties from key.properties file
+    val keystorePropertiesFile = rootProject.file("key.properties")
+    val keystoreProperties = java.util.Properties()
+    
+    if (keystorePropertiesFile.exists()) {
+        keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))
+    }
+
     defaultConfig {
         // Production Application ID - matches Firebase
         applicationId = "com.freetask.apps"
@@ -31,11 +39,27 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            if (keystorePropertiesFile.exists()) {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Use production signing if key.properties exists, otherwise use debug
+            signingConfig = if (keystorePropertiesFile.exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                // Fallback to debug keys for development
+                println("⚠️ WARNING: Using debug keys. Run create_keystore.ps1 to setup production signing.")
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }

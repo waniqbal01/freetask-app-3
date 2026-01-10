@@ -1,0 +1,50 @@
+name: Build Flutter APK
+
+on:
+  workflow_dispatch:  # Manual trigger
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+        
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.35.3'
+        channel: 'stable'
+        
+    - name: Get dependencies
+      run: flutter pub get
+      working-directory: ./freetask_app
+      
+    - name: Build APK
+      run: flutter build apk --release
+      working-directory: ./freetask_app
+      
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: app-release
+        path: freetask_app/build/app/outputs/flutter-apk/app-release.apk
+        
+    - name: Build ARM64 APK  
+      run: flutter build apk --release --target-platform android-arm64 --split-per-abi
+      working-directory: ./freetask_app
+      
+    - name: Upload ARM64 APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: app-arm64-v8a-release
+        path: freetask_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
