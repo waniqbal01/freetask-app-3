@@ -17,6 +17,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -68,10 +69,24 @@ android {
 }
 
 dependencies {
+    constraints {
+        // Force byte-buddy to use a version compatible with Java 17
+        // Version 1.17.6 was compiled with Java 24 (class file major version 68)
+        implementation("net.bytebuddy:byte-buddy:1.14.18") {
+            because("Version 1.17.6 requires Java 24, but we're using Java 17")
+        }
+        implementation("net.bytebuddy:byte-buddy-agent:1.14.18") {
+            because("Version 1.17.6 requires Java 24, but we're using Java 17")
+        }
+    }
+    
     // Firebase BOM with stable AGP/Kotlin versions
     implementation(platform("com.google.firebase:firebase-bom:32.3.1"))
     implementation("com.google.firebase:firebase-analytics-ktx")
     implementation("com.google.firebase:firebase-messaging-ktx")
+    
+    // Core library desugaring
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }
 
 flutter {
