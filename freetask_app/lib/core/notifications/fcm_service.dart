@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:dio/dio.dart';
 import '../storage/storage.dart';
+import '../../services/http_client.dart';
 import '../../features/auth/auth_repository.dart';
 
 // Top-level function for background message handling
@@ -165,8 +166,7 @@ class FCMService {
       if (token == null) return;
 
       final dio = Dio();
-      final apiUrl =
-          await appStorage.read('api_url') ?? 'http://localhost:4000';
+      final apiUrl = await HttpClient().currentBaseUrl();
 
       await dio.post(
         '$apiUrl/notifications/register-token',

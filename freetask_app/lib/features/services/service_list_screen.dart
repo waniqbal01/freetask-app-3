@@ -154,6 +154,18 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
 
     return Scaffold(
       bottomNavigationBar: const AppBottomNav(currentTab: AppTab.home),
+      floatingActionButton: role == 'FREELANCER'
+          ? FloatingActionButton.extended(
+              onPressed: () async {
+                final result = await context.push('/services/create');
+                if (result == true) {
+                  _fetchServices();
+                }
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Buat Servis'),
+            )
+          : null,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(

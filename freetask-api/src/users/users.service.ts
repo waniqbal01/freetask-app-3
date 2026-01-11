@@ -33,6 +33,31 @@ export class UsersService {
     return toAppUser(user);
   }
 
+  async getPublicProfile(id: number) {
+    const user = await this.ensureUserExists(id);
+    // Reuse toAppUser or map manually if we need to hide more fields
+    // For now toAppUser seems safe (excludes password)
+    // We might want to include services later
+    const publicData = toAppUser(user);
+    
+    // Fetch user's services to show on profile
+    const services = await this.prisma.service.findMany({
+      where: { freelancerId: id },
+      select: {
+          id: true,
+          title: true,
+          price: true,
+          thumbnailUrl: true,
+          category: true,
+      }
+    });
+
+    return {
+        ...publicData,
+        services,
+    };
+  }
+
   async updateProfile(id: number, dto: UpdateUserDto) {
     const avatarUrl = dto.avatarUrl ?? dto.avatar;
 

@@ -63,6 +63,39 @@ class UsersRepository {
       rethrow;
     }
   }
+
+  Future<Map<String, dynamic>> getPublicProfile(String userId) async {
+    // Basic validation to prevent unnecessary calls
+    if (userId.isEmpty || userId == 'null') {
+      throw ArgumentError('Invalid user ID');
+    }
+
+    try {
+      // Use _authorizedOptions(requireAuth: false) if we want public access without login
+      // But typically we do want them logged in to see details
+      final token = await _storage.read(AuthRepository.tokenStorageKey);
+      final options = token != null && token.isNotEmpty
+          ? Options(headers: {'Authorization': 'Bearer $token'})
+          : null;
+
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/users/$userId',
+        options: options,
+      );
+
+      final data = response.data;
+      if (data == null) {
+        throw StateError('Pengguna tidak ditemui');
+      }
+      return data;
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 404) {
+        throw StateError('Pengguna tidak ditemui');
+      }
+      await handleApiError(error);
+      rethrow;
+    }
+  }
 }
 
 final usersRepository = UsersRepository();

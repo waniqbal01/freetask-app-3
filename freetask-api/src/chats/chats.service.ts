@@ -7,7 +7,7 @@ import { ChatThreadDto } from './dto/chat-thread.dto';
 
 @Injectable()
 export class ChatsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async listThreads(
     userId: number,
@@ -22,8 +22,8 @@ export class ChatsService {
         role === UserRole.ADMIN
           ? {}
           : {
-              OR: [{ clientId: userId }, { freelancerId: userId }],
-            },
+            OR: [{ clientId: userId }, { freelancerId: userId }],
+          },
       include: {
         client: {
           select: { id: true, name: true },
@@ -89,6 +89,8 @@ export class ChatsService {
             senderId: message.sender.id,
             senderName: message.sender.name,
             content: message.content,
+            type: message.type,
+            attachmentUrl: message.attachmentUrl,
             createdAt: message.createdAt,
           }) satisfies ChatMessageDto,
       );
@@ -105,6 +107,8 @@ export class ChatsService {
       const createdMessage = await tx.chatMessage.create({
         data: {
           content: dto.content,
+          type: dto.type ?? 'text',
+          attachmentUrl: dto.attachmentUrl,
           jobId,
           senderId: userId,
         },
@@ -129,6 +133,8 @@ export class ChatsService {
       senderId: message.sender.id,
       senderName: message.sender.name,
       content: message.content,
+      type: message.type,
+      attachmentUrl: message.attachmentUrl,
       createdAt: message.createdAt,
     } satisfies ChatMessageDto;
   }

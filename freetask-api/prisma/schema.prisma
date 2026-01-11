@@ -103,6 +103,8 @@ model ChatMessage {
   id          Int      @id @default(autoincrement())
   createdAt   DateTime @default(now())
   content     String
+  type        String   @default("text")
+  attachmentUrl String?
   sender      User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
   senderId    Int
   job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)

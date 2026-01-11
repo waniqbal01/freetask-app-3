@@ -113,12 +113,14 @@ class ChatRepository {
     return controller.stream;
   }
 
-  Future<void> sendText({
+  Future<void> sendMessage({
     required String jobId,
     required String text,
+    String? attachmentUrl,
+    String type = 'text',
   }) async {
     final trimmed = text.trim();
-    if (trimmed.isEmpty) {
+    if (trimmed.isEmpty && attachmentUrl == null) {
       _notifyStreamError('Mesej kosong tidak dihantar.');
       return;
     }
@@ -128,11 +130,36 @@ class ChatRepository {
           '/chats/$jobId/messages',
           data: <String, dynamic>{
             'content': trimmed,
+            'type': type,
+            'attachmentUrl': attachmentUrl,
           },
           options: await _authorizedOptions(),
         );
       });
       await _loadMessages(jobId, mergeExisting: true);
+    } on DioException catch (error) {
+      await _handleError(error);
+      rethrow;
+    }
+  }
+
+  Future<String> uploadChatImage(dynamic file) async {
+    try {
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(file.path),
+      });
+
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/uploads',
+        data: formData,
+        options: await _authorizedOptions(),
+      );
+
+      final data = response.data;
+      if (data != null && data['url'] != null) {
+        return data['url'] as String;
+      }
+      throw StateError('Upload failed: No URL returned');
     } on DioException catch (error) {
       await _handleError(error);
       rethrow;

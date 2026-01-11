@@ -11,7 +11,7 @@ import { UpdateServiceDto } from './dto/update-service.dto';
 
 @Injectable()
 export class ServicesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(userId: number, role: UserRole, dto: CreateServiceDto) {
     if (role !== UserRole.FREELANCER) {
@@ -29,6 +29,7 @@ export class ServicesService {
         description: dto.description,
         price: new Prisma.Decimal(parsedPrice.toFixed(2)),
         category: dto.category,
+        thumbnailUrl: dto.thumbnailUrl,
         freelancerId: userId,
       },
       include: {
@@ -46,11 +47,11 @@ export class ServicesService {
       where: {
         ...(q
           ? {
-              OR: [
-                { title: { contains: q, mode: 'insensitive' } },
-                { description: { contains: q, mode: 'insensitive' } },
-              ],
-            }
+            OR: [
+              { title: { contains: q, mode: 'insensitive' } },
+              { description: { contains: q, mode: 'insensitive' } },
+            ],
+          }
           : {}),
         ...(category ? { category } : {}),
       },

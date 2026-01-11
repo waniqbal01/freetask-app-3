@@ -1,6 +1,11 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../theme/app_theme.dart';
 
 import '../../core/utils/error_utils.dart';
 import 'chat_models.dart';
@@ -88,8 +93,9 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                   }
                 });
                 return RefreshIndicator(
-                  onRefresh: () =>
-                      ref.read(chatRepositoryProvider).reloadMessages(widget.chatId),
+                  onRefresh: () => ref
+                      .read(chatRepositoryProvider)
+                      .reloadMessages(widget.chatId),
                   child: ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.all(16),
@@ -101,7 +107,8 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                           onLoadMore: _handleLoadMore,
                         );
                       }
-                      final message = hasMore ? messages[index - 1] : messages[index];
+                      final message =
+                          hasMore ? messages[index - 1] : messages[index];
                       return Align(
                         alignment: Alignment.centerLeft,
                         child: Container(
@@ -114,10 +121,28 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              Text(
-                                message.text,
-                                style: const TextStyle(color: Colors.black87),
-                              ),
+                              if (message.type == 'image' &&
+                                  message.attachmentUrl != null) ...[
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    message.attachmentUrl!,
+                                    height: 200,
+                                    width: 200,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => const Icon(
+                                        Icons.broken_image,
+                                        size: 50,
+                                        color: Colors.grey),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                              ],
+                              if (message.text.isNotEmpty)
+                                Text(
+                                  message.text,
+                                  style: const TextStyle(color: Colors.black87),
+                                ),
                               const SizedBox(height: 4),
                               Text(
                                 '${message.senderName} • ${_formatTimestamp(message.timestamp)}',
@@ -168,6 +193,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
           _MessageComposer(
             controller: _controller,
             onSendText: _handleSendText,
+            onSendImage: _handleSendImage,
             enabled: !hasMessageError,
           ),
         ],
@@ -181,7 +207,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     }
     final trimmed = text.trim();
     try {
-      await ref.read(chatRepositoryProvider).sendText(
+      await ref.read(chatRepositoryProvider).sendMessage(
             jobId: widget.chatId,
             text: trimmed,
           );
@@ -196,6 +222,44 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
         return;
       }
       _showSnackBar('Ralat menghantar mesej.');
+    }
+  }
+
+  Future<void> _handleSendImage(File file) async {
+    try {
+      // 1. Upload image using services repository (reusing upload logic)
+      // Note: We might want to move upload logic to a shared repository later
+      // For now, importing services_repository is fine or we duplicate upload logic
+      // But ServicesRepository is not imported here.
+      // Better: Add uploadImage to ChatRepository or use a shared FileRepository.
+
+      // Let's assume ChatRepository has uploadImage now or we can implement it there quickly.
+      // Wait, I didn't add uploadImage to ChatRepository. I should.
+
+      // Temporary: Use a placeholder or notify user if fails.
+
+      // Actually, I can use a quick http post here or better, add upload logic to ChatRepo.
+      // Since I can't edit ChatRepo here easily (parallel edits constraint),
+      // I will assume ChatRepo has it or I will add it in next step.
+      // For this step I will leave it empty with a TODO or comment to compile.
+
+      // Better plan: Add upload logic to ChatRepository in the next step.
+      // So here just call it.
+
+      final url = await ref.read(chatRepositoryProvider).uploadChatImage(file);
+
+      await ref.read(chatRepositoryProvider).sendMessage(
+            jobId: widget.chatId,
+            text: '', // Empty text for image message
+            type: 'image',
+            attachmentUrl: url,
+          );
+    } on DioException catch (error) {
+      if (!mounted) return;
+      _showSnackBar(resolveDioErrorMessage(error));
+    } catch (_) {
+      if (!mounted) return;
+      _showSnackBar('Gagal menghantar gambar.');
     }
   }
 
@@ -235,17 +299,24 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
   }
 }
 
-class _MessageComposer extends StatelessWidget {
+class _MessageComposer extends StatefulWidget {
   const _MessageComposer({
     required this.controller,
     required this.onSendText,
+    required this.onSendImage,
     this.enabled = true,
   });
 
   final TextEditingController controller;
   final ValueChanged<String> onSendText;
+  final ValueChanged<File> onSendImage;
   final bool enabled;
 
+  @override
+  State<_MessageComposer> createState() => _MessageComposerState();
+}
+
+class _MessageComposerState extends State<_MessageComposer> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -260,31 +331,51 @@ class _MessageComposer extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
+            IconButton(
+              icon: const Icon(Icons.add_photo_alternate_outlined),
+              onPressed: widget.enabled ? _pickImage : null,
+              color: AppColors.primary,
+            ),
+            const SizedBox(width: 8),
             Expanded(
               child: TextField(
-                controller: controller,
-                readOnly: !enabled,
-                textInputAction:
-                    enabled ? TextInputAction.send : TextInputAction.none,
+                controller: widget.controller,
+                readOnly: !widget.enabled,
+                textInputAction: widget.enabled
+                    ? TextInputAction.send
+                    : TextInputAction.none,
                 decoration: InputDecoration(
-                  hintText: enabled
+                  hintText: widget.enabled
                       ? 'Tulis mesej...'
                       : 'Chat akan datang (Coming Soon)',
                   border: const OutlineInputBorder(),
                   isDense: true,
                 ),
-                onSubmitted: enabled ? onSendText : null,
+                onSubmitted: widget.enabled ? widget.onSendText : null,
               ),
             ),
             const SizedBox(width: 8),
             IconButton(
               icon: const Icon(Icons.send),
-              onPressed: enabled ? () => onSendText(controller.text) : null,
+              onPressed: widget.enabled
+                  ? () => widget.onSendText(widget.controller.text)
+                  : null,
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _pickImage() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      allowMultiple: false,
+    );
+
+    if (result != null && result.files.single.path != null) {
+      widget.onSendImage(File(result.files.single.path!));
+    }
   }
 }
 

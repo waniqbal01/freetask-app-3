@@ -4,5 +4,7 @@ export class ChatMessageDto {
   senderId: number;
   senderName: string;
   content: string;
+  type: string;
+  attachmentUrl: string | null;
   createdAt: Date;
 }

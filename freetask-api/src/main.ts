@@ -79,6 +79,27 @@ async function bootstrap() {
     });
 
     // ------------------------------
+    // Initialize Firebase Admin
+    // ------------------------------
+    try {
+      const admin = require('firebase-admin');
+      const serviceAccount = process.env.FIREBASE_CREDENTIALS
+        ? JSON.parse(process.env.FIREBASE_CREDENTIALS)
+        : undefined;
+
+      if (serviceAccount) {
+        admin.initializeApp({
+          credential: admin.credential.cert(serviceAccount),
+        });
+        logger.log('Firebase Admin initialized successfully');
+      } else {
+        logger.warn('FIREBASE_CREDENTIALS not provided. Push notifications will describe only.');
+      }
+    } catch (error) {
+      logger.error('Failed to initialize Firebase Admin', error);
+    }
+
+    // ------------------------------
     // Global Upload Size Limits
     // ------------------------------
     const express = require('express');

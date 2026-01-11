@@ -94,6 +94,62 @@ class ServicesRepository {
     return Options(headers: <String, String>{'Authorization': 'Bearer $token'});
   }
 
+  Future<void> createService({
+    required String title,
+    required String description,
+    required double price,
+    required String category,
+    String? thumbnailUrl,
+  }) async {
+    try {
+      await _dio.post<void>(
+        '/services',
+        data: {
+          'title': title,
+          'description': description,
+          'price': price,
+          'category': category,
+          'thumbnailUrl': thumbnailUrl,
+        },
+        options: await _authorizedOptions(),
+      );
+    } on DioException catch (error) {
+      await _handleDioError(error);
+      rethrow;
+    }
+  }
+
+  Future<String> uploadServiceImage(dynamic file) async {
+    // Determine if file is File (mobile) or something else (web not supported yet fully)
+    // For now assuming dart:io File
+
+    // Import dart:io is needed in repository or use a cross-platform solution
+    // But since CreateServiceScreen passes File, we need to handle it.
+    // However, repository shouldn't depend on dart:io directly if we want web support later.
+    // But for now sticking to mobile.
+
+    try {
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(file.path),
+      });
+
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/uploads',
+        data: formData,
+        options: await _authorizedOptions(),
+      );
+
+      final data = response.data;
+      if (data != null && data['url'] != null) {
+        return data['url'] as String;
+      }
+      throw StateError('Upload failed: No URL returned');
+    } on DioException catch (error) {
+      await _handleDioError(error);
+      rethrow;
+    }
+  }
+
   Future<void> _handleDioError(DioException error) async {
     await handleApiError(error);
   }
