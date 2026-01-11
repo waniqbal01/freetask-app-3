@@ -118,6 +118,12 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                         avatar: const Icon(Icons.android, size: 16),
                       ),
                       ActionChip(
+                        label: const Text('Render Live'),
+                        onPressed: () => _controller.text =
+                            'https://freetask-backend.onrender.com',
+                        avatar: const Icon(Icons.cloud, size: 16),
+                      ),
+                      ActionChip(
                         label: const Text('iOS / Web (Local)'),
                         onPressed: () =>
                             _controller.text = 'http://localhost:4000',
