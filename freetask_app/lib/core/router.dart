@@ -45,7 +45,7 @@ Future<bool> hasToken() async {
 }
 
 final appRouter = GoRouter(
-  initialLocation: '/startup',
+  initialLocation: '/',
   refreshListenable: authRefreshNotifier,
   redirect: (context, state) async {
     final location = state.uri.path;

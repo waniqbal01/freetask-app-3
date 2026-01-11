@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -31,13 +31,6 @@ class _LoginScreenState extends State<LoginScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
-  }
-
-  void _fillDemoCredentials(String email) {
-    setState(() {
-      _emailController.text = email;
-      _passwordController.text = 'Password123!';
-    });
   }
 
   Future<void> _handleLogin() async {
@@ -131,17 +124,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    IconButton(
-                      onPressed: () {
-                        if (context.canPop()) {
-                          context.pop();
-                        } else {
-                          context.go('/');
-                        }
-                      },
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                      color: AppColors.neutral500,
-                    ),
                     const SizedBox(height: AppSpacing.s8),
                     Text(
                       'Selamat kembali 👋',
@@ -157,14 +139,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: AppSpacing.s8),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton.icon(
-                        onPressed: () => context.push('/settings/api'),
-                        icon: const Icon(Icons.settings_ethernet_outlined),
-                        label: const Text('Tukar API Server'),
-                      ),
-                    ),
                     const SizedBox(height: AppSpacing.s24),
                     SectionCard(
                       title: 'Log masuk akaun',
@@ -173,32 +147,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                OutlinedButton.icon(
-                                  onPressed: _isSubmitting
-                                      ? null
-                                      : () => _fillDemoCredentials(
-                                          'client1@example.com'),
-                                  icon: const Icon(
-                                      Icons.person_pin_circle_outlined),
-                                  label: const Text('Guna akaun demo Client'),
-                                ),
-                                OutlinedButton.icon(
-                                  onPressed: _isSubmitting
-                                      ? null
-                                      : () => _fillDemoCredentials(
-                                          'freelancer1@example.com'),
-                                  icon: const Icon(
-                                      Icons.workspace_premium_outlined),
-                                  label:
-                                      const Text('Guna akaun demo Freelancer'),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: AppSpacing.s16),
                             TextFormField(
                               controller: _emailController,
                               keyboardType: TextInputType.emailAddress,
@@ -283,126 +231,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-                    if (kDebugMode) ...[
-                      const SizedBox(height: AppSpacing.s16),
-                      SectionCard(
-                        title: 'Demo Accounts',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                                'Gunakan akaun sedia ada untuk ujian cepat:'),
-                            const SizedBox(height: AppSpacing.s12),
-                            _DemoCredentialRow(
-                              role: 'Admin',
-                              email: 'admin@example.com',
-                              onTap: _fillDemoCredentials,
-                            ),
-                            _DemoCredentialRow(
-                              role: 'Client',
-                              email: 'client1@example.com',
-                              onTap: _fillDemoCredentials,
-                            ),
-                            _DemoCredentialRow(
-                              role: 'Client',
-                              email: 'client2@example.com',
-                              onTap: _fillDemoCredentials,
-                            ),
-                            _DemoCredentialRow(
-                              role: 'Freelancer',
-                              email: 'freelancer1@example.com',
-                              onTap: _fillDemoCredentials,
-                            ),
-                            _DemoCredentialRow(
-                              role: 'Freelancer',
-                              email: 'freelancer2@example.com',
-                              onTap: _fillDemoCredentials,
-                            ),
-                            const SizedBox(height: AppSpacing.s12),
-                            const Text(
-                              'Kata laluan untuk semua akaun demo: Password123!',
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.s12),
-                      Container(
-                        padding: const EdgeInsets.all(AppSpacing.s12),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          borderRadius: AppRadius.mediumRadius,
-                          border: Border.all(color: Colors.blue.shade200),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(Icons.phone_iphone,
-                                    size: 18, color: Colors.blue.shade700),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'iOS Physical Device?',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.blue.shade700,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Running on a physical iOS device? Update API URL via "Tukar API Server" above to your LAN IP (e.g., http://192.168.1.100:4000)',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.blue.shade800,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DemoCredentialRow extends StatelessWidget {
-  const _DemoCredentialRow({
-    required this.role,
-    required this.email,
-    required this.onTap,
-  });
-
-  final String role;
-  final String email;
-  final void Function(String email) onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: InkWell(
-        onTap: () => onTap(email),
-        child: Row(
-          children: [
-            const Icon(Icons.person_outline, size: 18),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text('$role · $email'),
-            ),
-            const SizedBox(width: 8),
-            const Icon(Icons.auto_fix_normal_outlined, size: 16),
-          ],
         ),
       ),
     );
