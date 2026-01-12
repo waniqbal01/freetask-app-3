@@ -11,6 +11,9 @@ import '../../theme/app_theme.dart';
 import '../../widgets/section_card.dart';
 import 'job_constants.dart';
 
+import 'package:file_picker/file_picker.dart';
+import 'package:mime/mime.dart';
+import '../../services/upload_service.dart';
 import '../auth/auth_repository.dart';
 
 class JobCheckoutScreen extends StatefulWidget {
@@ -24,10 +27,12 @@ class JobCheckoutScreen extends StatefulWidget {
 
 class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
   bool _isSubmitting = false;
+  bool _isUploading = false;
   String? _errorMessage;
-  String? _descriptionError;
+  String? _messageError;
   String? _amountError;
   late final TextEditingController _descriptionController;
+  late final TextEditingController _messageController;
   late final TextEditingController _amountController;
   late final bool _allowEditing;
   final List<String> _attachments = [];
@@ -55,6 +60,7 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
     _descriptionController = TextEditingController(
       text: _description.isNotEmpty ? _description : _serviceDescription,
     );
+    _messageController = TextEditingController();
     _amountController = TextEditingController(
       text: _amount != null && _amount! > 0 ? _amount!.toStringAsFixed(2) : '',
     );
@@ -64,6 +70,7 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
   @override
   void dispose() {
     _descriptionController.dispose();
+    _messageController.dispose();
     _amountController.dispose();
     super.dispose();
   }
@@ -97,34 +104,32 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
 
   Future<void> _createOrder() async {
     final serviceId = _serviceId;
-    final descriptionInput = _descriptionController.text.trim();
-    final description = descriptionInput.isNotEmpty
-        ? descriptionInput
-        : (_description.isNotEmpty ? _description : _serviceDescription);
+    // Use message input as the job description
+    final messageInput = _messageController.text.trim();
+    final combinedDescription = messageInput;
+
     final amountInput = _amountController.text.trim();
     final parsedAmount =
         amountInput.isNotEmpty ? double.tryParse(amountInput) : _amount;
 
     setState(() {
       _errorMessage = null;
-      _descriptionError = null;
+      _messageError = null;
       _amountError = null;
     });
 
-    if (serviceId.isEmpty || description.isEmpty) {
+    if (serviceId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Maklumat servis tidak lengkap.')),
       );
       return;
     }
 
-    final trimmedDescription = description.trim();
-
-    if (trimmedDescription.length < jobMinDescLen ||
+    if (combinedDescription.length < jobMinDescLen ||
         parsedAmount == null ||
         parsedAmount < jobMinAmount) {
       setState(() {
-        _descriptionError = trimmedDescription.length < jobMinDescLen
+        _messageError = combinedDescription.length < jobMinDescLen
             ? 'Minimum $jobMinDescLen aksara diperlukan.'
             : null;
         _amountError = parsedAmount == null || parsedAmount < jobMinAmount
@@ -143,7 +148,7 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       final job = await jobsRepository.createOrder(
         serviceId,
         parsedAmount,
-        description,
+        combinedDescription, // Send message as description
         serviceTitle:
             _title.isEmpty ? _summary['serviceTitle']?.toString() : _title,
         attachments: _attachments.isNotEmpty ? _attachments : null,
@@ -181,7 +186,7 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       final fieldErrors = _parseFieldErrors(error);
       setState(() {
         _errorMessage = fieldErrors.isEmpty ? message : null;
-        _descriptionError = fieldErrors['description'];
+        _messageError = fieldErrors['description'];
         _amountError = fieldErrors['amount'];
       });
       final status = error.response?.statusCode;
@@ -198,7 +203,7 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       setState(() {
         _errorMessage = message;
         if (message.toLowerCase().contains('penerangan')) {
-          _descriptionError = message;
+          _messageError = message;
         }
         if (message.toLowerCase().contains('jumlah minima')) {
           _amountError = message;
@@ -306,172 +311,338 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.s24),
-                    SectionCard(
-                      title: 'Ringkasan Servis',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title ?? 'Servis ID: $_serviceId',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: _descriptionController,
-                            maxLines: 3,
-                            decoration: InputDecoration(
-                              labelText: 'Penerangan job',
-                              helperText: _descriptionError ??
-                                  'Minimum $jobMinDescLen aksara.',
-                              helperStyle: TextStyle(
-                                color: _descriptionError != null
-                                    ? AppColors.error
-                                    : AppColors.neutral400,
-                              ),
-                              errorText: _descriptionError,
-                              alignLabelWithHint: true,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.s12),
-                          TextField(
-                            controller: _amountController,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            readOnly: !_allowEditing,
-                            decoration: InputDecoration(
-                              labelText: _allowEditing
-                                  ? 'Anggaran harga (RM)'
-                                  : 'Jumlah (RM)',
-                              helperText: _amountError ??
-                                  'Minimum RM${jobMinAmount.toStringAsFixed(2)}.',
-                              helperStyle: TextStyle(
-                                color: _amountError != null
-                                    ? AppColors.error
-                                    : AppColors.neutral400,
-                              ),
-                              errorText: _amountError,
-                              suffixIcon: _allowEditing
-                                  ? const Icon(Icons.edit_outlined)
-                                  : const Icon(Icons.lock_outline),
-                            ),
-                          ),
-                          if (_allowEditing) ...[
-                            const SizedBox(height: AppSpacing.s8),
-                            const Text(
-                              'Harga servis belum tersedia. Masukkan anggaran untuk minta sebut harga.',
-                              style: AppTextStyles.bodySmall,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.s12),
-                    SectionCard(
-                      title: 'Lampiran (Pautan)',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (_attachments.isNotEmpty) ...[
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children:
-                                  _attachments.asMap().entries.map((entry) {
-                                final index = entry.key;
-                                final url = entry.value;
-                                return Chip(
-                                  label: Text(
-                                    url.length > 30
-                                        ? '${url.substring(0, 30)}...'
-                                        : url,
-                                    style: const TextStyle(fontSize: 12),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SectionCard(
+                              title: 'Ringkasan Servis',
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    title ?? 'Servis ID: $_serviceId',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.w700),
                                   ),
-                                  onDeleted: () {
-                                    setState(() {
-                                      _attachments.removeAt(index);
-                                    });
-                                  },
-                                  materialTapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                );
-                              }).toList(),
-                            ),
-                            const SizedBox(height: 12),
-                          ],
-                          FTButton(
-                            label: 'Tambah Pautan Document/Image',
-                            size: FTButtonSize.small,
-                            variant: FTButtonVariant.outline,
-                            expanded: false,
-                            onPressed: () async {
-                              final controller = TextEditingController();
-                              final url = await showDialog<String>(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Tambah Pautan'),
-                                  content: TextField(
-                                    controller: controller,
-                                    decoration: const InputDecoration(
-                                      hintText: 'https://example.com/file.pdf',
-                                      labelText: 'URL Pautan',
+                                  const SizedBox(height: 12),
+                                  TextField(
+                                    controller: _descriptionController,
+                                    maxLines: 2,
+                                    enabled: false, // Read-only
+                                    decoration: InputDecoration(
+                                      labelText: 'Butiran Servis',
+                                      filled: true,
+                                      fillColor: Colors.grey.shade100,
+                                      disabledBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(
+                                            color: Colors.grey.shade300),
+                                        borderRadius: AppRadius.mediumRadius,
+                                      ),
                                     ),
                                   ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: const Text('Batal'),
+                                  const SizedBox(height: AppSpacing.s12),
+                                  TextField(
+                                    controller: _messageController,
+                                    maxLines: 3,
+                                    decoration: InputDecoration(
+                                      labelText:
+                                          'Mesej / Arahan kepada freelancer',
+                                      hintText:
+                                          'Sila nyatakan keperluan job anda...',
+                                      helperText: _messageError ??
+                                          'Minimum $jobMinDescLen aksara.',
+                                      helperStyle: TextStyle(
+                                        color: _messageError != null
+                                            ? AppColors.error
+                                            : AppColors.neutral400,
+                                      ),
+                                      errorText: _messageError,
+                                      alignLabelWithHint: true,
                                     ),
-                                    FilledButton(
-                                      onPressed: () => Navigator.pop(
-                                          context, controller.text),
-                                      child: const Text('Tambah'),
+                                  ),
+                                  const SizedBox(height: AppSpacing.s12),
+                                  TextField(
+                                    controller: _amountController,
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                    readOnly: !_allowEditing,
+                                    decoration: InputDecoration(
+                                      labelText: _allowEditing
+                                          ? 'Anggaran harga (RM)'
+                                          : 'Jumlah (RM)',
+                                      helperText: _amountError ??
+                                          'Minimum RM${jobMinAmount.toStringAsFixed(2)}.',
+                                      helperStyle: TextStyle(
+                                        color: _amountError != null
+                                            ? AppColors.error
+                                            : AppColors.neutral400,
+                                      ),
+                                      errorText: _amountError,
+                                      suffixIcon: _allowEditing
+                                          ? const Icon(Icons.edit_outlined)
+                                          : const Icon(Icons.lock_outline),
+                                    ),
+                                  ),
+                                  if (_allowEditing) ...[
+                                    const SizedBox(height: AppSpacing.s8),
+                                    const Text(
+                                      'Harga servis belum tersedia. Masukkan anggaran untuk minta sebut harga.',
+                                      style: AppTextStyles.bodySmall,
                                     ),
                                   ],
-                                ),
-                              );
-                              if (url != null && url.trim().isNotEmpty) {
-                                setState(() {
-                                  _attachments.add(url.trim());
-                                });
-                              }
-                            },
-                          ),
-                        ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.s12),
+                            SectionCard(
+                              title: 'Lampiran (Pautan)',
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (_attachments.isNotEmpty) ...[
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: _attachments
+                                          .asMap()
+                                          .entries
+                                          .map((entry) {
+                                        final index = entry.key;
+                                        final url = entry.value;
+                                        return Chip(
+                                          label: Text(
+                                            url.length > 30
+                                                ? '${url.substring(0, 30)}...'
+                                                : url,
+                                            style:
+                                                const TextStyle(fontSize: 12),
+                                          ),
+                                          onDeleted: () {
+                                            setState(() {
+                                              _attachments.removeAt(index);
+                                            });
+                                          },
+                                          materialTapTargetSize:
+                                              MaterialTapTargetSize.shrinkWrap,
+                                        );
+                                      }).toList(),
+                                    ),
+                                    const SizedBox(height: 12),
+                                  ],
+                                  FTButton(
+                                    label: _isUploading
+                                        ? 'Uploading...'
+                                        : 'Tambah Pautan Document/Image',
+                                    size: FTButtonSize.small,
+                                    variant: FTButtonVariant.outline,
+                                    expanded: false,
+                                    isLoading: _isUploading,
+                                    onPressed: _isUploading
+                                        ? null
+                                        : () async {
+                                            await showModalBottomSheet(
+                                              context: context,
+                                              shape:
+                                                  const RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.vertical(
+                                                        top: Radius.circular(
+                                                            16)),
+                                              ),
+                                              builder: (context) => SafeArea(
+                                                child: Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    ListTile(
+                                                      leading: const Icon(Icons
+                                                          .upload_file_rounded),
+                                                      title: const Text(
+                                                          'Muat naik dari peranti'),
+                                                      onTap: () async {
+                                                        Navigator.pop(context);
+                                                        try {
+                                                          final result =
+                                                              await FilePicker
+                                                                  .platform
+                                                                  .pickFiles(
+                                                            withData: true,
+                                                            type:
+                                                                FileType.custom,
+                                                            allowedExtensions: [
+                                                              'jpg',
+                                                              'jpeg',
+                                                              'png',
+                                                              'pdf',
+                                                              'doc',
+                                                              'docx'
+                                                            ],
+                                                          );
+
+                                                          if (result != null &&
+                                                              result.files
+                                                                  .isNotEmpty) {
+                                                            final file = result
+                                                                .files.first;
+                                                            final bytes =
+                                                                file.bytes;
+                                                            final name =
+                                                                file.name;
+
+                                                            if (bytes == null) {
+                                                              throw Exception(
+                                                                  'Gagal membaca fail.');
+                                                            }
+
+                                                            setState(() {
+                                                              _isUploading =
+                                                                  true;
+                                                            });
+
+                                                            final mimeType =
+                                                                lookupMimeType(
+                                                                    name);
+                                                            final uploadResult =
+                                                                await uploadService
+                                                                    .uploadData(
+                                                                        name,
+                                                                        bytes,
+                                                                        mimeType);
+
+                                                            setState(() {
+                                                              _attachments.add(
+                                                                  uploadResult
+                                                                      .url);
+                                                            });
+                                                          }
+                                                        } catch (e) {
+                                                          if (mounted) {
+                                                            ScaffoldMessenger
+                                                                    .of(context)
+                                                                .showSnackBar(
+                                                              SnackBar(
+                                                                  content: Text(
+                                                                      'Ralat muat naik: $e')),
+                                                            );
+                                                          }
+                                                        } finally {
+                                                          if (mounted) {
+                                                            setState(() {
+                                                              _isUploading =
+                                                                  false;
+                                                            });
+                                                          }
+                                                        }
+                                                      },
+                                                    ),
+                                                    ListTile(
+                                                      leading: const Icon(
+                                                          Icons.link_rounded),
+                                                      title: const Text(
+                                                          'Tampal Pautan URL'),
+                                                      onTap: () async {
+                                                        Navigator.pop(context);
+                                                        final controller =
+                                                            TextEditingController();
+                                                        final url =
+                                                            await showDialog<
+                                                                String>(
+                                                          context: context,
+                                                          builder: (context) =>
+                                                              AlertDialog(
+                                                            title: const Text(
+                                                                'Tambah Pautan'),
+                                                            content: TextField(
+                                                              controller:
+                                                                  controller,
+                                                              decoration:
+                                                                  const InputDecoration(
+                                                                hintText:
+                                                                    'https://example.com/file.pdf',
+                                                                labelText:
+                                                                    'URL Pautan',
+                                                              ),
+                                                            ),
+                                                            actions: [
+                                                              TextButton(
+                                                                onPressed: () =>
+                                                                    Navigator.pop(
+                                                                        context),
+                                                                child:
+                                                                    const Text(
+                                                                        'Batal'),
+                                                              ),
+                                                              FilledButton(
+                                                                onPressed: () =>
+                                                                    Navigator.pop(
+                                                                        context,
+                                                                        controller
+                                                                            .text),
+                                                                child: const Text(
+                                                                    'Tambah'),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        );
+                                                        if (url != null &&
+                                                            url
+                                                                .trim()
+                                                                .isNotEmpty) {
+                                                          setState(() {
+                                                            _attachments.add(
+                                                                url.trim());
+                                                          });
+                                                        }
+                                                      },
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.s12),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(AppSpacing.s16),
+                              decoration: BoxDecoration(
+                                color: AppColors.neutral50,
+                                borderRadius: AppRadius.mediumRadius,
+                                border: Border.all(color: AppColors.neutral100),
+                              ),
+                              child: const Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Tip checkout',
+                                    style: AppTextStyles.titleMedium,
+                                  ),
+                                  SizedBox(height: AppSpacing.s8),
+                                  Text(
+                                    'Perincikan skop tambahan dalam ruangan penerangan supaya freelancer jelas tentang tugasan.',
+                                  ),
+                                  SizedBox(height: AppSpacing.s8),
+                                  Text(
+                                    'Dana anda akan dipegang secara escrow dan hanya dilepaskan apabila job selesai atau selepas 7 hari.',
+                                    style: AppTextStyles.bodySmall,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.s24),
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.s12),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(AppSpacing.s16),
-                      decoration: BoxDecoration(
-                        color: AppColors.neutral50,
-                        borderRadius: AppRadius.mediumRadius,
-                        border: Border.all(color: AppColors.neutral100),
-                      ),
-                      child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Tip checkout',
-                            style: AppTextStyles.titleMedium,
-                          ),
-                          SizedBox(height: AppSpacing.s8),
-                          Text(
-                            'Perincikan skop tambahan dalam ruangan penerangan supaya freelancer jelas tentang tugasan.',
-                          ),
-                          SizedBox(height: AppSpacing.s8),
-                          Text(
-                            'Dana anda akan dipegang secara escrow dan hanya dilepaskan apabila job selesai atau selepas 7 hari.',
-                            style: AppTextStyles.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Spacer(),
                     if (_errorMessage != null) ...[
                       Container(
                         width: double.infinity,

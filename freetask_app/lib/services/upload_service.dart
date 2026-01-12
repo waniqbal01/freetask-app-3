@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:mime/mime.dart';
 import 'package:path/path.dart' as p;
 
+import 'package:http_parser/http_parser.dart';
 import 'http_client.dart';
 import '../core/storage/storage.dart';
 import '../core/notifications/notification_service.dart';
@@ -25,11 +26,36 @@ class UploadService {
     final formData = FormData.fromMap(<String, dynamic>{
       'file': await MultipartFile.fromFile(filePath, filename: fileName),
     });
+    return _performUpload(formData);
+  }
 
+  Future<UploadResult> uploadData(
+      String fileName, Uint8List bytes, String? mimeType) async {
+    if (bytes.lengthInBytes > maxFileBytes) {
+      throw const ValidationException('Saiz fail melebihi had 5MB.');
+    }
+    // Basic mime check if provided, otherwise assume valid for now or check header bytes (complex).
+    if (mimeType != null && !allowedMimeTypes.contains(mimeType)) {
+      throw const ValidationException(
+          'Jenis fail tidak disokong untuk muat naik.');
+    }
+
+    final formData = FormData.fromMap(<String, dynamic>{
+      'file': MultipartFile.fromBytes(
+        bytes,
+        filename: fileName,
+        contentType: mimeType != null ? MediaType.parse(mimeType) : null,
+      ),
+    });
+    return _performUpload(formData);
+  }
+
+  Future<UploadResult> _performUpload(FormData formData) async {
     final token = await _storage.read(_authTokenKey) ??
         await _storage.read(_legacyAccessTokenKey);
     if (token == null || token.isEmpty) {
-      throw const UnauthenticatedUploadException('Sila login dulu untuk upload.');
+      throw const UnauthenticatedUploadException(
+          'Sila login dulu untuk upload.');
     }
     final headers = <String, dynamic>{};
     headers['Authorization'] = 'Bearer $token';
@@ -52,7 +78,7 @@ class UploadService {
     }
 
     return UploadResult(
-      key: key ?? fileName,
+      key: key ?? 'unknown',
       url: _normalizePath(url),
     );
   }
@@ -68,7 +94,8 @@ class UploadService {
     final headers = await authorizationHeader();
     if (headers.isEmpty) {
       _notifyUnauthorized();
-      throw const UnauthenticatedUploadException('Sila log masuk untuk memuat turun fail.');
+      throw const UnauthenticatedUploadException(
+          'Sila log masuk untuk memuat turun fail.');
     }
 
     try {
@@ -80,9 +107,11 @@ class UploadService {
         ),
       );
     } on DioException catch (error) {
-      if (error.response?.statusCode == 401 || error.response?.statusCode == 403) {
+      if (error.response?.statusCode == 401 ||
+          error.response?.statusCode == 403) {
         _notifyUnauthorized(
-          message: 'Akses fail memerlukan log masuk aktif. Sila log masuk semula.',
+          message:
+              'Akses fail memerlukan log masuk aktif. Sila log masuk semula.',
         );
       }
       rethrow;
@@ -102,7 +131,8 @@ class UploadService {
 
     final mimeType = lookupMimeType(filePath) ?? '';
     if (!allowedMimeTypes.contains(mimeType)) {
-      throw const ValidationException('Jenis fail tidak disokong untuk muat naik.');
+      throw const ValidationException(
+          'Jenis fail tidak disokong untuk muat naik.');
     }
   }
 
@@ -120,7 +150,8 @@ class UploadService {
   static const String _legacyAccessTokenKey = 'access_token';
 
   Future<Map<String, String>> authorizationHeader() async {
-    final token = await _storage.read(_authTokenKey) ?? await _storage.read(_legacyAccessTokenKey);
+    final token = await _storage.read(_authTokenKey) ??
+        await _storage.read(_legacyAccessTokenKey);
     if (token == null || token.isEmpty) {
       return <String, String>{};
     }
@@ -137,11 +168,14 @@ class UploadService {
   }
 
   String _joinBaseAndPath(String base, String path) {
-    final sanitizedBase = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
+    final sanitizedBase =
+        base.endsWith('/') ? base.substring(0, base.length - 1) : base;
     return '$sanitizedBase$path';
   }
 
-  void _notifyUnauthorized({String message = 'Sesi tamat. Sila log masuk semula untuk akses fail.'}) {
+  void _notifyUnauthorized(
+      {String message =
+          'Sesi tamat. Sila log masuk semula untuk akses fail.'}) {
     notificationService.messengerKey.currentState?.showSnackBar(
       SnackBar(content: Text(message)),
     );

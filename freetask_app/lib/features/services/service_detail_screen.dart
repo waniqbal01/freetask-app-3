@@ -82,7 +82,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     };
 
     try {
-      await context.push('/jobs/checkout', extra: jobDraft);
+      await context.push('/job-checkout', extra: jobDraft);
     } finally {
       if (mounted) {
         setState(() {
@@ -118,8 +118,8 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   Text(
                     _errorMessage!,
                     textAlign: TextAlign.center,
-                    style:
-                        AppTextStyles.bodyMedium.copyWith(color: AppColors.error),
+                    style: AppTextStyles.bodyMedium
+                        .copyWith(color: AppColors.error),
                   ),
                   AppSpacing.vertical16,
                   FTButton(
@@ -144,7 +144,8 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
           return const Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.store_mall_directory_outlined, size: 52, color: Colors.grey),
+              Icon(Icons.store_mall_directory_outlined,
+                  size: 52, color: Colors.grey),
               SizedBox(height: AppSpacing.s12),
               Text('Tiada servis buat masa ini'),
             ],
@@ -216,7 +217,8 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                             ],
                           ),
                         ),
-                        const Icon(Icons.payments_rounded, color: AppColors.primary, size: 36),
+                        const Icon(Icons.payments_rounded,
+                            color: AppColors.primary, size: 36),
                       ],
                     ),
                   ),
@@ -381,36 +383,38 @@ class _ServiceBanner extends StatelessWidget {
                     Chip(
                       label: Text(
                         service.category,
-                        style: AppTextStyles.bodySmall.copyWith(color: Colors.white),
+                        style: AppTextStyles.bodySmall
+                            .copyWith(color: Colors.white),
                       ),
                       backgroundColor: Colors.white.withValues(alpha: 0.18),
                       side: BorderSide.none,
                     ),
                     AppSpacing.vertical16,
-                  Text(
-                    service.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.headlineSmall.copyWith(color: Colors.white),
-                  ),
-                  AppSpacing.vertical8,
-                  Row(
-                    children: [
-                      if (service.isPriceUnavailable)
-                        Text(
-                          'Harga belum tersedia',
-                          style:
-                              AppTextStyles.bodyMedium.copyWith(color: Colors.white),
-                        )
-                      else
-                        Text(
-                          'RM${service.price.toStringAsFixed(2)}',
-                          style:
-                              AppTextStyles.headlineSmall.copyWith(color: Colors.white),
-                        ),
-                    ],
-                  ),
-                ],
+                    Text(
+                      service.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.headlineSmall
+                          .copyWith(color: Colors.white),
+                    ),
+                    AppSpacing.vertical8,
+                    Row(
+                      children: [
+                        if (service.isPriceUnavailable)
+                          Text(
+                            'Harga belum tersedia',
+                            style: AppTextStyles.bodyMedium
+                                .copyWith(color: Colors.white),
+                          )
+                        else
+                          Text(
+                            'RM${service.price.toStringAsFixed(2)}',
+                            style: AppTextStyles.headlineSmall
+                                .copyWith(color: Colors.white),
+                          ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -447,7 +451,8 @@ class _FreelancerProfile extends StatelessWidget {
             backgroundColor: AppColors.primary.withValues(alpha: 0.1),
             child: Text(
               initials,
-              style: AppTextStyles.headlineSmall.copyWith(color: AppColors.primary),
+              style: AppTextStyles.headlineSmall
+                  .copyWith(color: AppColors.primary),
             ),
           ),
           const SizedBox(width: AppSpacing.s16),
@@ -457,17 +462,20 @@ class _FreelancerProfile extends StatelessWidget {
               children: [
                 Text(
                   'Profil Freelancer',
-                  style: AppTextStyles.labelSmall.copyWith(color: AppColors.neutral400),
+                  style: AppTextStyles.labelSmall
+                      .copyWith(color: AppColors.neutral400),
                 ),
                 AppSpacing.vertical8,
                 Text(
                   'ID: $freelancerId',
-                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.neutral500),
+                  style: AppTextStyles.bodyMedium
+                      .copyWith(color: AppColors.neutral500),
                 ),
                 AppSpacing.vertical8,
                 const Row(
                   children: [
-                    Icon(Icons.verified_rounded, color: AppColors.secondary, size: 18),
+                    Icon(Icons.verified_rounded,
+                        color: AppColors.secondary, size: 18),
                     SizedBox(width: AppSpacing.s8),
                     Text(
                       'Ready to collaborate',
@@ -478,7 +486,8 @@ class _FreelancerProfile extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.neutral300),
+          const Icon(Icons.arrow_forward_ios,
+              size: 16, color: AppColors.neutral300),
         ],
       ),
     );
@@ -509,8 +518,8 @@ class _PriceIssueBlock extends StatelessWidget {
               const SizedBox(width: AppSpacing.s8),
               Text(
                 'Harga servis belum tersedia atau tidak sah.',
-                style: AppTextStyles.bodyMedium
-                    .copyWith(color: Colors.orange.shade800, fontWeight: FontWeight.w700),
+                style: AppTextStyles.bodyMedium.copyWith(
+                    color: Colors.orange.shade800, fontWeight: FontWeight.w700),
               ),
             ],
           ),
@@ -534,7 +543,7 @@ class _PriceIssueBlock extends StatelessWidget {
                 expanded: false,
                 size: FTButtonSize.small,
                 onPressed: () => GoRouter.of(context)
-                    .push('/jobs/checkout', extra: {'priceIssue': true}),
+                    .push('/job-checkout', extra: {'priceIssue': true}),
               ),
               const SizedBox(width: AppSpacing.s12),
               TextButton.icon(

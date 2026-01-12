@@ -430,6 +430,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 action: () => jobsRepository.acceptJob(job.id),
                 successMessage: 'Job accepted'),
             size: FTButtonSize.small,
+            expanded: false,
             isLoading: _isProcessing));
         actions.add(const SizedBox(width: 8));
         actions.add(FTButton(
@@ -440,6 +441,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 successMessage: 'Job rejected'),
             size: FTButtonSize.small,
             isLoading: _isProcessing,
+            expanded: false,
             variant: FTButtonVariant.outline));
       } else if (job.status == JobStatus.accepted) {
         actions.add(FTButton(
@@ -449,12 +451,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 action: () => jobsRepository.startJob(job.id),
                 successMessage: 'Job started'),
             size: FTButtonSize.small,
+            expanded: false,
             isLoading: _isProcessing));
       } else if (job.status == JobStatus.inProgress) {
         actions.add(FTButton(
             label: 'Submit Work',
             onPressed: () => _showSubmitDialog(job),
             size: FTButtonSize.small,
+            expanded: false,
             isLoading: _isProcessing));
         actions.add(const SizedBox(width: 8));
         actions.add(FTButton(
@@ -462,6 +466,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             onPressed: _handleDispute,
             size: FTButtonSize.small,
             isLoading: _isProcessing,
+            expanded: false,
             variant: FTButtonVariant.outline));
       }
     } else if (role == 'CLIENT' && isJobClient) {
@@ -473,6 +478,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 action: () => jobsRepository.confirmJob(job.id),
                 successMessage: 'Job confirmed'),
             size: FTButtonSize.small,
+            expanded: false,
             isLoading: _isProcessing));
         actions.add(const SizedBox(width: 8));
         actions.add(FTButton(
@@ -480,6 +486,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             onPressed: () => _showRevisionDialog(job),
             size: FTButtonSize.small,
             isLoading: _isProcessing,
+            expanded: false,
             variant: FTButtonVariant.outline));
       }
       // Add other client actions like Cancel/Dispute
@@ -493,6 +500,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 successMessage: 'Job cancelled'),
             size: FTButtonSize.small,
             isLoading: _isProcessing,
+            expanded: false,
             variant: FTButtonVariant.outline));
       }
       if (canRaiseDispute(job.status) && job.status != JobStatus.inReview) {
@@ -503,6 +511,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             onPressed: _handleDispute,
             size: FTButtonSize.small,
             isLoading: _isProcessing,
+            expanded: false,
             variant: FTButtonVariant.outline));
       }
     }
@@ -1010,369 +1019,366 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               (!_isClientView && _userRole!.toUpperCase() != 'FREELANCER'));
 
       body = SafeArea(
-        child: Padding(
+        child: ListView(
           padding: const EdgeInsets.all(AppSpacing.s24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                  ),
-                  const SizedBox(width: AppSpacing.s8),
-                  Text(
-                    'Maklumat Job',
-                    style: textTheme.headlineSmall
-                        ?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.s12),
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                ),
+                const SizedBox(width: AppSpacing.s8),
+                Text(
+                  'Maklumat Job',
+                  style: textTheme.headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.s12),
 
-              // UX-C-06: Auto-completion Timer Banner for InReview
-              if (job.status == JobStatus.inReview &&
-                  job.autoCompleteAt != null) ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(AppSpacing.s16),
-                  margin: const EdgeInsets.symmetric(horizontal: 0),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: AppRadius.mediumRadius,
-                    border: Border.all(color: Colors.blue.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.timer_outlined,
-                          color: Colors.blue.shade700, size: 28),
-                      const SizedBox(width: AppSpacing.s12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'In Review (Auto-complete)',
-                              style: textTheme.titleSmall?.copyWith(
-                                color: Colors.blue.shade900,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Job will complete automatically on ${_formatDate(job.autoCompleteAt)} unless revised.',
-                              style: textTheme.bodySmall
-                                  ?.copyWith(color: Colors.blue.shade800),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.s12),
-              ],
-              // UX-C-05: Success banner after checkout
-              if (_showSuccessBanner) ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(AppSpacing.s16),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: AppRadius.mediumRadius,
-                    border: Border.all(color: Colors.green.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.check_circle_outline,
-                          color: Colors.green.shade700, size: 28),
-                      const SizedBox(width: AppSpacing.s12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Job berjaya dicipta!',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.green,
-                              ).copyWith(color: Colors.green.shade900),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Anda boleh track progress dan chat dengan freelancer di sini.',
-                              style: AppTextStyles.bodySmall.copyWith(
-                                color: Colors.green.shade800,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, size: 20),
-                        color: Colors.green.shade700,
-                        onPressed: () {
-                          setState(() {
-                            _showSuccessBanner = false;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.s12),
-              ],
+            // UX-C-06: Auto-completion Timer Banner for InReview
+            if (job.status == JobStatus.inReview &&
+                job.autoCompleteAt != null) ...[
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(AppSpacing.s12),
+                padding: const EdgeInsets.all(AppSpacing.s16),
+                margin: const EdgeInsets.symmetric(horizontal: 0),
                 decoration: BoxDecoration(
                   color: Colors.blue.shade50,
                   borderRadius: AppRadius.mediumRadius,
-                  border: Border.all(color: Colors.blue.shade100),
+                  border: Border.all(color: Colors.blue.shade200),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.badge_outlined,
-                            color: AppColors.primary),
-                        const SizedBox(width: AppSpacing.s8),
-                        Text(
-                          'Anda melihat job ini sebagai: $viewLabel',
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.s6),
-                    Text(
-                      _isClientView
-                          ? 'Anda boleh semak progress, berhubung dengan freelancer dan sahkan hasil kerja.'
-                          : 'Pastikan anda menyiapkan kerja dan kemas kini status (Terima, Mula, Lengkap) mengikut perkembangan.',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.neutral600,
-                      ),
-                    ),
-                    if (roleMismatch) ...[
-                      const SizedBox(height: AppSpacing.s6),
-                      Row(
+                    Icon(Icons.timer_outlined,
+                        color: Colors.blue.shade700, size: 28),
+                    const SizedBox(width: AppSpacing.s12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.info_outline,
-                              size: 18, color: Colors.redAccent),
-                          const SizedBox(width: AppSpacing.s6),
-                          Expanded(
-                            child: Text(
-                              'Akaun aktif bukan $viewLabel. Paparan adalah read-only untuk elak tindakan tidak sah.',
-                              style: AppTextStyles.bodySmall.copyWith(
-                                color: Colors.redAccent,
-                              ),
+                          Text(
+                            'In Review (Auto-complete)',
+                            style: textTheme.titleSmall?.copyWith(
+                              color: Colors.blue.shade900,
+                              fontWeight: FontWeight.bold,
                             ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Job will complete automatically on ${_formatDate(job.autoCompleteAt)} unless revised.',
+                            style: textTheme.bodySmall
+                                ?.copyWith(color: Colors.blue.shade800),
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(height: AppSpacing.s16),
-              SectionCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: AppSpacing.s12),
+            ],
+            // UX-C-05: Success banner after checkout
+            if (_showSuccessBanner) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.s16),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: AppRadius.mediumRadius,
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 52,
-                          height: 52,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: statusVisual.color.withValues(alpha: 0.12),
+                    Icon(Icons.check_circle_outline,
+                        color: Colors.green.shade700, size: 28),
+                    const SizedBox(width: AppSpacing.s12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Job berjaya dicipta!',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.green,
+                            ).copyWith(color: Colors.green.shade900),
                           ),
-                          child: Icon(
-                            statusVisual.icon,
-                            color: statusVisual.color,
-                            size: 28,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                job.serviceTitle,
-                                style: textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.neutral900,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              JobStatusBadge(visual: statusVisual),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  const Icon(Icons.shield_moon_outlined,
-                                      size: 18, color: AppColors.neutral500),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Status pembayaran / escrow:',
-                                    style: textTheme.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  if (_isEscrowLoading)
-                                    const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  else if (_escrowError != null)
-                                    Tooltip(
-                                      message: _escrowError,
-                                      child: Chip(
-                                        label: const Text('Info escrow tiada'),
-                                        backgroundColor: Colors.orange.shade50,
-                                      ),
-                                    )
-                                  else
-                                    Chip(
-                                      label: Text(
-                                          _escrowStatusLabel(_escrow?.status)),
-                                      backgroundColor:
-                                          _escrowStatusColor(_escrow?.status)
-                                              .withValues(alpha: 0.12),
-                                      labelStyle: TextStyle(
-                                        color:
-                                            _escrowStatusColor(_escrow?.status),
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (_isUserLoading) ...[
-                          const SizedBox(width: AppSpacing.s8),
-                          const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ] else if (actions.isNotEmpty) ...[
-                          const SizedBox(width: AppSpacing.s8),
-                          Wrap(
-                            spacing: AppSpacing.s8,
-                            runSpacing: AppSpacing.s8,
-                            children: actions,
+                          const SizedBox(height: 4),
+                          Text(
+                            'Anda boleh track progress dan chat dengan freelancer di sini.',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: Colors.green.shade800,
+                            ),
                           ),
                         ],
-                      ],
+                      ),
                     ),
-                    const SizedBox(height: AppSpacing.s16),
-                    const Divider(),
-                    const SizedBox(height: AppSpacing.s12),
-                    _DetailRow(
-                      icon: Icons.calendar_today_outlined,
-                      label: 'Tarikh / Masa',
-                      value: _formatDate(job.createdAt),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      color: Colors.green.shade700,
+                      onPressed: () {
+                        setState(() {
+                          _showSuccessBanner = false;
+                        });
+                      },
                     ),
-                    const SizedBox(height: 12),
-                    _DetailRow(
-                      icon: Icons.receipt_long_outlined,
-                      label: 'Service ID',
-                      value: job.serviceId,
-                    ),
-                    const SizedBox(height: 12),
-                    _DetailRow(
-                      icon: Icons.payments_outlined,
-                      label: 'Jumlah',
-                      value: _formatAmount(job),
-                    ),
-                    if (job.hasAmountIssue) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(AppSpacing.s8),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          borderRadius: AppRadius.mediumRadius,
-                          border: Border.all(color: Colors.red.shade200),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(Icons.warning_amber_rounded,
-                                color: Colors.red, size: 18),
-                            const SizedBox(width: AppSpacing.s8),
-                            Expanded(
-                              child: Text(
-                                'Price data unavailable or corrupted. Contact support.',
-                                style: textTheme.bodySmall
-                                    ?.copyWith(color: Colors.red.shade800),
-                              ),
-                            ),
-                          ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.s12),
+            ],
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.s12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: AppRadius.mediumRadius,
+                border: Border.all(color: Colors.blue.shade100),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.badge_outlined,
+                          color: AppColors.primary),
+                      const SizedBox(width: AppSpacing.s8),
+                      Text(
+                        'Anda melihat job ini sebagai: $viewLabel',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
                         ),
                       ),
                     ],
-                    const SizedBox(height: 12),
-                    _DetailRow(
-                      icon: Icons.person_outline,
-                      label: _isClientView ? 'Freelancer ID' : 'Client ID',
-                      value: _isClientView ? job.freelancerId : job.clientId,
+                  ),
+                  const SizedBox(height: AppSpacing.s6),
+                  Text(
+                    _isClientView
+                        ? 'Anda boleh semak progress, berhubung dengan freelancer dan sahkan hasil kerja.'
+                        : 'Pastikan anda menyiapkan kerja dan kemas kini status (Terima, Mula, Lengkap) mengikut perkembangan.',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.neutral600,
                     ),
-                    const SizedBox(height: 12),
-                    _DetailRow(
-                      icon: Icons.confirmation_number_outlined,
-                      label: 'Job ID',
-                      value: job.id,
-                    ),
-                    if (job.isDisputed) ...[
-                      const SizedBox(height: 16),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(AppSpacing.s12),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
-                          borderRadius: AppRadius.mediumRadius,
+                  ),
+                  if (roleMismatch) ...[
+                    const SizedBox(height: AppSpacing.s6),
+                    Row(
+                      children: [
+                        const Icon(Icons.info_outline,
+                            size: 18, color: Colors.redAccent),
+                        const SizedBox(width: AppSpacing.s6),
+                        Expanded(
+                          child: Text(
+                            'Akaun aktif bukan $viewLabel. Paparan adalah read-only untuk elak tindakan tidak sah.',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: Colors.redAccent,
+                            ),
+                          ),
                         ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s16),
+            SectionCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: statusVisual.color.withValues(alpha: 0.12),
+                        ),
+                        child: Icon(
+                          statusVisual.icon,
+                          color: statusVisual.color,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Dispute',
-                              style: textTheme.titleMedium?.copyWith(
+                              job.serviceTitle,
+                              style: textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.w700,
-                                color: Colors.orange.shade700,
+                                color: AppColors.neutral900,
                               ),
                             ),
                             const SizedBox(height: 6),
-                            Text(
-                              job.disputeReason ?? 'Tiada maklumat tambahan.',
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: Colors.orange.shade700,
-                              ),
+                            JobStatusBadge(visual: statusVisual),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(Icons.shield_moon_outlined,
+                                    size: 18, color: AppColors.neutral500),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Status pembayaran / escrow:',
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                if (_isEscrowLoading)
+                                  const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                else if (_escrowError != null)
+                                  Tooltip(
+                                    message: _escrowError,
+                                    child: Chip(
+                                      label: const Text('Info escrow tiada'),
+                                      backgroundColor: Colors.orange.shade50,
+                                    ),
+                                  )
+                                else
+                                  Chip(
+                                    label: Text(
+                                        _escrowStatusLabel(_escrow?.status)),
+                                    backgroundColor:
+                                        _escrowStatusColor(_escrow?.status)
+                                            .withValues(alpha: 0.12),
+                                    labelStyle: TextStyle(
+                                      color:
+                                          _escrowStatusColor(_escrow?.status),
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ],
                         ),
                       ),
+                      if (_isUserLoading) ...[
+                        const SizedBox(width: AppSpacing.s8),
+                        const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ] else if (actions.isNotEmpty) ...[
+                        const SizedBox(width: AppSpacing.s8),
+                        Wrap(
+                          spacing: AppSpacing.s8,
+                          runSpacing: AppSpacing.s8,
+                          children: actions,
+                        ),
+                      ],
                     ],
+                  ),
+                  const SizedBox(height: AppSpacing.s16),
+                  const Divider(),
+                  const SizedBox(height: AppSpacing.s12),
+                  _DetailRow(
+                    icon: Icons.calendar_today_outlined,
+                    label: 'Tarikh / Masa',
+                    value: _formatDate(job.createdAt),
+                  ),
+                  const SizedBox(height: 12),
+                  _DetailRow(
+                    icon: Icons.receipt_long_outlined,
+                    label: 'Service ID',
+                    value: job.serviceId,
+                  ),
+                  const SizedBox(height: 12),
+                  _DetailRow(
+                    icon: Icons.payments_outlined,
+                    label: 'Jumlah',
+                    value: _formatAmount(job),
+                  ),
+                  if (job.hasAmountIssue) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppSpacing.s8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: AppRadius.mediumRadius,
+                        border: Border.all(color: Colors.red.shade200),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.warning_amber_rounded,
+                              color: Colors.red, size: 18),
+                          const SizedBox(width: AppSpacing.s8),
+                          Expanded(
+                            child: Text(
+                              'Price data unavailable or corrupted. Contact support.',
+                              style: textTheme.bodySmall
+                                  ?.copyWith(color: Colors.red.shade800),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
-                ),
+                  const SizedBox(height: 12),
+                  _DetailRow(
+                    icon: Icons.person_outline,
+                    label: _isClientView ? 'Freelancer ID' : 'Client ID',
+                    value: _isClientView ? job.freelancerId : job.clientId,
+                  ),
+                  const SizedBox(height: 12),
+                  _DetailRow(
+                    icon: Icons.confirmation_number_outlined,
+                    label: 'Job ID',
+                    value: job.id,
+                  ),
+                  if (job.isDisputed) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppSpacing.s12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: AppRadius.mediumRadius,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Dispute',
+                            style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            job.disputeReason ?? 'Tiada maklumat tambahan.',
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
               ),
-              const SizedBox(height: AppSpacing.s16),
-              _buildEscrowSection(textTheme),
-            ],
-          ),
+            ),
+            const SizedBox(height: AppSpacing.s16),
+            _buildEscrowSection(textTheme),
+          ],
         ),
       );
     } else {
@@ -1390,6 +1396,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           ),
         ),
         child: Stack(
+          fit: StackFit.expand,
           children: [
             body,
             if (_isProcessing || _isEscrowProcessing) ...[

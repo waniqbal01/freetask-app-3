@@ -192,6 +192,13 @@ final appRouter = GoRouter(
       },
     ),
     GoRoute(
+      path: '/job-checkout',
+      builder: (BuildContext context, GoRouterState state) {
+        final summary = state.extra as Map<String, dynamic>?;
+        return JobCheckoutScreen(serviceSummary: summary);
+      },
+    ),
+    GoRoute(
       path: '/jobs/:id',
       builder: (BuildContext context, GoRouterState state) {
         final extras = state.extra as Map<String, dynamic>?;
@@ -205,13 +212,6 @@ final appRouter = GoRouter(
           isClientView: isClientView,
           fromCheckout: fromCheckout,
         );
-      },
-    ),
-    GoRoute(
-      path: '/jobs/checkout',
-      builder: (BuildContext context, GoRouterState state) {
-        final summary = state.extra as Map<String, dynamic>?;
-        return JobCheckoutScreen(serviceSummary: summary);
       },
     ),
     GoRoute(
