@@ -13,6 +13,8 @@ import { JobsService } from './jobs.service';
 import { CreateJobDto } from './dto/create-job.dto';
 import { DisputeJobDto } from './dto/dispute-job.dto';
 import { UpdateJobStatusDto } from './dto/update-job-status.dto';
+import { SubmitJobDto } from './dto/submit-job.dto';
+import { RequestRevisionDto } from './dto/request-revision.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { GetUser } from '../auth/get-user.decorator';
 import { UserRole } from '@prisma/client';
@@ -87,6 +89,38 @@ export class JobsController {
     @GetUser('role') role: UserRole,
   ) {
     return this.jobsService.startJob(id, userId, role);
+  }
+
+  @Patch(':id/submit')
+  @Roles(UserRole.FREELANCER)
+  submit(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('userId') userId: number,
+    @GetUser('role') role: UserRole,
+    @Body() dto: SubmitJobDto,
+  ) {
+    return this.jobsService.submitJob(id, userId, role, dto);
+  }
+
+  @Patch(':id/confirm')
+  @Roles(UserRole.CLIENT)
+  confirm(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('userId') userId: number,
+    @GetUser('role') role: UserRole,
+  ) {
+    return this.jobsService.confirmJob(id, userId, role);
+  }
+
+  @Patch(':id/revision')
+  @Roles(UserRole.CLIENT)
+  requestRevision(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('userId') userId: number,
+    @GetUser('role') role: UserRole,
+    @Body() dto: RequestRevisionDto,
+  ) {
+    return this.jobsService.requestRevision(id, userId, role, dto);
   }
 
   @Patch(':id/reject')

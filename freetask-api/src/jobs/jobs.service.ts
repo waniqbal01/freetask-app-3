@@ -4,20 +4,30 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { JobStatus, Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateJobDto } from './dto/create-job.dto';
 import { DisputeJobDto } from './dto/dispute-job.dto';
 import { UpdateJobStatusDto } from './dto/update-job-status.dto';
+import { SubmitJobDto } from './dto/submit-job.dto';
+import { RequestRevisionDto } from './dto/request-revision.dto';
 import { JOB_MIN_DISPUTE_REASON_LEN } from './constants';
 import { EscrowService } from '../escrow/escrow.service';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { NotificationsService } from '../notifications/notifications.service';
+import { ChatsService } from '../chats/chats.service';
 
 @Injectable()
 export class JobsService {
+  private readonly logger = new Logger(JobsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly escrowService: EscrowService,
+    private readonly notificationsService: NotificationsService,
+    private readonly chatsService: ChatsService,
   ) { }
 
   async create(userId: number, role: UserRole, dto: CreateJobDto) {
@@ -49,11 +59,20 @@ export class JobsService {
         serviceId: service.id,
         clientId: userId,
         freelancerId: service.freelancerId,
+        orderAttachments: dto.attachments ? (dto.attachments as any) : undefined,
       },
       include: this.jobInclude,
     });
 
     await this.createEscrowRecord(job.id, amount);
+
+    // Notify Freelancer
+    await this.notificationsService.sendNotification({
+      userId: service.freelancerId,
+      title: 'New Order Received',
+      body: `You have received a new order: ${trimmedTitle}`,
+      data: { type: 'job_order', jobId: job.id.toString() },
+    });
 
     return this.withFlatFields(job);
   }
@@ -86,7 +105,6 @@ export class JobsService {
 
     if (status) {
       const statuses = status.split(',') as JobStatus[];
-      // Basic validation could be added here
       (where as any).status = { in: statuses };
     }
 
@@ -125,6 +143,15 @@ export class JobsService {
     this.ensureRole(role, [UserRole.FREELANCER]);
     const job = await this.ensureJobForFreelancer(id, userId);
     this.ensureValidTransition(job.status, JobStatus.ACCEPTED);
+
+    // Notify Client
+    await this.notificationsService.sendNotification({
+      userId: job.clientId,
+      title: 'Order Accepted',
+      body: `Freelancer has accepted your order #${job.id}`,
+      data: { type: 'job_accepted', jobId: job.id.toString() },
+    });
+
     return this.applyStatusUpdate(id, JobStatus.ACCEPTED);
   }
 
@@ -132,13 +159,127 @@ export class JobsService {
     this.ensureRole(role, [UserRole.FREELANCER]);
     const job = await this.ensureJobForFreelancer(id, userId);
     this.ensureValidTransition(job.status, JobStatus.IN_PROGRESS);
+
+    // Notify Client
+    await this.notificationsService.sendNotification({
+      userId: job.clientId,
+      title: 'Job Started',
+      body: `Freelancer has started working on job #${job.id}`,
+      data: { type: 'job_started', jobId: job.id.toString() },
+    });
+
     return this.applyStatusUpdate(id, JobStatus.IN_PROGRESS);
+  }
+
+  async submitJob(id: number, userId: number, role: UserRole, dto: SubmitJobDto) {
+    this.ensureRole(role, [UserRole.FREELANCER]);
+    const job = await this.ensureJobForFreelancer(id, userId);
+    this.ensureValidTransition(job.status, JobStatus.IN_REVIEW);
+
+    const now = new Date();
+    const autoCompleteAt = new Date(now.getTime() + 48 * 60 * 60 * 1000); // 48 hours from now
+
+    const updatedJob = await this.prisma.$transaction(async (tx) => {
+      const j = await tx.job.update({
+        where: { id },
+        data: {
+          status: JobStatus.IN_REVIEW,
+          submittedAt: now,
+          autoCompleteAt: autoCompleteAt,
+          submissionMessage: dto.message,
+          submissionAttachments: dto.attachments ? (dto.attachments as any) : undefined,
+        },
+        include: this.jobInclude,
+      });
+      return j;
+    });
+
+    // Notify Client
+    await this.notificationsService.sendNotification({
+      userId: job.clientId,
+      title: 'Job Submitted for Review',
+      body: `Freelancer has submitted work for Job #${job.id}. Please review within 48 hours.`,
+      data: { type: 'job_submitted', jobId: job.id.toString() },
+    });
+
+    // System Message in Chat
+    await this.chatsService.postMessage(id, userId, role, {
+      content: `[SYSTEM] Work submitted: ${dto.message || 'No description provided.'}`,
+      type: 'system',
+    });
+
+    return this.withFlatFields(updatedJob);
+  }
+
+  async confirmJob(id: number, userId: number, role: UserRole) {
+    this.ensureRole(role, [UserRole.CLIENT]);
+    const job = await this.ensureJobForClient(id, userId);
+    this.ensureValidTransition(job.status, JobStatus.COMPLETED);
+
+    const updatedJob = await this.applyStatusUpdate(id, JobStatus.COMPLETED);
+
+    // Notify Freelancer
+    await this.notificationsService.sendNotification({
+      userId: job.freelancerId,
+      title: 'Job Completed',
+      body: `Client confirmed completion for Job #${job.id}. Funds released.`,
+      data: { type: 'job_completed', jobId: job.id.toString() },
+    });
+
+    // System Message
+    await this.chatsService.postMessage(id, userId, role, {
+      content: '[SYSTEM] Job marked as completed by client.',
+      type: 'system',
+    });
+
+    return updatedJob;
+  }
+
+  async requestRevision(id: number, userId: number, role: UserRole, dto: RequestRevisionDto) {
+    this.ensureRole(role, [UserRole.CLIENT]);
+    const job = await this.ensureJobForClient(id, userId);
+    this.ensureValidTransition(job.status, JobStatus.IN_PROGRESS);
+
+    // Reset auto complete
+    const updatedJob = await this.prisma.job.update({
+      where: { id },
+      data: {
+        status: JobStatus.IN_PROGRESS,
+        autoCompleteAt: null,
+      },
+      include: this.jobInclude,
+    });
+
+    // Notify Freelancer
+    await this.notificationsService.sendNotification({
+      userId: job.freelancerId,
+      title: 'Revision Requested',
+      body: `Client requested revision for Job #${job.id}: ${dto.reason}`,
+      data: { type: 'job_revision', jobId: job.id.toString() },
+    });
+
+    // System Message
+    await this.chatsService.postMessage(id, userId, role, {
+      content: `[SYSTEM] Revision requested: ${dto.reason}`,
+      type: 'system',
+    });
+
+    return this.withFlatFields(updatedJob);
   }
 
   async rejectJob(id: number, userId: number, role: UserRole) {
     this.ensureRole(role, [UserRole.FREELANCER]);
     const job = await this.ensureJobForFreelancer(id, userId);
     this.ensureValidTransition(job.status, JobStatus.REJECTED);
+
+    // Notify Client
+    await this.notificationsService.sendNotification({
+      userId: job.clientId,
+      title: 'Order Rejected',
+      body: `Freelancer declined your order #${job.id}`,
+      data: { type: 'job_rejected', jobId: job.id.toString() },
+    });
+
     return this.applyStatusUpdate(id, JobStatus.REJECTED);
   }
 
@@ -149,6 +290,9 @@ export class JobsService {
     return this.applyStatusUpdate(id, JobStatus.CANCELLED);
   }
 
+  // Deprecated direct complete by Freelancer (now goes through Submit -> Review)
+  // Kept for backward compat or forced completion if needed, 
+  // but standard flow should be submitJob
   async completeJob(id: number, userId: number, role: UserRole) {
     this.ensureRole(role, [UserRole.FREELANCER]);
     const job = await this.ensureJobForFreelancer(id, userId);
@@ -198,13 +342,57 @@ export class JobsService {
     return this.applyStatusUpdate(id, dto.status);
   }
 
+  @Cron(CronExpression.EVERY_HOUR)
+  async handleAutoCompleteJobs() {
+    this.logger.log('Checking for auto-completable jobs...');
+    const now = new Date();
+
+    const jobs = await this.prisma.job.findMany({
+      where: {
+        status: JobStatus.IN_REVIEW,
+        autoCompleteAt: { lte: now },
+      },
+    });
+
+    for (const job of jobs) {
+      try {
+        this.logger.log(`Auto-completing job ${job.id}`);
+        await this.applyStatusUpdate(job.id, JobStatus.COMPLETED);
+
+        // Notify both parties
+        await this.notificationsService.sendNotification({
+          userId: job.freelancerId,
+          title: 'Job Auto-Completed',
+          body: `Job #${job.id} has been auto-completed due to 48h inactivity.`,
+          data: { type: 'job_autocompleted', jobId: job.id.toString() },
+        });
+
+        await this.notificationsService.sendNotification({
+          userId: job.clientId,
+          title: 'Job Auto-Completed',
+          body: `Job #${job.id} has been auto-completed due to inactivity.`,
+          data: { type: 'job_autocompleted', jobId: job.id.toString() },
+        });
+
+      } catch (error) {
+        this.logger.error(`Failed to auto-complete job ${job.id}`, error);
+      }
+    }
+  }
+
   private ensureValidTransition(current: JobStatus, next: JobStatus) {
     const transitions: Record<JobStatus, JobStatus[]> = {
       [JobStatus.PENDING]: [JobStatus.ACCEPTED, JobStatus.REJECTED, JobStatus.CANCELLED],
       [JobStatus.ACCEPTED]: [JobStatus.IN_PROGRESS, JobStatus.CANCELLED],
       [JobStatus.IN_PROGRESS]: [
-        JobStatus.COMPLETED,
+        JobStatus.IN_REVIEW,
+        JobStatus.COMPLETED, // Legacy/Manual fallback
         JobStatus.CANCELLED,
+        JobStatus.DISPUTED,
+      ],
+      [JobStatus.IN_REVIEW]: [
+        JobStatus.COMPLETED,
+        JobStatus.IN_PROGRESS, // Revision
         JobStatus.DISPUTED,
       ],
       [JobStatus.COMPLETED]: [JobStatus.DISPUTED],
@@ -215,7 +403,7 @@ export class JobsService {
 
     const allowedNextStates = transitions[current] ?? [];
     if (!allowedNextStates.includes(next)) {
-      throw new ConflictException('Invalid status transition');
+      throw new ConflictException(`Invalid status transition from ${current} to ${next}`);
     }
   }
 
@@ -233,7 +421,7 @@ export class JobsService {
         throw new NotFoundException('Job not found');
       }
 
-      // BLOCKER #3 FIX: Validate escrow allows transition BEFORE updating job
+      // Validate escrow allows transition BEFORE updating job
       const escrow = await tx.escrow.findUnique({ where: { jobId: id } });
       if (escrow) {
         const validationError = this.escrowService.validateJobTransition(
@@ -252,11 +440,12 @@ export class JobsService {
         data: {
           status,
           disputeReason: disputeReason ?? null,
+          autoCompleteAt: status === JobStatus.COMPLETED ? null : undefined, // clear if completed
         },
         include: this.jobInclude,
       });
 
-      // Sync escrow status (this should no longer throw)
+      // Sync escrow status
       if (escrow) {
         await this.escrowService.syncOnJobStatus(tx, job, escrow);
       }
@@ -309,7 +498,7 @@ export class JobsService {
   private get jobInclude() {
     return {
       service: {
-        select: { id: true, title: true },
+        select: { id: true, title: true, thumbnailUrl: true },
       },
       client: {
         select: { id: true, name: true },
@@ -322,7 +511,7 @@ export class JobsService {
 
   private withFlatFields<
     T extends {
-      service?: { id: number; title: string } | null;
+      service?: { id: number; title: string; thumbnailUrl?: string | null } | null;
       client?: { id: number; name: string } | null;
       freelancer?: { id: number; name: string } | null;
       clientId?: number;
@@ -332,6 +521,7 @@ export class JobsService {
     return {
       ...job,
       serviceTitle: job.service?.title ?? null,
+      serviceThumbnailUrl: job.service?.thumbnailUrl ?? null,
       clientId: job.client?.id ?? job.clientId ?? null,
       freelancerId: job.freelancer?.id ?? job.freelancerId ?? null,
     };

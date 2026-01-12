@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart'; // Added for PlatformFile
+import 'package:flutter/foundation.dart'; // Added for kIsWeb
 import 'package:flutter/material.dart';
 
 import '../../models/service.dart';
@@ -102,7 +104,6 @@ class ServicesRepository {
     required double price,
     required String category,
     String? thumbnailUrl,
-    String? deliveryTime,
   }) async {
     try {
       await _dio.post<void>(
@@ -113,7 +114,6 @@ class ServicesRepository {
           'price': price,
           'category': category,
           'thumbnailUrl': thumbnailUrl,
-          'deliveryTime': deliveryTime,
         },
         options: await _authorizedOptions(),
       );
@@ -123,18 +123,32 @@ class ServicesRepository {
     }
   }
 
-  Future<String> uploadServiceImage(dynamic file) async {
-    // Determine if file is File (mobile) or something else (web not supported yet fully)
-    // For now assuming dart:io File
-
-    // Import dart:io is needed in repository or use a cross-platform solution
-    // But since CreateServiceScreen passes File, we need to handle it.
-    // However, repository shouldn't depend on dart:io directly if we want web support later.
-    // But for now sticking to mobile.
-
+  Future<String> uploadServiceImage(PlatformFile file) async {
     try {
+      late MultipartFile multipartFile;
+
+      if (kIsWeb) {
+        // Web: use bytes
+        if (file.bytes == null) {
+          throw StateError('Tiada data imej (bytes) ditemui. Sila cuba lagi.');
+        }
+        multipartFile = MultipartFile.fromBytes(
+          file.bytes!,
+          filename: file.name,
+        );
+      } else {
+        // Mobile/Desktop: use path
+        if (file.path == null) {
+          throw StateError('Tiada path imej ditemui. Sila cuba lagi.');
+        }
+        multipartFile = await MultipartFile.fromFile(
+          file.path!,
+          filename: file.name,
+        );
+      }
+
       final formData = FormData.fromMap({
-        'file': await MultipartFile.fromFile(file.path),
+        'file': multipartFile,
       });
 
       final response = await _dio.post<Map<String, dynamic>>(

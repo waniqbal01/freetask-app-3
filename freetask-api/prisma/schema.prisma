@@ -17,6 +17,7 @@ enum JobStatus {
   PENDING
   ACCEPTED
   IN_PROGRESS
+  IN_REVIEW
   COMPLETED
   CANCELLED
   REJECTED
@@ -107,6 +108,11 @@ model Job {
   amount         Decimal     @db.Decimal(10, 2)
   status         JobStatus   @default(PENDING)
   disputeReason  String?
+  submittedAt    DateTime?
+  autoCompleteAt DateTime?
+  submissionMessage String?
+  orderAttachments Json?
+  submissionAttachments Json?
   service        Service     @relation(fields: [serviceId], references: [id])
   serviceId      Int
   client         User        @relation("ClientJobs", fields: [clientId], references: [id])

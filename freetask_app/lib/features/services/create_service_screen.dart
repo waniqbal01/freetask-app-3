@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart'; // For kIsWeb
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -21,10 +22,9 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
-  final _deliveryTimeController = TextEditingController();
   String? _selectedCategory;
   bool _isLoading = false;
-  File? _selectedImage;
+  PlatformFile? _selectedImage;
 
   final List<String> _categories = [
     'Digital & Tech',
@@ -42,7 +42,6 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
     _titleController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
-    _deliveryTimeController.dispose();
     super.dispose();
   }
 
@@ -50,11 +49,12 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.image,
       allowMultiple: false,
+      withData: true, // Important for Web to get bytes
     );
 
-    if (result != null && result.files.single.path != null) {
+    if (result != null && result.files.isNotEmpty) {
       setState(() {
-        _selectedImage = File(result.files.single.path!);
+        _selectedImage = result.files.first;
       });
     }
   }
@@ -90,7 +90,6 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
         price: double.parse(_priceController.text),
         category: _selectedCategory!,
         thumbnailUrl: thumbnailUrl,
-        deliveryTime: _deliveryTimeController.text.trim(),
       );
 
       if (!mounted) return;
@@ -115,6 +114,19 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ImageProvider? imageProvider;
+    if (_selectedImage != null) {
+      if (kIsWeb) {
+        if (_selectedImage!.bytes != null) {
+          imageProvider = MemoryImage(_selectedImage!.bytes!);
+        }
+      } else {
+        if (_selectedImage!.path != null) {
+          imageProvider = FileImage(File(_selectedImage!.path!));
+        }
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Cipta Servis Baru'),
@@ -135,14 +147,14 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                     color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.grey.shade300),
-                    image: _selectedImage != null
+                    image: imageProvider != null
                         ? DecorationImage(
-                            image: FileImage(_selectedImage!),
+                            image: imageProvider,
                             fit: BoxFit.cover,
                           )
                         : null,
                   ),
-                  child: _selectedImage == null
+                  child: imageProvider == null
                       ? Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -249,17 +261,6 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Delivery Time
-              TextFormField(
-                controller: _deliveryTimeController,
-                decoration: const InputDecoration(
-                  labelText: 'Masa Siap (Contoh: 3 Hari)',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) => value == null || value.isEmpty
-                    ? 'Sila masukkan masa siap'
-                    : null,
-              ),
               const SizedBox(height: 32),
 
               FTButton(

@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -31,4 +32,9 @@ export class CreateJobDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(JOB_MIN_AMOUNT)
   amount: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  attachments?: string[];
 }

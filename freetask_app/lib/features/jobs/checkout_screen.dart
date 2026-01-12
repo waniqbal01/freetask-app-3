@@ -30,6 +30,7 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
   late final TextEditingController _descriptionController;
   late final TextEditingController _amountController;
   late final bool _allowEditing;
+  final List<String> _attachments = [];
 
   @override
   void initState() {
@@ -145,6 +146,7 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
         description,
         serviceTitle:
             _title.isEmpty ? _summary['serviceTitle']?.toString() : _title,
+        attachments: _attachments.isNotEmpty ? _attachments : null,
       );
       try {
         await escrowRepository.hold(job.id);
@@ -364,6 +366,80 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
                               style: AppTextStyles.bodySmall,
                             ),
                           ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s12),
+                    SectionCard(
+                      title: 'Lampiran (Pautan)',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (_attachments.isNotEmpty) ...[
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children:
+                                  _attachments.asMap().entries.map((entry) {
+                                final index = entry.key;
+                                final url = entry.value;
+                                return Chip(
+                                  label: Text(
+                                    url.length > 30
+                                        ? '${url.substring(0, 30)}...'
+                                        : url,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                  onDeleted: () {
+                                    setState(() {
+                                      _attachments.removeAt(index);
+                                    });
+                                  },
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                          FTButton(
+                            label: 'Tambah Pautan Document/Image',
+                            size: FTButtonSize.small,
+                            variant: FTButtonVariant.outline,
+                            expanded: false,
+                            onPressed: () async {
+                              final controller = TextEditingController();
+                              final url = await showDialog<String>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Tambah Pautan'),
+                                  content: TextField(
+                                    controller: controller,
+                                    decoration: const InputDecoration(
+                                      hintText: 'https://example.com/file.pdf',
+                                      labelText: 'URL Pautan',
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('Batal'),
+                                    ),
+                                    FilledButton(
+                                      onPressed: () => Navigator.pop(
+                                          context, controller.text),
+                                      child: const Text('Tambah'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (url != null && url.trim().isNotEmpty) {
+                                setState(() {
+                                  _attachments.add(url.trim());
+                                });
+                              }
+                            },
+                          ),
                         ],
                       ),
                     ),

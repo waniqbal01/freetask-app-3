@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../models/service.dart';
 import '../theme/app_theme.dart';
 import 'freelancer_avatar.dart';
+import '../core/utils/url_utils.dart';
 
 class ServiceCard extends StatelessWidget {
   const ServiceCard({
@@ -30,101 +31,81 @@ class ServiceCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (service.thumbnailUrl != null &&
-                  service.thumbnailUrl!.isNotEmpty)
-                AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child: Image.network(
-                    service.thumbnailUrl!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: Colors.grey.shade200,
-                      child: const Center(
-                        child: Icon(Icons.broken_image_outlined),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.s16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. Singleton Freelancer Avatar (Left)
+                FreelancerAvatar(
+                  avatarUrl: service.freelancerAvatarUrl,
+                  size: 50,
+                  onTap: () {
+                    if (service.freelancerId.isNotEmpty) {
+                      GoRouter.of(context)
+                          .push('/users/${service.freelancerId}');
+                    }
+                  },
+                ),
+                const SizedBox(width: AppSpacing.s12),
+
+                // 2. Info (Middle)
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        service.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.neutral900,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      _CategoryChip(label: service.category),
+                      const SizedBox(height: 8),
+                      Text(
+                        service.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.bodySmall
+                            ?.copyWith(color: AppColors.neutral400),
+                      ),
+                      const SizedBox(height: 12),
+                      _PriceTag(
+                        price: service.price,
+                        showWarning: service.isPriceUnavailable,
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 3. Thumbnail (Right) - Small/Medium
+                if (service.thumbnailUrl != null &&
+                    service.thumbnailUrl!.isNotEmpty) ...[
+                  const SizedBox(width: AppSpacing.s12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                      width: 80,
+                      height: 80,
+                      child: Image.network(
+                        UrlUtils.resolveImageUrl(service.thumbnailUrl),
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          color: Colors.grey.shade200,
+                          child: const Center(
+                            child: Icon(Icons.broken_image_outlined, size: 20),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              Padding(
-                padding: const EdgeInsets.all(AppSpacing.s16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    if (service.thumbnailUrl == null ||
-                        service.thumbnailUrl!.isEmpty) ...[
-                      FreelancerAvatar(
-                        avatarUrl: service.freelancerAvatarUrl,
-                        size: 60,
-                        onTap: () {
-                          if (service.freelancerId.isNotEmpty) {
-                            GoRouter.of(context)
-                                .push('/users/${service.freelancerId}');
-                          }
-                        },
-                      ),
-                      const SizedBox(width: AppSpacing.s16),
-                    ],
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  service.title,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.neutral900,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              _CategoryChip(label: service.category),
-                              const SizedBox(width: AppSpacing.s8),
-                              // Only show ID if needed, maybe cleaner without it for now
-                              // Text(
-                              //   'ID: ${service.id}',
-                              //   style: textTheme.bodySmall,
-                              // ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            service.description,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: textTheme.bodyMedium
-                                ?.copyWith(color: AppColors.neutral400),
-                          ),
-                          const SizedBox(height: 14),
-                          Row(
-                            children: <Widget>[
-                              _PriceTag(
-                                price: service.price,
-                                showWarning: service.isPriceUnavailable,
-                              ),
-                              const Spacer(),
-                              const Icon(Icons.arrow_forward_ios,
-                                  size: 14, color: AppColors.neutral300),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+                ],
+              ],
+            ),
           ),
         ),
       ),
@@ -151,15 +132,16 @@ class ServiceCardSkeleton extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+            // Avatar Left
+            ClipOval(
               child: Container(
-                height: 86,
-                width: 86,
+                height: 50,
+                width: 50,
                 color: theme.colorScheme.surfaceContainerHighest,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
+            // Info Middle
             const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -172,14 +154,18 @@ class ServiceCardSkeleton extends StatelessWidget {
                   SizedBox(height: 6),
                   _SkeletonLine(widthFactor: 0.85, height: 12),
                   SizedBox(height: 14),
-                  Row(
-                    children: <Widget>[
-                      _SkeletonLine(widthFactor: 0.3, height: 16),
-                      Spacer(),
-                      _SkeletonLine(widthFactor: 0.18, height: 14),
-                    ],
-                  ),
+                  _SkeletonLine(widthFactor: 0.3, height: 16),
                 ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Image Right
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                height: 80,
+                width: 80,
+                color: theme.colorScheme.surfaceContainerHighest,
               ),
             ),
           ],

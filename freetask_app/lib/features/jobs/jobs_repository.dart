@@ -29,6 +29,7 @@ class JobsRepository {
     double amount,
     String description, {
     String? serviceTitle,
+    List<String>? attachments,
   }) async {
     try {
       final parsedServiceId = int.tryParse(serviceId.toString());
@@ -69,6 +70,7 @@ class JobsRepository {
           'title': (serviceTitle == null || serviceTitle.isEmpty)
               ? null
               : serviceTitle,
+          if (attachments != null) 'attachments': attachments,
         },
         options: await _authorizedOptions(),
       );
@@ -167,9 +169,55 @@ class JobsRepository {
   }
 
   Future<Job?> markCompleted(String jobId) async {
+    // Deprecated workflow - try submit flow instead or keep for legacy/manual
     try {
       final response = await _dio.patch<Map<String, dynamic>>(
         '/jobs/$jobId/complete',
+        options: await _authorizedOptions(),
+      );
+      return response.data != null ? Job.fromJson(response.data!) : null;
+    } on DioException catch (error) {
+      await _handleStatusError(error);
+      rethrow;
+    }
+  }
+
+  Future<Job?> submitJob(String jobId, String message,
+      {List<String>? attachments}) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        '/jobs/$jobId/submit',
+        data: {
+          'message': message,
+          if (attachments != null) 'attachments': attachments,
+        },
+        options: await _authorizedOptions(),
+      );
+      return response.data != null ? Job.fromJson(response.data!) : null;
+    } on DioException catch (error) {
+      await _handleStatusError(error);
+      rethrow;
+    }
+  }
+
+  Future<Job?> confirmJob(String jobId) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        '/jobs/$jobId/confirm',
+        options: await _authorizedOptions(),
+      );
+      return response.data != null ? Job.fromJson(response.data!) : null;
+    } on DioException catch (error) {
+      await _handleStatusError(error);
+      rethrow;
+    }
+  }
+
+  Future<Job?> requestRevision(String jobId, String reason) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        '/jobs/$jobId/revision',
+        data: {'reason': reason},
         options: await _authorizedOptions(),
       );
       return response.data != null ? Job.fromJson(response.data!) : null;

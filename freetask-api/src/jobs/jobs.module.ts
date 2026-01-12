@@ -3,9 +3,12 @@ import { JobsService } from './jobs.service';
 import { JobsController } from './jobs.controller';
 import { RolesGuard } from '../auth/roles.guard';
 import { EscrowService } from '../escrow/escrow.service';
+import { ChatsModule } from '../chats/chats.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
+  imports: [ChatsModule, NotificationsModule],
   controllers: [JobsController],
   providers: [JobsService, RolesGuard, EscrowService],
 })
-export class JobsModule {}
+export class JobsModule { }

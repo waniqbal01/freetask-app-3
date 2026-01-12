@@ -62,7 +62,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
     try {
       final services = await servicesRepository.getServices(
         q: _searchController.text,
-        category: _selectedCategory,
+        category: _selectedCategory == 'Semua' ? null : _selectedCategory,
       );
 
       if (!mounted) {
@@ -129,22 +129,11 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final role = _currentUser?.role.toUpperCase();
+    // Role is no longer needed for FAB since it was removed
+    // final role = context.read<RequestsRepository>().userRole;
 
     return Scaffold(
       bottomNavigationBar: const AppBottomNav(currentTab: AppTab.home),
-      floatingActionButton: role == 'FREELANCER'
-          ? FloatingActionButton.extended(
-              onPressed: () async {
-                final result = await context.push('/services/create');
-                if (result == true) {
-                  _fetchServices();
-                }
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Buat Servis'),
-            )
-          : null,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(

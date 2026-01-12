@@ -41,6 +41,13 @@ JobStatusVisual mapJobStatusVisual(JobStatus status) {
         color: Colors.deepPurple,
         icon: Icons.play_circle_outline,
       );
+    case JobStatus.inReview:
+      return const JobStatusVisual(
+        label: 'In Review',
+        badgeText: 'IN_REVIEW',
+        color: Colors.purple,
+        icon: Icons.rate_review_outlined,
+      );
     case JobStatus.completed:
       return JobStatusVisual(
         label: 'Completed',

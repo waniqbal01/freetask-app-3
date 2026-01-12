@@ -2,6 +2,7 @@ enum JobStatus {
   pending,
   accepted,
   inProgress,
+  inReview,
   completed,
   cancelled,
   rejected,
@@ -15,12 +16,18 @@ class Job {
     required this.freelancerId,
     required this.serviceId,
     required this.serviceTitle,
+    this.serviceThumbnailUrl,
     required this.amount,
     this.status = JobStatus.pending,
     this.isDisputed = false,
     this.disputeReason,
     this.createdAt,
     this.hasAmountIssue = false,
+    this.submittedAt,
+    this.autoCompleteAt,
+    this.submissionMessage,
+    this.orderAttachments,
+    this.submissionAttachments,
   });
 
   factory Job.fromJson(Map<String, dynamic> json) {
@@ -47,6 +54,8 @@ class Job {
           json['service_title']?.toString() ??
           serviceObj?['title']?.toString() ??
           'Servis ${json['service_id']?.toString() ?? json['serviceId']?.toString() ?? ''}',
+      serviceThumbnailUrl: json['serviceThumbnailUrl']?.toString() ??
+          serviceObj?['thumbnailUrl']?.toString(),
       amount: parsedAmount.value,
       hasAmountIssue: parsedAmount.hadError,
       status: _parseStatus(json['status']),
@@ -57,6 +66,15 @@ class Job {
       disputeReason: json['dispute_reason']?.toString() ??
           json['disputeReason']?.toString(),
       createdAt: _parseDateTime(json['created_at'] ?? json['createdAt']),
+      submittedAt: _parseDateTime(json['submittedAt']),
+      autoCompleteAt: _parseDateTime(json['autoCompleteAt']),
+      submissionMessage: json['submissionMessage']?.toString(),
+      orderAttachments: (json['orderAttachments'] as List?)
+          ?.map((e) => e.toString())
+          .toList(),
+      submissionAttachments: (json['submissionAttachments'] as List?)
+          ?.map((e) => e.toString())
+          .toList(),
     );
   }
 
@@ -72,12 +90,18 @@ class Job {
       freelancerId: freelancerId,
       serviceId: serviceId,
       serviceTitle: serviceTitle,
+      serviceThumbnailUrl: serviceThumbnailUrl,
       amount: amount,
       hasAmountIssue: hasAmountIssue,
       status: status ?? this.status,
       isDisputed: isDisputed ?? this.isDisputed,
       disputeReason: disputeReason ?? this.disputeReason,
       createdAt: createdAt ?? this.createdAt,
+      submittedAt: submittedAt,
+      autoCompleteAt: autoCompleteAt,
+      submissionMessage: submissionMessage,
+      orderAttachments: orderAttachments,
+      submissionAttachments: submissionAttachments,
     );
   }
 
@@ -86,12 +110,18 @@ class Job {
   final String freelancerId;
   final String serviceId;
   final String serviceTitle;
+  final String? serviceThumbnailUrl;
   final double amount;
   final bool hasAmountIssue;
   final JobStatus status;
   final bool isDisputed;
   final String? disputeReason;
   final DateTime? createdAt;
+  final DateTime? submittedAt;
+  final DateTime? autoCompleteAt;
+  final String? submissionMessage;
+  final List<String>? orderAttachments;
+  final List<String>? submissionAttachments;
 
   static JobStatus _parseStatus(dynamic value) {
     if (value is JobStatus) {
@@ -107,6 +137,8 @@ class Job {
       case 'IN-PROGRESS':
       case 'INPROGRESS':
         return JobStatus.inProgress;
+      case 'IN_REVIEW':
+        return JobStatus.inReview;
       case 'COMPLETED':
         return JobStatus.completed;
       case 'CANCELLED':

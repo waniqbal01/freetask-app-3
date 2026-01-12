@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_formatters.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/utils/error_utils.dart';
+import '../../core/utils/url_utils.dart';
 import '../../core/widgets/confirmation_dialog.dart';
 import '../../core/widgets/ft_button.dart';
 import '../../core/widgets/loading_overlay.dart';
@@ -414,7 +415,7 @@ class _JobListScreenState extends State<JobListScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 46,
+                    width: 46, // Reduced size slightly for icon
                     height: 46,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
@@ -423,6 +424,7 @@ class _JobListScreenState extends State<JobListScreen> {
                     child: Icon(
                       statusVisual.icon,
                       color: statusVisual.color,
+                      size: 24,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -438,18 +440,43 @@ class _JobListScreenState extends State<JobListScreen> {
                           ),
                         ),
                         const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            JobStatusBadge(visual: statusVisual),
-                          ],
-                        ),
+                        JobStatusBadge(visual: statusVisual),
                       ],
                     ),
                   ),
-                  const Icon(
-                    Icons.chevron_right,
-                    color: AppColors.neutral300,
-                  ),
+                  // Thumbnail on the Right
+                  if (job.serviceThumbnailUrl != null &&
+                      job.serviceThumbnailUrl!.isNotEmpty) ...[
+                    const SizedBox(width: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: SizedBox(
+                        width: 60,
+                        height: 60,
+                        child: Image.network(
+                          UrlUtils.resolveImageUrl(job.serviceThumbnailUrl),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
+                            color: Colors.grey.shade200,
+                            child: const Icon(Icons.broken_image_outlined,
+                                size: 20),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                  // Chevron only if no image, or keep it? User wants clean UI.
+                  // Let's keep chevron if no image? Or just rely on tapping row.
+                  // User said "thumbnails on right".
+                  if (job.serviceThumbnailUrl == null ||
+                      job.serviceThumbnailUrl!.isEmpty) ...[
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: AppColors.neutral300,
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 12),

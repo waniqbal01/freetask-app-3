@@ -4,15 +4,14 @@ import 'env.dart';
 import 'storage/storage.dart';
 
 class BaseUrlStore {
-  BaseUrlStore({AppStorage? storage})
-      : _storage = storage ?? appStorage;
+  BaseUrlStore({AppStorage? storage}) : _storage = storage ?? appStorage;
 
   static const _key = 'api_base_url_override';
   final AppStorage _storage;
 
   Future<String> readBaseUrl() async {
     final stored = (await _storage.read(_key))?.trim();
-    if (stored != null && stored.isNotEmpty) {
+    if (stored != null && stored.isNotEmpty && stored.startsWith('http')) {
       return stored;
     }
     return Env.defaultApiBaseUrl;
@@ -29,7 +28,8 @@ class BaseUrlStore {
 }
 
 class BaseUrlManager {
-  BaseUrlManager({AppStorage? storage}) : _store = BaseUrlStore(storage: storage);
+  BaseUrlManager({AppStorage? storage})
+      : _store = BaseUrlStore(storage: storage);
 
   final BaseUrlStore _store;
   String? _cached;

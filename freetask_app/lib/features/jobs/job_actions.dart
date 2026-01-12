@@ -4,7 +4,8 @@ import '../../models/job.dart';
 class JobActions {
   /// Returns list of available actions for a job given its status and the user's role
   /// Mirrors backend transition matrix from jobs.service.ts:179-198
-  static List<JobAction> getAvailableActions(JobStatus status, String userRole) {
+  static List<JobAction> getAvailableActions(
+      JobStatus status, String userRole) {
     final role = userRole.toUpperCase();
     final actions = <JobAction>[];
 
@@ -29,11 +30,22 @@ class JobActions {
 
       case JobStatus.inProgress:
         if (role == 'FREELANCER') {
-          actions.add(JobAction.complete);
+          // Replaces 'complete' - now goes to submit flow
+          // But we keep 'submit' as a distinct UI action not necessarily in this enum if not used by generic buttons
+          // Let's add 'submit' to enum for clarity
+          actions.add(JobAction.submit);
           actions.add(JobAction.dispute);
         }
         if (role == 'CLIENT') {
           actions.add(JobAction.cancel);
+          actions.add(JobAction.dispute);
+        }
+        break;
+
+      case JobStatus.inReview:
+        if (role == 'CLIENT') {
+          actions.add(JobAction.confirm);
+          actions.add(JobAction.requestRevision);
           actions.add(JobAction.dispute);
         }
         break;
@@ -79,6 +91,9 @@ enum JobAction {
   complete,
   cancel,
   dispute,
+  submit,
+  confirm,
+  requestRevision,
 }
 
 /// Extension to get human-readable labels for job actions
@@ -97,6 +112,12 @@ extension JobActionLabel on JobAction {
         return 'Cancel';
       case JobAction.dispute:
         return 'Dispute';
+      case JobAction.submit:
+        return 'Submit Work';
+      case JobAction.confirm:
+        return 'Confirm Completion';
+      case JobAction.requestRevision:
+        return 'Request Revision';
     }
   }
 
@@ -114,6 +135,12 @@ extension JobActionLabel on JobAction {
         return 'Batal';
       case JobAction.dispute:
         return 'Pertikaian';
+      case JobAction.submit:
+        return 'Hantar Kerja';
+      case JobAction.confirm:
+        return 'Sahkan Siap';
+      case JobAction.requestRevision:
+        return 'Minta Semakan';
     }
   }
 }

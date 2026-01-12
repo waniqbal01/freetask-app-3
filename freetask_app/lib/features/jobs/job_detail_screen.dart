@@ -417,153 +417,247 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final role = _userRole!.toUpperCase();
     final isJobClient = _userId != null && job.clientId == _userId;
     final isJobFreelancer = _userId != null && job.freelancerId == _userId;
-    final status = job.status;
+    // status is already available from job object
+
     final actions = <Widget>[];
 
     if (role == 'FREELANCER' && isJobFreelancer) {
-      final canAccept = canFreelancerAccept(status);
-      final canReject = canFreelancerReject(status);
-      final canStart = canFreelancerStart(status);
-      final canComplete = canFreelancerComplete(status);
-      final canDispute = canRaiseDispute(status);
-
-      if (canReject) {
-        actions.add(
-          FTButton(
-            label: 'Reject',
-            isLoading: _isProcessing,
-            onPressed: () => _guardedJobAction(
-              allowed: canReject,
-              action: () => jobsRepository.rejectJob(job.id),
-              successMessage: 'Job telah ditolak dan dikemas kini.',
-            ),
-            expanded: false,
-            size: FTButtonSize.small,
-          ),
-        );
-      }
-
-      if (canAccept) {
-        if (actions.isNotEmpty) {
-          actions.add(const SizedBox(width: AppSpacing.s8));
-        }
-        actions.add(
-          FTButton(
+      if (job.status == JobStatus.pending) {
+        actions.add(FTButton(
             label: 'Accept',
-            isLoading: _isProcessing,
             onPressed: () => _guardedJobAction(
-              allowed: canAccept,
-              action: () => jobsRepository.acceptJob(job.id),
-              successMessage:
-                  'Job diterima. Anda boleh mulakan apabila bersedia.',
-            ),
-            expanded: false,
+                allowed: true,
+                action: () => jobsRepository.acceptJob(job.id),
+                successMessage: 'Job accepted'),
             size: FTButtonSize.small,
-          ),
-        );
-      }
-
-      if (canStart) {
-        actions.add(
-          FTButton(
-            label: 'Start',
-            isLoading: _isProcessing,
+            isLoading: _isProcessing));
+        actions.add(const SizedBox(width: 8));
+        actions.add(FTButton(
+            label: 'Reject',
             onPressed: () => _guardedJobAction(
-              allowed: canStart,
-              action: () => jobsRepository.startJob(job.id),
-              successMessage: 'Job dimulakan! Status kini In Progress.',
-            ),
-            expanded: false,
+                allowed: true,
+                action: () => jobsRepository.rejectJob(job.id),
+                successMessage: 'Job rejected'),
             size: FTButtonSize.small,
-          ),
-        );
-      }
-
-      if (canComplete) {
-        actions.add(
-          FTButton(
-            label: 'Complete',
             isLoading: _isProcessing,
+            variant: FTButtonVariant.outline));
+      } else if (job.status == JobStatus.accepted) {
+        actions.add(FTButton(
+            label: 'Start Job',
             onPressed: () => _guardedJobAction(
-              allowed: canComplete,
-              action: () => jobsRepository.markCompleted(job.id),
-              successMessage: 'Job ditandakan selesai. Status kini Completed.',
-            ),
-            expanded: false,
+                allowed: true,
+                action: () => jobsRepository.startJob(job.id),
+                successMessage: 'Job started'),
             size: FTButtonSize.small,
-          ),
-        );
-      }
-
-      if (canDispute) {
-        if (actions.isNotEmpty) {
-          actions.add(const SizedBox(width: AppSpacing.s8));
-        }
-        actions.add(
-          FTButton(
+            isLoading: _isProcessing));
+      } else if (job.status == JobStatus.inProgress) {
+        actions.add(FTButton(
+            label: 'Submit Work',
+            onPressed: () => _showSubmitDialog(job),
+            size: FTButtonSize.small,
+            isLoading: _isProcessing));
+        actions.add(const SizedBox(width: 8));
+        actions.add(FTButton(
             label: 'Dispute',
-            isLoading: _isProcessing,
-            onPressed: () async {
-              final reason = await _promptDisputeReason();
-              if (reason == null) return;
-              await _guardedJobAction(
-                allowed: canDispute,
-                action: () => jobsRepository.disputeJob(job.id, reason),
-                successMessage: 'Dispute dihantar.',
-              );
-            },
-            expanded: false,
+            onPressed: _handleDispute,
             size: FTButtonSize.small,
-          ),
-        );
-      }
-    }
-
-    if (role == 'CLIENT' && isJobClient) {
-      final canCancel = canClientCancel(status);
-      final canDispute = canRaiseDispute(status);
-
-      if (canCancel) {
-        actions.add(
-          FTButton(
-            label: 'Batalkan',
             isLoading: _isProcessing,
+            variant: FTButtonVariant.outline));
+      }
+    } else if (role == 'CLIENT' && isJobClient) {
+      if (job.status == JobStatus.inReview) {
+        actions.add(FTButton(
+            label: 'Confirm Completion',
             onPressed: () => _guardedJobAction(
-              allowed: canCancel,
-              action: () => jobsRepository.cancelJob(job.id),
-              successMessage: 'Job dibatalkan.',
-            ),
-            expanded: false,
+                allowed: true,
+                action: () => jobsRepository.confirmJob(job.id),
+                successMessage: 'Job confirmed'),
             size: FTButtonSize.small,
-          ),
-        );
-      }
-
-      if (canDispute) {
-        if (actions.isNotEmpty) {
-          actions.add(const SizedBox(width: AppSpacing.s8));
-        }
-        actions.add(
-          FTButton(
-            label: 'Dispute',
+            isLoading: _isProcessing));
+        actions.add(const SizedBox(width: 8));
+        actions.add(FTButton(
+            label: 'Request Revision',
+            onPressed: () => _showRevisionDialog(job),
+            size: FTButtonSize.small,
             isLoading: _isProcessing,
-            onPressed: () async {
-              final reason = await _promptDisputeReason();
-              if (reason == null) return;
-              await _guardedJobAction(
-                allowed: canDispute,
-                action: () => jobsRepository.disputeJob(job.id, reason),
-                successMessage: 'Dispute dihantar.',
-              );
-            },
-            expanded: false,
+            variant: FTButtonVariant.outline));
+      }
+      // Add other client actions like Cancel/Dispute
+      if (canClientCancel(job.status)) {
+        if (actions.isNotEmpty) actions.add(const SizedBox(width: 8));
+        actions.add(FTButton(
+            label: 'Cancel',
+            onPressed: () => _guardedJobAction(
+                allowed: true,
+                action: () => jobsRepository.cancelJob(job.id),
+                successMessage: 'Job cancelled'),
             size: FTButtonSize.small,
-          ),
-        );
+            isLoading: _isProcessing,
+            variant: FTButtonVariant.outline));
+      }
+      if (canRaiseDispute(job.status) && job.status != JobStatus.inReview) {
+        // Prevent duplicate dispute button in review? No, allow it.
+        if (actions.isNotEmpty) actions.add(const SizedBox(width: 8));
+        actions.add(FTButton(
+            label: 'Dispute',
+            onPressed: _handleDispute,
+            size: FTButtonSize.small,
+            isLoading: _isProcessing,
+            variant: FTButtonVariant.outline));
       }
     }
 
     return actions;
+  }
+
+  void _handleDispute() async {
+    final reason = await _promptDisputeReason();
+    if (reason == null) return;
+    _guardedJobAction(
+      allowed: true,
+      action: () => jobsRepository.disputeJob(_job!.id, reason),
+      successMessage: 'Dispute sent',
+    );
+  }
+
+  Future<void> _showSubmitDialog(Job job) async {
+    final messageController = TextEditingController();
+    List<String> attachments = [];
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Submit Work'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: messageController,
+                    decoration: const InputDecoration(
+                        labelText: 'Message / Description',
+                        hintText: 'Describe your work...'),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+                  if (attachments.isNotEmpty) ...[
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: attachments.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final url = entry.value;
+                        return Chip(
+                          label: Text(
+                            url.length > 20
+                                ? '${url.substring(0, 20)}...'
+                                : url,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          onDeleted: () {
+                            setState(() {
+                              attachments.removeAt(index);
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final urlController = TextEditingController();
+                      final url = await showDialog<String>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Add Link'),
+                          content: TextField(
+                            controller: urlController,
+                            decoration: const InputDecoration(
+                              labelText: 'URL',
+                              hintText: 'https://...',
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Cancel'),
+                            ),
+                            FilledButton(
+                              onPressed: () =>
+                                  Navigator.pop(context, urlController.text),
+                              child: const Text('Add'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (url != null && url.trim().isNotEmpty) {
+                        setState(() {
+                          attachments.add(url.trim());
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.link, size: 18),
+                    label: const Text('Add Link'),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel')),
+                FilledButton(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await _guardedJobAction(
+                          allowed: true,
+                          action: () => jobsRepository.submitJob(
+                              job.id, messageController.text,
+                              attachments:
+                                  attachments.isNotEmpty ? attachments : null),
+                          successMessage: 'Work submitted for review');
+                    },
+                    child: const Text('Submit')),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showRevisionDialog(Job job) async {
+    final reasonController = TextEditingController();
+    await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+              title: const Text('Request Revision'),
+              content: TextField(
+                controller: reasonController,
+                decoration: const InputDecoration(
+                    labelText: 'Revision Details',
+                    hintText: 'What needs to be changed?'),
+                maxLines: 3,
+              ),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel')),
+                FilledButton(
+                    onPressed: () async {
+                      if (reasonController.text.trim().isEmpty) return;
+                      Navigator.pop(context);
+                      await _guardedJobAction(
+                          allowed: true,
+                          action: () => jobsRepository.requestRevision(
+                              job.id, reasonController.text),
+                          successMessage: 'Revision requested');
+                    },
+                    child: const Text('Request')),
+              ],
+            ));
   }
 
   Widget? _buildBottomActionBar(Job job) {
@@ -641,6 +735,23 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           variant: FTButtonVariant.outline,
         );
       }
+      if (job.status == JobStatus.inReview) {
+        return _ActionBarButton(
+          label: 'Confirm / Revision',
+          isLoading: _isProcessing,
+          onPressed: () {
+            // Scroll to actions or show dialog?
+            // Ideally we just point them to use the main action buttons in the body
+            // But let's put a primary action here
+            _guardedJobAction(
+                allowed: true,
+                action: () => jobsRepository.confirmJob(job.id),
+                successMessage: 'Job confirmed');
+          },
+          variant: FTButtonVariant.filled,
+        );
+      }
+      // ... existing logic
       if (job.status == JobStatus.disputed) {
         return const _ActionBarLabel(text: 'Dispute sedang berjalan');
       }
@@ -919,6 +1030,49 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 ],
               ),
               const SizedBox(height: AppSpacing.s12),
+
+              // UX-C-06: Auto-completion Timer Banner for InReview
+              if (job.status == JobStatus.inReview &&
+                  job.autoCompleteAt != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppSpacing.s16),
+                  margin: const EdgeInsets.symmetric(horizontal: 0),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: AppRadius.mediumRadius,
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.timer_outlined,
+                          color: Colors.blue.shade700, size: 28),
+                      const SizedBox(width: AppSpacing.s12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'In Review (Auto-complete)',
+                              style: textTheme.titleSmall?.copyWith(
+                                color: Colors.blue.shade900,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Job will complete automatically on ${_formatDate(job.autoCompleteAt)} unless revised.',
+                              style: textTheme.bodySmall
+                                  ?.copyWith(color: Colors.blue.shade800),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.s12),
+              ],
               // UX-C-05: Success banner after checkout
               if (_showSuccessBanner) ...[
                 Container(

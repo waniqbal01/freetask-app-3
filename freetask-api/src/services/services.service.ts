@@ -30,13 +30,11 @@ export class ServicesService {
         price: new Prisma.Decimal(parsedPrice.toFixed(2)),
         category: dto.category,
         thumbnailUrl: dto.thumbnailUrl,
-        deliveryTime: dto.deliveryTime,
-        isActive: dto.isActive ?? true,
         freelancerId: userId,
       },
       include: {
         freelancer: {
-          select: { id: true, name: true, email: true },
+          select: { id: true, name: true, email: true, avatarUrl: true },
         },
       },
     });
@@ -60,7 +58,7 @@ export class ServicesService {
       },
       include: {
         freelancer: {
-          select: { id: true, name: true },
+          select: { id: true, name: true, avatarUrl: true },
         },
       },
     });
@@ -72,7 +70,7 @@ export class ServicesService {
       where: { id },
       include: {
         freelancer: {
-          select: { id: true, name: true, email: true },
+          select: { id: true, name: true, email: true, avatarUrl: true },
         },
       },
     });

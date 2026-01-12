@@ -98,7 +98,8 @@ export class UploadsService {
   }
 
   private buildRelativePath(filename: string) {
-    return `/uploads/${filename}`;
+    // Return public path by default so frontend can load images without auth
+    return `/uploads/public/${filename}`;
   }
 
   private sanitizeRequestedFile(rawFilename: string) {
