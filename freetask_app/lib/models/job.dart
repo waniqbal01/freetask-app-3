@@ -18,6 +18,7 @@ class Job {
     required this.serviceTitle,
     this.serviceThumbnailUrl,
     required this.amount,
+    this.description,
     this.status = JobStatus.pending,
     this.isDisputed = false,
     this.disputeReason,
@@ -56,6 +57,7 @@ class Job {
           'Servis ${json['service_id']?.toString() ?? json['serviceId']?.toString() ?? ''}',
       serviceThumbnailUrl: json['serviceThumbnailUrl']?.toString() ??
           serviceObj?['thumbnailUrl']?.toString(),
+      description: json['description']?.toString(),
       amount: parsedAmount.value,
       hasAmountIssue: parsedAmount.hadError,
       status: _parseStatus(json['status']),
@@ -83,6 +85,7 @@ class Job {
     bool? isDisputed,
     String? disputeReason,
     DateTime? createdAt,
+    String? description, // Added to copyWith
   }) {
     return Job(
       id: id,
@@ -91,6 +94,7 @@ class Job {
       serviceId: serviceId,
       serviceTitle: serviceTitle,
       serviceThumbnailUrl: serviceThumbnailUrl,
+      description: description ?? this.description,
       amount: amount,
       hasAmountIssue: hasAmountIssue,
       status: status ?? this.status,
@@ -111,6 +115,7 @@ class Job {
   final String serviceId;
   final String serviceTitle;
   final String? serviceThumbnailUrl;
+  final String? description;
   final double amount;
   final bool hasAmountIssue;
   final JobStatus status;

@@ -142,17 +142,17 @@ export class JobsService {
   async acceptJob(id: number, userId: number, role: UserRole) {
     this.ensureRole(role, [UserRole.FREELANCER]);
     const job = await this.ensureJobForFreelancer(id, userId);
-    this.ensureValidTransition(job.status, JobStatus.ACCEPTED);
+    this.ensureValidTransition(job.status, JobStatus.IN_PROGRESS);
 
     // Notify Client
     await this.notificationsService.sendNotification({
       userId: job.clientId,
-      title: 'Order Accepted',
-      body: `Freelancer has accepted your order #${job.id}`,
-      data: { type: 'job_accepted', jobId: job.id.toString() },
+      title: 'Order Accepted & Started',
+      body: `Freelancer has accepted and started your order #${job.id}`,
+      data: { type: 'job_started', jobId: job.id.toString() },
     });
 
-    return this.applyStatusUpdate(id, JobStatus.ACCEPTED);
+    return this.applyStatusUpdate(id, JobStatus.IN_PROGRESS);
   }
 
   async startJob(id: number, userId: number, role: UserRole) {
@@ -382,7 +382,12 @@ export class JobsService {
 
   private ensureValidTransition(current: JobStatus, next: JobStatus) {
     const transitions: Record<JobStatus, JobStatus[]> = {
-      [JobStatus.PENDING]: [JobStatus.ACCEPTED, JobStatus.REJECTED, JobStatus.CANCELLED],
+      [JobStatus.PENDING]: [
+        JobStatus.ACCEPTED,
+        JobStatus.IN_PROGRESS, // Direct start
+        JobStatus.REJECTED,
+        JobStatus.CANCELLED,
+      ],
       [JobStatus.ACCEPTED]: [JobStatus.IN_PROGRESS, JobStatus.CANCELLED],
       [JobStatus.IN_PROGRESS]: [
         JobStatus.IN_REVIEW,

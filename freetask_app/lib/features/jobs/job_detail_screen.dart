@@ -1376,6 +1376,61 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 ],
               ),
             ),
+            if ((job.description?.isNotEmpty ?? false) ||
+                (job.orderAttachments?.isNotEmpty ?? false)) ...[
+              const SizedBox(height: AppSpacing.s16),
+              SectionCard(
+                title: 'Maklumat / Arahan',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (job.description?.isNotEmpty ?? false) ...[
+                      Text('Mesej:',
+                          style: textTheme.labelLarge
+                              ?.copyWith(color: Colors.grey.shade700)),
+                      const SizedBox(height: 4),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(AppSpacing.s12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: AppRadius.mediumRadius,
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child:
+                            Text(job.description!, style: textTheme.bodyMedium),
+                      ),
+                    ],
+                    if (job.orderAttachments?.isNotEmpty ?? false) ...[
+                      if (job.description?.isNotEmpty ?? false)
+                        const SizedBox(height: AppSpacing.s12),
+                      Text('Lampiran:',
+                          style: textTheme.labelLarge
+                              ?.copyWith(color: Colors.grey.shade700)),
+                      const SizedBox(height: 8),
+                      ...job.orderAttachments!.map((url) => Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.link,
+                                    size: 18, color: Colors.blue),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: SelectableText(
+                                    url,
+                                    style: textTheme.bodySmall?.copyWith(
+                                        color: Colors.blue,
+                                        decoration: TextDecoration.underline),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
+                    ]
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: AppSpacing.s16),
             _buildEscrowSection(textTheme),
           ],

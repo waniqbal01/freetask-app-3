@@ -466,6 +466,9 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
                                                       title: const Text(
                                                           'Muat naik dari peranti'),
                                                       onTap: () async {
+                                                        final messenger =
+                                                            ScaffoldMessenger
+                                                                .of(context);
                                                         Navigator.pop(context);
                                                         try {
                                                           final result =
@@ -505,39 +508,45 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
                                                                   true;
                                                             });
 
-                                                            final mimeType =
-                                                                lookupMimeType(
-                                                                    name);
-                                                            final uploadResult =
-                                                                await uploadService
-                                                                    .uploadData(
-                                                                        name,
-                                                                        bytes,
-                                                                        mimeType);
+                                                            try {
+                                                              final mimeType =
+                                                                  lookupMimeType(
+                                                                      name);
+                                                              final uploadResult =
+                                                                  await uploadService
+                                                                      .uploadData(
+                                                                          name,
+                                                                          bytes,
+                                                                          mimeType);
 
-                                                            setState(() {
-                                                              _attachments.add(
-                                                                  uploadResult
-                                                                      .url);
-                                                            });
+                                                              if (mounted) {
+                                                                setState(() {
+                                                                  _attachments.add(
+                                                                      uploadResult
+                                                                          .url);
+                                                                });
+                                                              }
+                                                            } catch (e) {
+                                                              messenger
+                                                                  .showSnackBar(
+                                                                SnackBar(
+                                                                    content: Text(
+                                                                        'Ralat muat naik: $e')),
+                                                              );
+                                                            } finally {
+                                                              if (mounted) {
+                                                                setState(() {
+                                                                  _isUploading =
+                                                                      false;
+                                                                });
+                                                              }
+                                                            }
                                                           }
                                                         } catch (e) {
-                                                          if (mounted) {
-                                                            ScaffoldMessenger
-                                                                    .of(context)
-                                                                .showSnackBar(
+                                                          messenger.showSnackBar(
                                                               SnackBar(
                                                                   content: Text(
-                                                                      'Ralat muat naik: $e')),
-                                                            );
-                                                          }
-                                                        } finally {
-                                                          if (mounted) {
-                                                            setState(() {
-                                                              _isUploading =
-                                                                  false;
-                                                            });
-                                                          }
+                                                                      'Ralat: $e')));
                                                         }
                                                       },
                                                     ),
