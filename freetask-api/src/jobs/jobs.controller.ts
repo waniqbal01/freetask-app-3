@@ -43,7 +43,7 @@ export class JobsController {
     @GetUser('role') role: UserRole,
     @Query() query?: JobsQueryDto,
   ) {
-    return this.jobsService.findAllForUser(userId, role, query?.filter, {
+    return this.jobsService.findAllForUser(userId, role, query?.filter, query?.status, {
       limit: query?.limit,
       offset: query?.offset,
     });

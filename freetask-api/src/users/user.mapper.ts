@@ -4,11 +4,11 @@ import { AppUser } from './types/app-user.type';
 export const toAppUser = (user: User): AppUser => {
   const skills = Array.isArray(user.skills)
     ? user.skills
-        .map((skill) => (skill !== null && skill !== undefined ? skill.toString() : ''))
-        .filter((skill) => skill.length > 0)
+      .map((skill) => (skill !== null && skill !== undefined ? skill.toString() : ''))
+      .filter((skill) => skill.length > 0)
     : user.skills
-    ? [user.skills.toString()]
-    : null;
+      ? [user.skills.toString()]
+      : null;
 
   return {
     id: user.id,
@@ -21,5 +21,7 @@ export const toAppUser = (user: User): AppUser => {
     bio: user.bio ?? null,
     skills,
     rate: user.rate !== null && user.rate !== undefined ? Number(user.rate) : null,
+    phoneNumber: user.phoneNumber,
+    location: user.location,
   };
 };

@@ -24,4 +24,11 @@ export class CreateServiceDto {
   @IsOptional()
   @IsString()
   thumbnailUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  deliveryTime?: string;
+
+  @IsOptional()
+  isActive?: boolean;
 }

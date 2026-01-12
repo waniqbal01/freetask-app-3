@@ -22,6 +22,8 @@ class UsersRepository {
     String? bio,
     List<String>? skills,
     num? rate,
+    String? phoneNumber,
+    String? location,
   }) async {
     final payload = <String, dynamic>{};
 
@@ -37,6 +39,8 @@ class UsersRepository {
     addIfPresent('bio', bio);
     addIfPresent('skills', skills);
     addIfPresent('rate', rate);
+    addIfPresent('phoneNumber', phoneNumber);
+    addIfPresent('location', location);
 
     if (payload.isEmpty) {
       return;

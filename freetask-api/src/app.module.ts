@@ -16,6 +16,7 @@ import { EscrowModule } from './escrow/escrow.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PaymentsModule } from './payments/payments.module';
 import { AdminModule } from './admin/admin.module';
+import { PortfolioModule } from './portfolio/portfolio.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { AdminModule } from './admin/admin.module';
     NotificationsModule,
     PaymentsModule,
     AdminModule,
+    PortfolioModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -10,6 +10,10 @@ class AppUser {
     this.bio,
     this.skills,
     this.rate,
+    this.rating,
+    this.reviewCount,
+    this.phoneNumber,
+    this.location,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
@@ -27,6 +31,10 @@ class AppUser {
           ? skills.map((dynamic skill) => skill.toString()).toList()
           : null,
       rate: (json['rate'] as num?)?.toDouble(),
+      rating: (json['rating'] as num?)?.toDouble(),
+      reviewCount: json['reviewCount'] as int?,
+      phoneNumber: json['phoneNumber'] as String?,
+      location: json['location'] as String?,
     );
   }
 
@@ -37,5 +45,10 @@ class AppUser {
   final String? avatarUrl;
   final String? bio;
   final List<String>? skills;
+
   final double? rate;
+  final double? rating;
+  final int? reviewCount;
+  final String? phoneNumber;
+  final String? location;
 }

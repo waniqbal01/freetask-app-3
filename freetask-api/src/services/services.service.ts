@@ -30,6 +30,8 @@ export class ServicesService {
         price: new Prisma.Decimal(parsedPrice.toFixed(2)),
         category: dto.category,
         thumbnailUrl: dto.thumbnailUrl,
+        deliveryTime: dto.deliveryTime,
+        isActive: dto.isActive ?? true,
         freelancerId: userId,
       },
       include: {
@@ -42,7 +44,7 @@ export class ServicesService {
     return this.serializeService(created);
   }
 
-  async findAll(q?: string, category?: string) {
+  async findAll(q?: string, category?: string, freelancerId?: number) {
     const services = await this.prisma.service.findMany({
       where: {
         ...(q
@@ -54,6 +56,7 @@ export class ServicesService {
           }
           : {}),
         ...(category ? { category } : {}),
+        ...(freelancerId ? { freelancerId } : {}),
       },
       include: {
         freelancer: {

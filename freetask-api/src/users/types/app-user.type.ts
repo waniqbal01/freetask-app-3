@@ -11,4 +11,8 @@ export type AppUser = {
   bio: string | null;
   skills: string[] | null;
   rate: number | null;
+  phoneNumber: string | null;
+  location: string | null;
+  rating?: number | null;
+  reviewCount?: number | null;
 };

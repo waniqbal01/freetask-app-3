@@ -19,7 +19,7 @@ import { UserRole } from '@prisma/client';
 
 @Controller('services')
 export class ServicesController {
-  constructor(private readonly servicesService: ServicesService) {}
+  constructor(private readonly servicesService: ServicesService) { }
 
   @UseGuards(JwtAuthGuard)
   @Post()
@@ -35,8 +35,9 @@ export class ServicesController {
   findAll(
     @Query('q') q?: string,
     @Query('category') category?: string,
+    @Query('freelancerId') freelancerId?: string,
   ) {
-    return this.servicesService.findAll(q, category);
+    return this.servicesService.findAll(q, category, freelancerId ? parseInt(freelancerId) : undefined);
   }
 
   @Get('categories')

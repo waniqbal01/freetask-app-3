@@ -5,4 +5,7 @@ export class JobsQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsIn(['client', 'freelancer', 'all'], { message: 'filter must be one of: client, freelancer, all' })
   filter?: 'client' | 'freelancer' | 'all';
+
+  @IsOptional()
+  status?: string; // Comma-separated enum values
 }

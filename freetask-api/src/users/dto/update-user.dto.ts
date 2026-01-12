@@ -32,4 +32,12 @@ export class UpdateUserDto {
   @Type(() => Number)
   @IsNumber()
   rate?: number;
+
+  @IsOptional()
+  @IsString()
+  phoneNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  location?: string;
 }

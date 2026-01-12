@@ -9,6 +9,8 @@ class Service {
     this.freelancerName,
     this.freelancerAvatarUrl,
     this.thumbnailUrl,
+    this.deliveryTime,
+    this.isActive = true,
     this.hasPriceIssue = false,
   });
 
@@ -29,6 +31,8 @@ class Service {
       freelancerName: freelancer?['name']?.toString(),
       freelancerAvatarUrl: freelancer?['avatarUrl']?.toString(),
       thumbnailUrl: json['thumbnailUrl']?.toString(),
+      deliveryTime: json['deliveryTime']?.toString(),
+      isActive: json['isActive'] ?? true,
     );
   }
 
@@ -40,6 +44,8 @@ class Service {
   final String? freelancerName;
   final String? freelancerAvatarUrl;
   final String? thumbnailUrl;
+  final String? deliveryTime;
+  final bool isActive;
   final double price;
   final bool hasPriceIssue;
 

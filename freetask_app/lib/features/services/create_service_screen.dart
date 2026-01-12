@@ -21,6 +21,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
+  final _deliveryTimeController = TextEditingController();
   String? _selectedCategory;
   bool _isLoading = false;
   File? _selectedImage;
@@ -41,6 +42,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
     _titleController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
+    _deliveryTimeController.dispose();
     super.dispose();
   }
 
@@ -88,6 +90,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
         price: double.parse(_priceController.text),
         category: _selectedCategory!,
         thumbnailUrl: thumbnailUrl,
+        deliveryTime: _deliveryTimeController.text.trim(),
       );
 
       if (!mounted) return;
@@ -243,6 +246,19 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                   }
                   return null;
                 },
+              ),
+              const SizedBox(height: 16),
+
+              // Delivery Time
+              TextFormField(
+                controller: _deliveryTimeController,
+                decoration: const InputDecoration(
+                  labelText: 'Masa Siap (Contoh: 3 Hari)',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) => value == null || value.isEmpty
+                    ? 'Sila masukkan masa siap'
+                    : null,
               ),
               const SizedBox(height: 32),
 

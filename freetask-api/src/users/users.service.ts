@@ -6,7 +6,7 @@ import { toAppUser } from './user.mapper';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   create(data: Prisma.UserCreateInput) {
     return this.prisma.user.create({ data });
@@ -39,22 +39,30 @@ export class UsersService {
     // For now toAppUser seems safe (excludes password)
     // We might want to include services later
     const publicData = toAppUser(user);
-    
+
     // Fetch user's services to show on profile
     const services = await this.prisma.service.findMany({
       where: { freelancerId: id },
       select: {
-          id: true,
-          title: true,
-          price: true,
-          thumbnailUrl: true,
-          category: true,
+        id: true,
+        title: true,
+        price: true,
+        thumbnailUrl: true,
+        category: true,
       }
     });
 
+    const aggregate = await this.prisma.review.aggregate({
+      where: { revieweeId: id },
+      _avg: { rating: true },
+      _count: { id: true },
+    });
+
     return {
-        ...publicData,
-        services,
+      ...publicData,
+      services,
+      rating: aggregate._avg.rating ?? 0,
+      reviewCount: aggregate._count.id ?? 0,
     };
   }
 
@@ -69,6 +77,8 @@ export class UsersService {
         bio: dto.bio,
         skills: dto.skills,
         rate: dto.rate,
+        phoneNumber: dto.phoneNumber,
+        location: dto.location,
       },
     });
 

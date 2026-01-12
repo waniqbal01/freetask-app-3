@@ -10,11 +10,15 @@ void main() async {
 
   // Initialize Firebase
   try {
-    await Firebase.initializeApp();
-    debugPrint('Firebase initialized successfully');
+    if (const bool.fromEnvironment('dart.library.js_util')) {
+      debugPrint('Skipping Firebase initialization on Web (Config missing)');
+    } else {
+      await Firebase.initializeApp();
+      debugPrint('Firebase initialized successfully');
 
-    // Initialize FCM service
-    await fcmService.initialize();
+      // Initialize FCM service
+      await fcmService.initialize();
+    }
   } catch (e) {
     debugPrint('Firebase initialization error: $e');
     // Continue without Firebase if initialization fails

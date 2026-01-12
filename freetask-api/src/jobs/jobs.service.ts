@@ -62,6 +62,7 @@ export class JobsService {
     userId: number,
     role: UserRole,
     filter?: 'client' | 'freelancer' | 'all',
+    status?: string,
     pagination?: { limit?: number; offset?: number },
   ) {
     const effectiveFilter = role === UserRole.ADMIN && !filter ? 'all' : filter;
@@ -82,6 +83,12 @@ export class JobsService {
           : role === UserRole.ADMIN
             ? {}
             : { OR: [{ clientId: userId }, { freelancerId: userId }] };
+
+    if (status) {
+      const statuses = status.split(',') as JobStatus[];
+      // Basic validation could be added here
+      (where as any).status = { in: statuses };
+    }
 
     const take = Math.min(Math.max(pagination?.limit ?? 20, 1), 50);
     const skip = Math.max(pagination?.offset ?? 0, 0);

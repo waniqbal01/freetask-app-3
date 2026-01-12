@@ -179,14 +179,24 @@ class JobsRepository {
     }
   }
 
-  Future<List<Job>> getClientJobs({String? limit, String? offset}) async {
-    return _fetchJobs(_buildQuery(<String, dynamic>{'filter': 'client'},
-        limit: limit, offset: offset));
+  Future<List<Job>> getClientJobs(
+      {String? limit, String? offset, List<String>? status}) async {
+    final query = _buildQuery(<String, dynamic>{'filter': 'client'},
+        limit: limit, offset: offset);
+    if (status != null && status.isNotEmpty) {
+      query['status'] = status.join(',');
+    }
+    return _fetchJobs(query);
   }
 
-  Future<List<Job>> getFreelancerJobs({String? limit, String? offset}) async {
-    return _fetchJobs(_buildQuery(<String, dynamic>{'filter': 'freelancer'},
-        limit: limit, offset: offset));
+  Future<List<Job>> getFreelancerJobs(
+      {String? limit, String? offset, List<String>? status}) async {
+    final query = _buildQuery(<String, dynamic>{'filter': 'freelancer'},
+        limit: limit, offset: offset);
+    if (status != null && status.isNotEmpty) {
+      query['status'] = status.join(',');
+    }
+    return _fetchJobs(query);
   }
 
   Future<List<Job>> getAllJobs(

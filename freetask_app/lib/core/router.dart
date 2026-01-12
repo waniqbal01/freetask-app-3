@@ -13,16 +13,18 @@ import '../features/checkout/checkout_screen.dart';
 import '../features/jobs/checkout_screen.dart';
 import '../features/jobs/job_detail_screen.dart';
 import '../features/jobs/job_list_screen.dart';
-import '../features/settings/profile_screen.dart';
+import '../features/users/profile_screen.dart';
 import '../features/services/service_detail_screen.dart';
 import '../features/services/service_list_screen.dart';
 import '../features/users/public_profile_screen.dart';
 import '../features/services/create_service_screen.dart';
+import '../features/services/user_services_list_screen.dart';
 import '../models/job.dart';
 import '../features/auth/auth_repository.dart';
 import 'notifications/notification_service.dart';
 import 'storage/storage.dart';
 import 'utils/query_utils.dart';
+import '../features/jobs/filtered_job_list_screen.dart';
 
 final authRefreshNotifier = ValueNotifier<DateTime>(DateTime.now());
 final AppStorage _storage = appStorage;
@@ -155,6 +157,12 @@ final appRouter = GoRouter(
       },
     ),
     GoRoute(
+      path: '/services/mine',
+      builder: (BuildContext context, GoRouterState state) {
+        return const UserServicesListScreen();
+      },
+    ),
+    GoRoute(
       path: '/services/create',
       builder: (BuildContext context, GoRouterState state) {
         return const CreateServiceScreen();
@@ -210,6 +218,17 @@ final appRouter = GoRouter(
       builder: (BuildContext context, GoRouterState state) {
         final summary = state.extra as Map<String, dynamic>?;
         return JobCheckoutScreen(serviceSummary: summary);
+      },
+    ),
+    GoRoute(
+      path: '/jobs/filtered',
+      builder: (BuildContext context, GoRouterState state) {
+        final title = state.uri.queryParameters['title'] ?? 'Jobs';
+        final role = state.uri.queryParameters['role'] ?? 'client';
+        final statuses =
+            state.uri.queryParameters['statuses']?.split(',') ?? [];
+        return FilteredJobListScreen(
+            title: title, role: role, statuses: statuses);
       },
     ),
     GoRoute(

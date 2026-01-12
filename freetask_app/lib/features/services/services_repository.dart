@@ -19,13 +19,15 @@ class ServicesRepository {
   final AppStorage _storage;
   final Dio _dio;
 
-  Future<List<Service>> getServices({String? q, String? category}) async {
+  Future<List<Service>> getServices(
+      {String? q, String? category, int? freelancerId}) async {
     try {
       final response = await _dio.get<List<dynamic>>(
         '/services',
         queryParameters: <String, dynamic>{
           if (q != null && q.isNotEmpty) 'q': q,
           if (category != null && category.isNotEmpty) 'category': category,
+          if (freelancerId != null) 'freelancerId': freelancerId,
         },
         options: await _authorizedOptions(requireAuth: false),
       );
@@ -100,6 +102,7 @@ class ServicesRepository {
     required double price,
     required String category,
     String? thumbnailUrl,
+    String? deliveryTime,
   }) async {
     try {
       await _dio.post<void>(
@@ -110,6 +113,7 @@ class ServicesRepository {
           'price': price,
           'category': category,
           'thumbnailUrl': thumbnailUrl,
+          'deliveryTime': deliveryTime,
         },
         options: await _authorizedOptions(),
       );
