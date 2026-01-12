@@ -132,26 +132,26 @@ async function main() {
   const admin = await upsertUser('admin@example.com', 'Admin User', password, UserRole.ADMIN, 'https://ui-avatars.com/api/?name=Admin+User&background=random');
 
   const services = await Promise.all([
-    upsertService('Logo Design', 'Professional logo design service.', 150, 'Design', freelancers[0].id),
+    upsertService('Logo Design', 'Professional logo design service.', 150, 'Design & Creative', freelancers[0].id),
     upsertService(
       'Website Development',
       'Full-stack website development.',
       1200,
-      'Development',
+      'Digital & Tech',
       freelancers[0].id,
     ),
     upsertService(
       'SEO Optimization',
       'Improve your search engine rankings.',
       400,
-      'Marketing',
+      'Marketing & Growth',
       freelancers[1].id,
     ),
     upsertService(
       'Social Media Management',
       'Grow and manage your social media presence.',
       300,
-      'Marketing',
+      'Marketing & Growth',
       freelancers[1].id,
     ),
   ]);

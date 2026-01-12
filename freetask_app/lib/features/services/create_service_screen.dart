@@ -26,14 +26,14 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
   File? _selectedImage;
 
   final List<String> _categories = [
-    'Design',
-    'Development',
-    'Marketing',
-    'Writing',
-    'Video',
-    'Music',
-    'Business',
-    'Lifestyle',
+    'Digital & Tech',
+    'Design & Creative',
+    'Marketing & Growth',
+    'Writing & Translation',
+    'Business & Admin',
+    'Home & Repair Services',
+    'Event & Media Services',
+    'Education & Coaching',
   ];
 
   @override

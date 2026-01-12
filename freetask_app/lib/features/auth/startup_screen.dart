@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_strings.dart';
-import '../../core/storage/storage.dart';
-import '../onboarding/onboarding_screen.dart';
+
 import 'auth_redirect.dart';
 import 'auth_repository.dart';
 
@@ -22,18 +21,12 @@ class _StartupScreenState extends State<StartupScreen> {
   }
 
   Future<void> _bootstrap() async {
-    final onboardingDone =
-        (await appStorage.read(onboardingCompletedKey)) == 'true';
     final token = await authRepository.getSavedToken();
     if (!mounted) {
       return;
     }
 
     if (token == null || token.isEmpty) {
-      if (!onboardingDone) {
-        context.go('/onboarding');
-        return;
-      }
       context.go('/login');
       return;
     }

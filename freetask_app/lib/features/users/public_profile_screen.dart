@@ -165,7 +165,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 return Chip(
                   label: Text(skill),
                   backgroundColor:
-                      Theme.of(context).primaryColor.withOpacity(0.1),
+                      Theme.of(context).primaryColor.withValues(alpha: 0.1),
                   labelStyle: TextStyle(
                     color: Theme.of(context).primaryColor,
                     fontSize: 12,

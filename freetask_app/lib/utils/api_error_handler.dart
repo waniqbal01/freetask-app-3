@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../notifications/notification_service.dart';
-import '../router.dart';
+import '../core/router.dart';
 import '../../features/auth/auth_repository.dart';
 
 Future<void> handleApiError(

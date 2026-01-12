@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../theme/app_theme.dart';
 
-enum AppTab { home, jobs, chats, settings }
+enum AppTab { home, jobs, chats, profile }
 
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({super.key, required this.currentTab});
@@ -22,8 +22,8 @@ class AppBottomNav extends StatelessWidget {
       case AppTab.chats:
         context.go('/chats');
         break;
-      case AppTab.settings:
-        context.go('/settings');
+      case AppTab.profile:
+        context.go('/profile');
         break;
     }
   }
@@ -58,9 +58,9 @@ class AppBottomNav extends StatelessWidget {
             label: 'Chat',
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings_rounded),
-            label: 'Settings',
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person_rounded),
+            label: 'Profile',
           ),
         ],
       ),

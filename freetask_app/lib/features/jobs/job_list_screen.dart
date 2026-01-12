@@ -19,7 +19,6 @@ import 'job_transition_rules.dart';
 import 'jobs_repository.dart';
 import 'widgets/job_card_skeleton.dart';
 import 'widgets/job_status_badge.dart';
-import '../../widgets/active_role_banner.dart';
 import '../../widgets/app_bottom_nav.dart';
 
 class JobListScreen extends StatefulWidget {
@@ -867,24 +866,6 @@ class _JobListScreenState extends State<JobListScreen> {
   @override
   Widget build(BuildContext context) {
     final role = _currentUser?.role.toUpperCase();
-    String? actionLabel;
-    VoidCallback? onAction;
-    String? subtitle;
-
-    if (role == 'CLIENT') {
-      actionLabel = 'Lihat Home';
-      onAction = () => context.go('/home');
-      subtitle = 'Fokus pada tempahan anda dan teruskan chat.';
-    } else if (role == 'FREELANCER') {
-      actionLabel = 'Browse Services';
-      onAction = () => context.go('/home');
-      subtitle = 'Semak job yang perlu diterima atau ditolak.';
-    } else if (role == 'ADMIN') {
-      actionLabel = 'Admin';
-      onAction = () => context.go('/admin');
-      subtitle = 'Pantau job dan escrow yang aktif.';
-    }
-
     // UX-F-04: Make tabs conditional based on role
     final isFreelancer = role == 'FREELANCER';
     final tabCount = isFreelancer ? 2 : 1;
@@ -975,18 +956,6 @@ class _JobListScreenState extends State<JobListScreen> {
                           ),
                         ],
                       ),
-                    ),
-                  ),
-                if (_currentUser != null)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                    child: ActiveRoleBanner(
-                      user: _currentUser,
-                      actionLabel: actionLabel,
-                      onAction: onAction,
-                      subtitle: subtitle,
-                      switchLabel: 'Tukar role/akun',
-                      onSwitch: () => context.go('/settings'),
                     ),
                   ),
                 if (isFreelancer)

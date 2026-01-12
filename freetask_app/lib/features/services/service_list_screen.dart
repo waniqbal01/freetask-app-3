@@ -11,7 +11,6 @@ import '../../models/service.dart';
 import '../../models/user.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/service_card.dart';
-import '../../widgets/active_role_banner.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../auth/auth_repository.dart';
 import 'services_repository.dart';
@@ -131,26 +130,6 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
   @override
   Widget build(BuildContext context) {
     final role = _currentUser?.role.toUpperCase();
-    final bool isClient = role == 'CLIENT';
-    final bool isAdmin = role == 'ADMIN';
-    String? actionLabel;
-    VoidCallback? onAction;
-    String? subtitle;
-
-    if (isClient) {
-      actionLabel = 'Lihat Jobs';
-      onAction = () => context.go('/jobs');
-      subtitle = 'Terus pantau tempahan anda atau buka chat.';
-    } else if (role == 'FREELANCER') {
-      actionLabel = 'Pergi ke Job Board';
-      onAction = () => context.go('/jobs');
-      subtitle =
-          'Anda Freelancer – lihat Job Board dan terima job yang sesuai.';
-    } else if (isAdmin) {
-      actionLabel = 'Buka Admin';
-      onAction = () => context.go('/admin');
-      subtitle = 'Akses pantas ke dashboard pentadbir.';
-    }
 
     return Scaffold(
       bottomNavigationBar: const AppBottomNav(currentTab: AppTab.home),
@@ -189,14 +168,6 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               if (_currentUser != null) ...[
-                                ActiveRoleBanner(
-                                  user: _currentUser,
-                                  actionLabel: actionLabel,
-                                  onAction: onAction,
-                                  subtitle: subtitle,
-                                  switchLabel: 'Tukar role/akun',
-                                  onSwitch: () => context.go('/settings'),
-                                ),
                                 const SizedBox(height: AppSpacing.s12),
                               ],
                               _MarketplaceHero(
@@ -399,15 +370,6 @@ class _MarketplaceHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.s16),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () => context.push('/settings/api'),
-              icon: const Icon(Icons.settings_ethernet_outlined),
-              label: const Text('API Server'),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.s12),
           TextField(
             controller: searchController,
             onChanged: (_) => onSearchChanged(),

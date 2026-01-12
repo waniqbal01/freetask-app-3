@@ -6,15 +6,14 @@ import '../features/admin/admin_unauthorized_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/auth/startup_screen.dart';
-import '../features/onboarding/onboarding_screen.dart';
+
 import '../features/chat/chat_list_screen.dart';
 import '../features/chat/chat_room_screen.dart';
 import '../features/checkout/checkout_screen.dart';
 import '../features/jobs/checkout_screen.dart';
 import '../features/jobs/job_detail_screen.dart';
 import '../features/jobs/job_list_screen.dart';
-import '../features/settings/api_settings_screen.dart';
-import '../features/settings/settings_screen.dart';
+import '../features/settings/profile_screen.dart';
 import '../features/services/service_detail_screen.dart';
 import '../features/services/service_list_screen.dart';
 import '../features/users/public_profile_screen.dart';
@@ -56,20 +55,11 @@ final appRouter = GoRouter(
     final needsAuth = location.startsWith('/jobs') ||
         location.startsWith('/chats') ||
         location.startsWith('/admin') ||
-        location.startsWith('/settings');
-    final onboardingDone =
-        (await _storage.read(onboardingCompletedKey)) == 'true';
-
+        location.startsWith('/profile');
     final tokenExists = await hasToken();
 
     // Fix UX-G-01: Prioritize auth status over onboarding flag
-    // If user has valid token, skip onboarding even if flag is missing
-    if (!onboardingDone &&
-        !tokenExists &&
-        !isStartup &&
-        !location.startsWith('/onboarding')) {
-      return '/onboarding';
-    }
+    // Onboarding section removed per user request
 
     if (!tokenExists && needsAuth) {
       final encoded = Uri.encodeComponent(state.uri.toString());
@@ -125,12 +115,6 @@ final appRouter = GoRouter(
       },
     ),
     GoRoute(
-      path: '/onboarding',
-      builder: (BuildContext context, GoRouterState state) {
-        return const OnboardingScreen();
-      },
-    ),
-    GoRoute(
       path: '/',
       builder: (BuildContext context, GoRouterState state) {
         return LoginScreen(returnTo: state.uri.queryParameters['returnTo']);
@@ -158,9 +142,9 @@ final appRouter = GoRouter(
       },
     ),
     GoRoute(
-      path: '/settings',
+      path: '/profile',
       builder: (BuildContext context, GoRouterState state) {
-        return const SettingsScreen();
+        return const ProfileScreen();
       },
     ),
     GoRoute(
@@ -246,12 +230,6 @@ final appRouter = GoRouter(
       builder: (BuildContext context, GoRouterState state) {
         final from = state.uri.queryParameters['from'];
         return AdminUnauthorizedScreen(from: from);
-      },
-    ),
-    GoRoute(
-      path: '/settings/api',
-      builder: (BuildContext context, GoRouterState state) {
-        return const ApiSettingsScreen();
       },
     ),
     GoRoute(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../models/service.dart';
 import '../theme/app_theme.dart';
@@ -38,7 +39,10 @@ class ServiceCard extends StatelessWidget {
                   avatarUrl: service.freelancerAvatarUrl,
                   size: 90,
                   onTap: () {
-                    // TODO: Navigate to freelancer profile
+                    if (service.freelancerId.isNotEmpty) {
+                      GoRouter.of(context)
+                          .push('/users/${service.freelancerId}');
+                    }
                   },
                 ),
                 const SizedBox(width: AppSpacing.s16),

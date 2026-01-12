@@ -241,7 +241,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
       // Actually, I can use a quick http post here or better, add upload logic to ChatRepo.
       // Since I can't edit ChatRepo here easily (parallel edits constraint),
       // I will assume ChatRepo has it or I will add it in next step.
-      // For this step I will leave it empty with a TODO or comment to compile.
+      // Note: Image upload logic to be implemented in ChatRepository.
 
       // Better plan: Add upload logic to ChatRepository in the next step.
       // So here just call it.
