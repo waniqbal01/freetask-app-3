@@ -30,91 +30,101 @@ class ServiceCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.s16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                FreelancerAvatar(
-                  avatarUrl: service.freelancerAvatarUrl,
-                  size: 90,
-                  onTap: () {
-                    if (service.freelancerId.isNotEmpty) {
-                      GoRouter.of(context)
-                          .push('/users/${service.freelancerId}');
-                    }
-                  },
-                ),
-                const SizedBox(width: AppSpacing.s16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              service.title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.neutral900,
-                              ),
-                            ),
-                          ),
-                          if (service.freelancerName != null &&
-                              service.freelancerName!.isNotEmpty) ...[
-                            const SizedBox(width: AppSpacing.s8),
-                            Text(
-                              service.freelancerName ?? '',
-                              style: textTheme.labelMedium
-                                  ?.copyWith(color: AppColors.neutral400),
-                            ),
-                          ],
-                        ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (service.thumbnailUrl != null &&
+                  service.thumbnailUrl!.isNotEmpty)
+                AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: Image.network(
+                    service.thumbnailUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: Colors.grey.shade200,
+                      child: const Center(
+                        child: Icon(Icons.broken_image_outlined),
                       ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          _CategoryChip(label: service.category),
-                          const SizedBox(width: AppSpacing.s8),
-                          const Icon(Icons.person_outline,
-                              size: 16, color: AppColors.neutral300),
-                          const SizedBox(width: 4),
-                          Text(
-                            service.freelancerId.isNotEmpty
-                                ? 'ID: ${service.freelancerId}'
-                                : 'Freelancer',
-                            style: textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        service.description,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.bodyMedium
-                            ?.copyWith(color: AppColors.neutral400),
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: <Widget>[
-                          _PriceTag(
-                            price: service.price,
-                            showWarning: service.isPriceUnavailable,
-                          ),
-                          const Spacer(),
-                          const Icon(Icons.arrow_forward_ios,
-                              size: 14, color: AppColors.neutral300),
-                        ],
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ],
-            ),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.s16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    if (service.thumbnailUrl == null ||
+                        service.thumbnailUrl!.isEmpty) ...[
+                      FreelancerAvatar(
+                        avatarUrl: service.freelancerAvatarUrl,
+                        size: 60,
+                        onTap: () {
+                          if (service.freelancerId.isNotEmpty) {
+                            GoRouter.of(context)
+                                .push('/users/${service.freelancerId}');
+                          }
+                        },
+                      ),
+                      const SizedBox(width: AppSpacing.s16),
+                    ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  service.title,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.neutral900,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              _CategoryChip(label: service.category),
+                              const SizedBox(width: AppSpacing.s8),
+                              // Only show ID if needed, maybe cleaner without it for now
+                              // Text(
+                              //   'ID: ${service.id}',
+                              //   style: textTheme.bodySmall,
+                              // ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            service.description,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.bodyMedium
+                                ?.copyWith(color: AppColors.neutral400),
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            children: <Widget>[
+                              _PriceTag(
+                                price: service.price,
+                                showWarning: service.isPriceUnavailable,
+                              ),
+                              const Spacer(),
+                              const Icon(Icons.arrow_forward_ios,
+                                  size: 14, color: AppColors.neutral300),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

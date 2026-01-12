@@ -24,6 +24,7 @@ class UsersRepository {
     num? rate,
     String? phoneNumber,
     String? location,
+    bool? isAvailable,
   }) async {
     final payload = <String, dynamic>{};
 
@@ -41,6 +42,7 @@ class UsersRepository {
     addIfPresent('rate', rate);
     addIfPresent('phoneNumber', phoneNumber);
     addIfPresent('location', location);
+    if (isAvailable != null) payload['isAvailable'] = isAvailable;
 
     if (payload.isEmpty) {
       return;

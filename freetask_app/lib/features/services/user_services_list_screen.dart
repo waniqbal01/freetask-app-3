@@ -5,14 +5,14 @@ import 'services_repository.dart';
 import '../auth/auth_repository.dart';
 import '../../widgets/service_card.dart';
 
-class UserServicesListScreen extends StatefulWidget {
-  const UserServicesListScreen({super.key});
+class UserServicesView extends StatefulWidget {
+  const UserServicesView({super.key});
 
   @override
-  State<UserServicesListScreen> createState() => _UserServicesListScreenState();
+  State<UserServicesView> createState() => _UserServicesViewState();
 }
 
-class _UserServicesListScreenState extends State<UserServicesListScreen> {
+class _UserServicesViewState extends State<UserServicesView> {
   late Future<List<Service>> _servicesFuture;
 
   @override
@@ -22,7 +22,9 @@ class _UserServicesListScreenState extends State<UserServicesListScreen> {
   }
 
   void _loadServices() {
-    _servicesFuture = _fetchServices();
+    setState(() {
+      _servicesFuture = _fetchServices();
+    });
   }
 
   Future<List<Service>> _fetchServices() async {
@@ -33,57 +35,52 @@ class _UserServicesListScreenState extends State<UserServicesListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Servis Saya'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () async {
-              final result = await context.push('/services/create');
-              if (result == true) {
-                setState(() {
-                  _loadServices();
-                });
-              }
-            },
-          ),
-        ],
-      ),
-      body: FutureBuilder<List<Service>>(
-        future: _servicesFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
+    return FutureBuilder<List<Service>>(
+      future: _servicesFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Error: ${snapshot.error}'),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: _loadServices,
+                  child: const Text('Cuba Lagi'),
+                ),
+              ],
+            ),
+          );
+        }
 
-          final services = snapshot.data ?? [];
-          if (services.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('Anda belum mempunyai servis.'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                      onPressed: () async {
-                        final result = await context.push('/services/create');
-                        if (result == true) {
-                          setState(() {
-                            _loadServices();
-                          });
-                        }
-                      },
-                      child: const Text('Cipta Servis Pertama')),
-                ],
-              ),
-            );
-          }
+        final services = snapshot.data ?? [];
+        if (services.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.design_services_outlined,
+                    size: 48, color: Colors.grey),
+                const SizedBox(height: 12),
+                const Text('Anda belum mempunyai servis.'),
+                const SizedBox(height: 16),
+                // Button is handled by parent screen now, but we can keep a call to action here if needed
+                // or just leave it empty.
+              ],
+            ),
+          );
+        }
 
-          return ListView.separated(
+        return RefreshIndicator(
+          onRefresh: () async {
+            _loadServices();
+            await _servicesFuture;
+          },
+          child: ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: services.length,
             separatorBuilder: (_, __) => const SizedBox(height: 16),
@@ -91,12 +88,16 @@ class _UserServicesListScreenState extends State<UserServicesListScreen> {
               final service = services[index];
               return ServiceCard(
                 service: service,
-                onTap: () => context.push('/service/${service.id}'),
+                onTap: () async {
+                  await context.push('/services/${service.id}');
+                  // Refresh on return in case price/details changed
+                  _loadServices();
+                },
               );
             },
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }

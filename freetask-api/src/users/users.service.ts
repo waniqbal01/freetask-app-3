@@ -79,6 +79,7 @@ export class UsersService {
         rate: dto.rate,
         phoneNumber: dto.phoneNumber,
         location: dto.location,
+        isAvailable: dto.isAvailable,
       },
     });
 

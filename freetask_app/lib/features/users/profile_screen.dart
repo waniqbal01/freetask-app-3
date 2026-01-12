@@ -11,6 +11,9 @@ import '../../widgets/app_bottom_nav.dart';
 import '../auth/auth_repository.dart';
 import 'edit_profile_screen.dart';
 
+import 'package:file_picker/file_picker.dart';
+import '../../services/upload_service.dart';
+import 'users_repository.dart';
 import 'widgets/portfolio_list_widget.dart';
 import 'widgets/edit_portfolio_dialog.dart';
 
@@ -71,6 +74,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadUser(); // Reload after edit
   }
 
+  Future<void> _pickAndUploadImage() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+      );
+
+      if (result == null || result.files.isEmpty) return;
+
+      final filePath = result.files.single.path;
+      if (filePath == null) return;
+
+      setState(() => _isLoadingUser = true);
+
+      // Upload
+      final uploadResult = await uploadService.uploadFile(filePath);
+
+      // Update Profile
+      await usersRepository.updateProfile(avatarUrl: uploadResult.url);
+
+      await _loadUser();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memuat naik gambar: $e')),
+      );
+      setState(() => _isLoadingUser = false);
+    }
+  }
+
+  Future<void> _toggleAvailability(bool value) async {
+    try {
+      setState(() => _isLoadingUser = true);
+
+      await usersRepository.updateProfile(isAvailable: value);
+      await _loadUser();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal mengemaskini status: $e')),
+      );
+      setState(() => _isLoadingUser = false);
+    }
+  }
+
   Future<void> _addPortfolio() async {
     final result = await showDialog(
       context: context,
@@ -116,22 +163,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   if (_user != null) _buildUserInfo(_user!),
                   const SizedBox(height: 24),
                   if (isFreelancer) ...[
-                    _buildSectionTitle('Servis Saya',
-                        trailing: TextButton(
-                          onPressed: () => context.push('/services/create'),
-                          child: const Text('Tambah'),
-                        )),
-                    // Placeholder for Service List - for now just a link or summary
-                    Card(
-                      child: ListTile(
-                        leading: const Icon(Icons.list_alt),
-                        title: const Text('Urus Servis'),
-                        subtitle: const Text('Lihat dan kemaskini servis anda'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => context.push('/services/mine'),
+                    // Active Status Toggle
+                    if (_user != null)
+                      SwitchListTile(
+                        title: const Text('Status Aktif'),
+                        subtitle: Text(_user!.isAvailable
+                            ? 'Anda boleh menerima tempahan baru'
+                            : 'Anda tidak menerima tempahan baru'),
+                        value: _user!.isAvailable,
+                        onChanged: _toggleAvailability,
+                        secondary: Icon(
+                          _user!.isAvailable
+                              ? Icons.check_circle
+                              : Icons.remove_circle,
+                          color:
+                              _user!.isAvailable ? Colors.green : Colors.grey,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
+                    const Divider(),
+
                     _buildSectionTitle('Portfolio',
                         trailing: IconButton(
                           icon: const Icon(Icons.add_circle_outline),
@@ -143,36 +193,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       onEdit: _addPortfolio,
                       onItemTap: _editPortfolio,
                     ),
-                    const SizedBox(height: 24),
-                    _buildSectionTitle('Tempahan Masuk'),
-                    _buildOrderTile(
-                        'Job Requests',
-                        '0 Baru',
-                        () => context.push(
-                            '/jobs/filtered?title=Job Requests&role=freelancer&statuses=PENDING')),
-                    _buildOrderTile(
-                        'In Progress',
-                        '0 Aktif',
-                        () => context.push(
-                            '/jobs/filtered?title=Active Jobs&role=freelancer&statuses=IN_PROGRESS')),
-                  ] else ...[
-                    // Client View
-                    _buildSectionTitle('Tempahan Saya'),
-                    _buildOrderTile(
-                        'Pending Acceptance',
-                        'Lihat status',
-                        () => context.push(
-                            '/jobs/filtered?title=Pending Acceptance&role=client&statuses=PENDING')),
-                    _buildOrderTile(
-                        'In Progress',
-                        'Lihat job berjalan',
-                        () => context.push(
-                            '/jobs/filtered?title=In Progress&role=client&statuses=IN_PROGRESS')),
-                    _buildOrderTile(
-                        'Completed',
-                        'Sejarah tempahan',
-                        () => context.push(
-                            '/jobs/filtered?title=Completed History&role=client&statuses=COMPLETED,CANCELLED,REJECTED,DISPUTED')),
                   ],
                   if (isAdmin) ...[
                     const SizedBox(height: 24),
@@ -205,14 +225,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildUserInfo(AppUser user) {
     return Column(
       children: [
-        CircleAvatar(
-          radius: 40,
-          backgroundImage:
-              user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
-          child: user.avatarUrl == null
-              ? Text(user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                  style: const TextStyle(fontSize: 24))
-              : null,
+        Stack(
+          children: [
+            CircleAvatar(
+              radius: 50,
+              backgroundImage:
+                  user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
+              child: user.avatarUrl == null
+                  ? Text(
+                      user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                      style: const TextStyle(fontSize: 32))
+                  : null,
+            ),
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: GestureDetector(
+                onTap: _pickAndUploadImage,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: const Icon(Icons.camera_alt,
+                      color: Colors.white, size: 20),
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         Text(user.name, style: AppTextStyles.titleMedium),
@@ -263,18 +305,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Text(title, style: AppTextStyles.titleMedium),
         if (trailing != null) trailing,
       ],
-    );
-  }
-
-  Widget _buildOrderTile(String title, String subtitle, VoidCallback onTap) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        title: Text(title),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: onTap,
-      ),
     );
   }
 }

@@ -14,6 +14,7 @@ class AppUser {
     this.reviewCount,
     this.phoneNumber,
     this.location,
+    this.isAvailable = true,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
@@ -35,6 +36,7 @@ class AppUser {
       reviewCount: json['reviewCount'] as int?,
       phoneNumber: json['phoneNumber'] as String?,
       location: json['location'] as String?,
+      isAvailable: json['isAvailable'] as bool? ?? true,
     );
   }
 
@@ -51,4 +53,5 @@ class AppUser {
   final int? reviewCount;
   final String? phoneNumber;
   final String? location;
+  final bool isAvailable;
 }

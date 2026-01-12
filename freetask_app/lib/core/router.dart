@@ -18,7 +18,7 @@ import '../features/services/service_detail_screen.dart';
 import '../features/services/service_list_screen.dart';
 import '../features/users/public_profile_screen.dart';
 import '../features/services/create_service_screen.dart';
-import '../features/services/user_services_list_screen.dart';
+
 import '../models/job.dart';
 import '../features/auth/auth_repository.dart';
 import 'notifications/notification_service.dart';
@@ -154,12 +154,6 @@ final appRouter = GoRouter(
       builder: (BuildContext context, GoRouterState state) {
         final serviceId = state.pathParameters['id'] ?? 'unknown';
         return ServiceDetailScreen(serviceId: serviceId);
-      },
-    ),
-    GoRoute(
-      path: '/services/mine',
-      builder: (BuildContext context, GoRouterState state) {
-        return const UserServicesListScreen();
       },
     ),
     GoRoute(

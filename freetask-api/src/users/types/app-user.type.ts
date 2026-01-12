@@ -15,4 +15,5 @@ export type AppUser = {
   location: string | null;
   rating?: number | null;
   reviewCount?: number | null;
+  isAvailable: boolean;
 };

@@ -20,6 +20,7 @@ import 'jobs_repository.dart';
 import 'widgets/job_card_skeleton.dart';
 import 'widgets/job_status_badge.dart';
 import '../../widgets/app_bottom_nav.dart';
+import '../services/user_services_list_screen.dart';
 
 class JobListScreen extends StatefulWidget {
   const JobListScreen({super.key, this.limitQuery, this.offsetQuery});
@@ -42,12 +43,20 @@ class _JobListScreenState extends State<JobListScreen> {
   AppUser? _currentUser;
   String? _userLoadError;
 
+  // Freelancer Sub-tab management (only for Freelancer role)
+  int _freelancerSubTabIndex = 0; // 0: Services, 1: Jobs
+
   @override
   void initState() {
     super.initState();
     _loadCurrentUser();
     _primeReviews();
     _loadJobs();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   Future<void> _loadCurrentUser() async {
@@ -70,6 +79,9 @@ class _JobListScreenState extends State<JobListScreen> {
   }
 
   Future<void> _loadJobs() async {
+    // We can optimize this to only load relevant jobs based on role later,
+    // but for now, we'll keep the logic simple and safe.
+    // If we only load client jobs for clients, we save bandwidth.
     await Future.wait([_fetchClientJobs(), _fetchFreelancerJobs()]);
   }
 
@@ -830,18 +842,6 @@ class _JobListScreenState extends State<JobListScreen> {
                 style: const TextStyle(color: AppColors.neutral500),
               ),
               const SizedBox(height: 16),
-              FTButton(
-                label: isClientView ? 'Cari Servis' : 'Pergi ke Job Board',
-                onPressed: () =>
-                    isClientView ? context.go('/home') : context.go('/jobs'),
-                expanded: false,
-              ),
-              const SizedBox(height: 8),
-              TextButton.icon(
-                onPressed: onRefresh,
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Refresh senarai'),
-              ),
             ],
           ),
         ),
@@ -865,137 +865,163 @@ class _JobListScreenState extends State<JobListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final role = _currentUser?.role.toUpperCase();
-    // UX-F-04: Make tabs conditional based on role
-    final isFreelancer = role == 'FREELANCER';
-    final tabCount = isFreelancer ? 2 : 1;
+    // Logic: If role == Freelancer, show Freelancer View (Sub-tabs: Services/Jobs).
+    // Else (Client, Admin, etc), show Client Job List (Jobs they posted).
 
-    return DefaultTabController(
-      length: tabCount,
-      child: Scaffold(
-        bottomNavigationBar: const AppBottomNav(currentTab: AppTab.jobs),
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFFEEF3FC), Colors.white],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
+    final role = _currentUser?.role.toUpperCase();
+    final isFreelancer = role == 'FREELANCER';
+
+    // Show create button ONLY if Freelancer Tab is active AND SubTab is 0 (Services)
+    final showCreateServiceButton = isFreelancer && _freelancerSubTabIndex == 0;
+
+    return Scaffold(
+      bottomNavigationBar: const AppBottomNav(currentTab: AppTab.jobs),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFEEF3FC), Colors.white],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
-          child: SafeArea(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          if (context.canPop()) {
-                            context.pop();
-                          } else {
-                            context.go('/home');
-                          }
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go('/home');
+                        }
+                      },
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Jobs & Orders',
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    if (showCreateServiceButton) ...[
+                      const Spacer(),
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          await context.push('/services/create');
+                          setState(() {});
                         },
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Jobs & Orders',
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w700),
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Create Service'),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
                       ),
                     ],
-                  ),
+                  ],
                 ),
-                if (_userLoadError != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Container(
-                      padding: const EdgeInsets.all(AppSpacing.s12),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.shade50,
-                        borderRadius: AppRadius.mediumRadius,
-                        border: Border.all(color: Colors.orange.shade200),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(Icons.warning_amber_rounded,
-                              color: Colors.orange.shade700),
-                          const SizedBox(width: AppSpacing.s8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _userLoadError!,
-                                  style: AppTextStyles.bodySmall.copyWith(
-                                    color: Colors.orange.shade900,
-                                  ),
-                                ),
-                                TextButton(
-                                  onPressed: _loadCurrentUser,
-                                  style: TextButton.styleFrom(
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                  child: const Text('Cuba muat semula profil'),
-                                ),
-                                TextButton.icon(
-                                  onPressed: authRepository.logout,
-                                  icon: const Icon(Icons.logout, size: 16),
-                                  label: const Text('Log keluar'),
-                                  style: TextButton.styleFrom(
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                if (isFreelancer)
-                  const TabBar(
-                    tabs: [
-                      Tab(text: 'Sebagai Client'),
-                      Tab(text: 'Sebagai Freelancer'),
-                    ],
-                  )
-                else
-                  const TabBar(
-                    tabs: [
-                      Tab(text: 'Sebagai Client'),
-                    ],
-                  ),
+              ),
+              if (_userLoadError != null)
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Paparan dihadkan kepada ${JobsRepository.defaultPageSize} item setiap tab (maks 50). Nilai limit/offset disanitasi ke had API.',
-                      style: Theme.of(context).textTheme.bodySmall,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Container(
+                    padding: const EdgeInsets.all(AppSpacing.s12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: AppRadius.mediumRadius,
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.warning_amber_rounded,
+                            color: Colors.orange.shade700),
+                        const SizedBox(width: AppSpacing.s8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _userLoadError!,
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: Colors.orange.shade900,
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: _loadCurrentUser,
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                ),
+                                child: const Text('Cuba muat semula profil'),
+                              ),
+                              TextButton.icon(
+                                onPressed: authRepository.logout,
+                                icon: const Icon(Icons.logout, size: 16),
+                                label: const Text('Log keluar'),
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
+              if (!isFreelancer)
                 Expanded(
-                  child: Stack(
+                  child: _buildJobsTab(
+                    jobs: _clientJobs,
+                    isClientView: true,
+                    isLoading: _isLoadingClient,
+                    errorMessage: _clientErrorMessage,
+                    onRefresh: _refreshClientJobs,
+                  ),
+                )
+              else
+                Expanded(
+                  child: Column(
                     children: [
-                      if (isFreelancer)
-                        TabBarView(
-                          children: [
-                            _buildJobsTab(
-                              jobs: _clientJobs,
-                              isClientView: true,
-                              isLoading: _isLoadingClient,
-                              errorMessage: _clientErrorMessage,
-                              onRefresh: _refreshClientJobs,
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: SegmentedButton<int>(
+                          segments: const [
+                            ButtonSegment(
+                              value: 0,
+                              label: Text('Servis Saya'),
+                              icon: Icon(Icons.design_services),
                             ),
+                            ButtonSegment(
+                              value: 1,
+                              label: Text('Urus Pesanan'),
+                              icon: Icon(Icons.list_alt),
+                            ),
+                          ],
+                          selected: {_freelancerSubTabIndex},
+                          onSelectionChanged: (Set<int> newSelection) {
+                            setState(() {
+                              _freelancerSubTabIndex = newSelection.first;
+                            });
+                          },
+                          showSelectedIcon: false,
+                        ),
+                      ),
+                      Expanded(
+                        child: IndexedStack(
+                          index: _freelancerSubTabIndex,
+                          children: [
+                            const UserServicesView(), // Sub-tab 0: My Services
                             _buildJobsTab(
+                              // Sub-tab 1: Jobs
                               jobs: _freelancerJobs,
                               isClientView: false,
                               isLoading: _isLoadingFreelancer,
@@ -1003,29 +1029,17 @@ class _JobListScreenState extends State<JobListScreen> {
                               onRefresh: _refreshFreelancerJobs,
                             ),
                           ],
-                        )
-                      else
-                        TabBarView(
-                          children: [
-                            _buildJobsTab(
-                              jobs: _clientJobs,
-                              isClientView: true,
-                              isLoading: _isLoadingClient,
-                              errorMessage: _clientErrorMessage,
-                              onRefresh: _refreshClientJobs,
-                            ),
-                          ],
                         ),
-                      if (_isProcessing)
-                        const LoadingOverlay(
-                          message: 'Memproses tindakan...',
-                          backgroundOpacity: 0.4,
-                        ),
+                      ),
                     ],
                   ),
                 ),
-              ],
-            ),
+              if (_isProcessing)
+                const LoadingOverlay(
+                  message: 'Memproses tindakan...',
+                  backgroundOpacity: 0.4,
+                ),
+            ],
           ),
         ),
       ),

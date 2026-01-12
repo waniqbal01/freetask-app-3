@@ -23,5 +23,6 @@ export const toAppUser = (user: User): AppUser => {
     rate: user.rate !== null && user.rate !== undefined ? Number(user.rate) : null,
     phoneNumber: user.phoneNumber,
     location: user.location,
+    isAvailable: user.isAvailable,
   };
 };
