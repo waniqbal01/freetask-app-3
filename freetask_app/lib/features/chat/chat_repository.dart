@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -143,10 +145,25 @@ class ChatRepository {
     }
   }
 
-  Future<String> uploadChatImage(dynamic file) async {
+  Future<String> uploadChatImage(PlatformFile file) async {
     try {
+      MultipartFile multipartFile;
+      if (kIsWeb) {
+        if (file.bytes == null) {
+          throw StateError('File bytes are missing for Web upload');
+        }
+        multipartFile =
+            MultipartFile.fromBytes(file.bytes!, filename: file.name);
+      } else {
+        if (file.path == null) {
+          throw StateError('File path is missing for Native upload');
+        }
+        multipartFile =
+            await MultipartFile.fromFile(file.path!, filename: file.name);
+      }
+
       final formData = FormData.fromMap({
-        'file': await MultipartFile.fromFile(file.path),
+        'file': multipartFile,
       });
 
       final response = await _dio.post<Map<String, dynamic>>(

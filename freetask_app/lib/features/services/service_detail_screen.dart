@@ -7,9 +7,11 @@ import 'package:go_router/go_router.dart';
 import '../../core/widgets/ft_button.dart';
 import '../../core/widgets/loading_overlay.dart';
 import '../../models/service.dart';
+import '../../models/user.dart';
 import '../../theme/app_theme.dart';
 import 'services_repository.dart';
 import '../../core/utils/error_utils.dart';
+import '../auth/auth_repository.dart';
 
 class ServiceDetailScreen extends StatefulWidget {
   const ServiceDetailScreen({required this.serviceId, super.key});
@@ -25,11 +27,25 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   bool _isLoading = false;
   bool _isHireLoading = false;
   String? _errorMessage;
+  AppUser? _currentUser;
 
   @override
   void initState() {
     super.initState();
     _loadService();
+    _loadCurrentUser();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    try {
+      final user = await authRepository.getCurrentUser();
+      if (!mounted) return;
+      setState(() {
+        _currentUser = user;
+      });
+    } catch (_) {
+      // User might not be logged in, that's okay
+    }
   }
 
   Future<void> _loadService() async {
@@ -246,8 +262,31 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       },
     );
 
+    final isOwner = _currentUser != null &&
+        _service != null &&
+        _currentUser!.id == _service!.freelancerId;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Maklumat Servis')),
+      appBar: AppBar(
+        title: const Text('Maklumat Servis'),
+        actions: [
+          if (isOwner && _service != null)
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () async {
+                final result = await context.push(
+                  '/services/${_service!.id}/edit',
+                  extra: _service,
+                );
+                // Refresh if service was edited or deleted
+                if (result == true && mounted) {
+                  _loadService();
+                }
+              },
+              tooltip: 'Edit Servis',
+            ),
+        ],
+      ),
       body: Stack(
         children: [
           bodyContent,

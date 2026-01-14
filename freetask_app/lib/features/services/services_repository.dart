@@ -22,7 +22,7 @@ class ServicesRepository {
   final Dio _dio;
 
   Future<List<Service>> getServices(
-      {String? q, String? category, int? freelancerId}) async {
+      {String? q, String? category, int? freelancerId, String? sortBy}) async {
     try {
       final response = await _dio.get<List<dynamic>>(
         '/services',
@@ -30,6 +30,7 @@ class ServicesRepository {
           if (q != null && q.isNotEmpty) 'q': q,
           if (category != null && category.isNotEmpty) 'category': category,
           if (freelancerId != null) 'freelancerId': freelancerId,
+          if (sortBy != null && sortBy.isNotEmpty) 'sortBy': sortBy,
         },
         options: await _authorizedOptions(requireAuth: false),
       );
@@ -162,6 +163,44 @@ class ServicesRepository {
         return data['url'] as String;
       }
       throw StateError('Upload failed: No URL returned');
+    } on DioException catch (error) {
+      await _handleDioError(error);
+      rethrow;
+    }
+  }
+
+  Future<void> updateService({
+    required String serviceId,
+    required String title,
+    required String description,
+    required double price,
+    required String category,
+    String? thumbnailUrl,
+  }) async {
+    try {
+      await _dio.patch<void>(
+        '/services/$serviceId',
+        data: {
+          'title': title,
+          'description': description,
+          'price': price,
+          'category': category,
+          if (thumbnailUrl != null) 'thumbnailUrl': thumbnailUrl,
+        },
+        options: await _authorizedOptions(),
+      );
+    } on DioException catch (error) {
+      await _handleDioError(error);
+      rethrow;
+    }
+  }
+
+  Future<void> deleteService(String serviceId) async {
+    try {
+      await _dio.delete<void>(
+        '/services/$serviceId',
+        options: await _authorizedOptions(),
+      );
     } on DioException catch (error) {
       await _handleDioError(error);
       rethrow;

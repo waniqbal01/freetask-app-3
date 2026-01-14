@@ -89,9 +89,15 @@ class _UserServicesViewState extends State<UserServicesView> {
               return ServiceCard(
                 service: service,
                 onTap: () async {
-                  await context.push('/services/${service.id}');
-                  // Refresh on return in case price/details changed
-                  _loadServices();
+                  // Navigate directly to edit screen for owned services
+                  final result = await context.push(
+                    '/services/${service.id}/edit',
+                    extra: service,
+                  );
+                  // Refresh on return if edited or deleted
+                  if (result == true) {
+                    _loadServices();
+                  }
                 },
               );
             },

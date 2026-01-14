@@ -9,13 +9,22 @@ import 'package:path/path.dart' as p;
 
 import 'package:http_parser/http_parser.dart';
 import 'http_client.dart';
+import '../core/env.dart';
 import '../core/storage/storage.dart';
 import '../core/notifications/notification_service.dart';
 
 class UploadService {
   UploadService({Dio? dio, AppStorage? storage})
-      : _dio = dio ?? HttpClient().dio,
+      : _dio = dio ?? _createDio(),
         _storage = storage ?? appStorage;
+
+  static Dio _createDio() {
+    return Dio(BaseOptions(
+      baseUrl: Env.defaultApiBaseUrl,
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 20),
+    ));
+  }
 
   final Dio _dio;
   final AppStorage _storage;

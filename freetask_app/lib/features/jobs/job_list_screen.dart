@@ -15,8 +15,6 @@ import '../../theme/app_theme.dart';
 import '../auth/auth_repository.dart';
 import '../reviews/review_dialog.dart';
 import '../reviews/reviews_repository.dart';
-import 'job_constants.dart';
-import 'job_transition_rules.dart';
 import 'jobs_repository.dart';
 import 'widgets/job_card_skeleton.dart';
 import 'widgets/job_status_badge.dart';
@@ -88,7 +86,7 @@ class _JobListScreenState extends State<JobListScreen> {
 
   Future<void> _primeReviews() async {
     try {
-      await reviewsRepository.getMyReviews();
+      await reviewsRepository.getSubmittedReviews();
     } catch (_) {
       // Ignore cache warm failures; UI will surface errors on demand.
     }
@@ -275,93 +273,6 @@ class _JobListScreenState extends State<JobListScreen> {
         const SnackBar(content: Text(AppStrings.successReviewSubmitted)),
       );
     }
-  }
-
-  Future<String?> _promptDisputeReason() async {
-    final controller = TextEditingController();
-    final reason = await showDialog<String>(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setState) {
-            final trimmed = controller.text.trim();
-            final isValid = trimmed.length >= jobMinDisputeReasonLen;
-            final helper =
-                '${trimmed.length}/$jobMaxDisputeReasonLen aksara (min $jobMinDisputeReasonLen)';
-
-            return AlertDialog(
-              title: const Text(AppStrings.disputeReasonTitle),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.s12),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: AppRadius.mediumRadius,
-                      border: Border.all(color: Colors.blue.shade200),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.info_outline,
-                            color: Colors.blue.shade700, size: 20),
-                        const SizedBox(width: AppSpacing.s8),
-                        Expanded(
-                          child: Text(
-                            AppStrings.disputeReasonInfo,
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: Colors.blue.shade900,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.s16),
-                  const Text(
-                    AppStrings.disputeReasonHelper,
-                    style: AppTextStyles.bodySmall,
-                  ),
-                  const SizedBox(height: AppSpacing.s8),
-                  TextField(
-                    controller: controller,
-                    decoration: InputDecoration(
-                      hintText: AppStrings.disputeReasonHint,
-                      helperText: helper,
-                      errorText: controller.text.isEmpty || isValid
-                          ? null
-                          : AppStrings.disputeReasonMinError,
-                    ),
-                    maxLength: jobMaxDisputeReasonLen,
-                    maxLines: 3,
-                    onChanged: (_) => setState(() {}),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.neutral600,
-                  ),
-                  child: const Text(AppStrings.btnCancel),
-                ),
-                FilledButton(
-                  onPressed:
-                      isValid ? () => Navigator.of(context).pop(trimmed) : null,
-                  child: const Text(
-                      '${AppStrings.btnSubmit} ${AppStrings.jobActionDispute}'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-    controller.dispose();
-    return reason;
   }
 
   JobStatusVisual _statusVisual(JobStatus status) {
@@ -604,7 +515,6 @@ class _JobListScreenState extends State<JobListScreen> {
     final role = _currentUser?.role.toUpperCase();
     final isClientOwner = _currentUser?.id == job.clientId;
     final isFreelancerOwner = _currentUser?.id == job.freelancerId;
-    final canDispute = canRaiseDispute(job.status);
 
     if (isClientView && role == 'CLIENT' && isClientOwner) {
       final List<Widget> actions = <Widget>[];
@@ -626,28 +536,6 @@ class _JobListScreenState extends State<JobListScreen> {
               await _handleAction(
                 () => jobsRepository.cancelJob(job.id),
                 AppStrings.successJobCancelled,
-              );
-            },
-            expanded: false,
-            size: FTButtonSize.small,
-          ),
-        );
-      }
-
-      if (canDispute) {
-        if (actions.isNotEmpty) {
-          actions.add(const SizedBox(width: AppSpacing.s8));
-        }
-        actions.add(
-          FTButton(
-            label: AppStrings.jobActionDispute,
-            isLoading: _isProcessing,
-            onPressed: () async {
-              final reason = await _promptDisputeReason();
-              if (reason == null) return;
-              await _handleAction(
-                () => jobsRepository.disputeJob(job.id, reason),
-                AppStrings.successDisputeSubmitted,
               );
             },
             expanded: false,
@@ -731,34 +619,18 @@ class _JobListScreenState extends State<JobListScreen> {
       if (role != 'FREELANCER' || !isFreelancerOwner) {
         return const SizedBox.shrink();
       }
-      return Row(
-        children: [
-          FTButton(
-            label: AppStrings.jobActionComplete,
-            isLoading: _isProcessing,
-            onPressed: () => _handleAction(
-              () => jobsRepository.markCompleted(job.id),
-              AppStrings.successJobCompleted,
-            ),
-            expanded: false,
-            size: FTButtonSize.small,
+      return Align(
+        alignment: Alignment.centerRight,
+        child: FTButton(
+          label: AppStrings.jobActionComplete,
+          isLoading: _isProcessing,
+          onPressed: () => _handleAction(
+            () => jobsRepository.markCompleted(job.id),
+            AppStrings.successJobCompleted,
           ),
-          const SizedBox(width: 8),
-          FTButton(
-            label: AppStrings.jobActionDispute,
-            isLoading: _isProcessing,
-            onPressed: () async {
-              final reason = await _promptDisputeReason();
-              if (reason == null) return;
-              await _handleAction(
-                () => jobsRepository.disputeJob(job.id, reason),
-                AppStrings.successDisputeSubmitted,
-              );
-            },
-            expanded: false,
-            size: FTButtonSize.small,
-          ),
-        ],
+          expanded: false,
+          size: FTButtonSize.small,
+        ),
       );
     }
 

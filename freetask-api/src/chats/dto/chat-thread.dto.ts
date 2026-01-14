@@ -4,4 +4,5 @@ export class ChatThreadDto {
   participantName: string;
   lastMessage?: string | null;
   lastAt?: Date | null;
+  jobStatus: string;
 }

@@ -1,15 +1,15 @@
-import 'dart:io';
-
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../theme/app_theme.dart';
-
 import '../../core/utils/error_utils.dart';
+import '../../core/utils/url_utils.dart';
+import '../auth/auth_providers.dart';
 import 'chat_models.dart';
 import 'chat_repository.dart';
+import 'package:intl/intl.dart';
 
 class ChatRoomScreen extends ConsumerStatefulWidget {
   const ChatRoomScreen({super.key, required this.chatId});
@@ -56,14 +56,47 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
         );
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FB), // Light Blue-Grey background
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(thread.jobTitle),
-            Text(
-              'Bersama ${thread.participantName}',
-              style: Theme.of(context).textTheme.bodySmall,
+        backgroundColor: const Color(0xFF1976D2), // Primary Blue
+        foregroundColor: Colors.white,
+        titleSpacing: 0,
+        title: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: Colors.grey.shade300,
+              child: Text(
+                  thread.participantName.isNotEmpty
+                      ? thread.participantName[0].toUpperCase()
+                      : '?',
+                  style: const TextStyle(color: Colors.black)),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(thread.participantName,
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 2),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(thread.jobStatus),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      thread.jobStatus.replaceAll('_', ' '),
+                      style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -98,7 +131,8 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                       .reloadMessages(widget.chatId),
                   child: ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     itemCount: messages.length + (hasMore ? 1 : 0),
                     itemBuilder: (BuildContext context, int index) {
                       if (hasMore && index == 0) {
@@ -107,53 +141,25 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                           onLoadMore: _handleLoadMore,
                         );
                       }
+
                       final message =
                           hasMore ? messages[index - 1] : messages[index];
-                      return Align(
-                        alignment: Alignment.centerLeft,
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 6),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
-                            borderRadius: BorderRadius.circular(12),
+                      // Reverse index for checking next/prev message because ListView is usually safe,
+                      // but here we render top-down.
+                      // To check date change:
+                      final bool isFirstMessageOfDay = _isFirstMessageOfDay(
+                          messages, hasMore ? index - 1 : index);
+
+                      return Column(
+                        children: [
+                          if (isFirstMessageOfDay)
+                            _DateHeader(timestamp: message.timestamp),
+                          _MessageBubble(
+                            message: message,
+                            isMe: message.senderId ==
+                                ref.read(currentUserProvider).value?.id,
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              if (message.type == 'image' &&
-                                  message.attachmentUrl != null) ...[
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(
-                                    message.attachmentUrl!,
-                                    height: 200,
-                                    width: 200,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => const Icon(
-                                        Icons.broken_image,
-                                        size: 50,
-                                        color: Colors.grey),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                              ],
-                              if (message.text.isNotEmpty)
-                                Text(
-                                  message.text,
-                                  style: const TextStyle(color: Colors.black87),
-                                ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${message.senderName} • ${_formatTimestamp(message.timestamp)}',
-                                style: const TextStyle(
-                                  color: Colors.black54,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        ],
                       );
                     },
                   ),
@@ -194,6 +200,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
             controller: _controller,
             onSendText: _handleSendText,
             onSendImage: _handleSendImage,
+            onSendFile: _handleSendFile,
             enabled: !hasMessageError,
           ),
         ],
@@ -225,27 +232,8 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     }
   }
 
-  Future<void> _handleSendImage(File file) async {
+  Future<void> _handleSendImage(PlatformFile file) async {
     try {
-      // 1. Upload image using services repository (reusing upload logic)
-      // Note: We might want to move upload logic to a shared repository later
-      // For now, importing services_repository is fine or we duplicate upload logic
-      // But ServicesRepository is not imported here.
-      // Better: Add uploadImage to ChatRepository or use a shared FileRepository.
-
-      // Let's assume ChatRepository has uploadImage now or we can implement it there quickly.
-      // Wait, I didn't add uploadImage to ChatRepository. I should.
-
-      // Temporary: Use a placeholder or notify user if fails.
-
-      // Actually, I can use a quick http post here or better, add upload logic to ChatRepo.
-      // Since I can't edit ChatRepo here easily (parallel edits constraint),
-      // I will assume ChatRepo has it or I will add it in next step.
-      // Note: Image upload logic to be implemented in ChatRepository.
-
-      // Better plan: Add upload logic to ChatRepository in the next step.
-      // So here just call it.
-
       final url = await ref.read(chatRepositoryProvider).uploadChatImage(file);
 
       await ref.read(chatRepositoryProvider).sendMessage(
@@ -263,6 +251,46 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     }
   }
 
+  Future<void> _handleSendFile(PlatformFile file) async {
+    try {
+      final url = await ref.read(chatRepositoryProvider).uploadChatImage(file);
+      final extension = file.extension?.toLowerCase() ?? '';
+      final type = ['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(extension)
+          ? 'image'
+          : 'file';
+
+      await ref.read(chatRepositoryProvider).sendMessage(
+            jobId: widget.chatId,
+            text: file.name, // Filename as text for file type
+            type: type,
+            attachmentUrl: url,
+          );
+    } on DioException catch (error) {
+      if (!mounted) return;
+      _showSnackBar(resolveDioErrorMessage(error));
+    } catch (_) {
+      if (!mounted) return;
+      _showSnackBar('Gagal menghantar fail.');
+    }
+  }
+
+  bool _isFirstMessageOfDay(List<ChatMessage> messages, int index) {
+    if (index == 0) return true;
+    final current = messages[index];
+    final previous =
+        messages[index - 1]; // Previous in list is chronologically older? Wait.
+    // List is likely sorted Chronologically if index 0 is oldest?
+    // Repo sorts: a.timestamp.compareTo(b.timestamp).
+    // So 0 is Oldest.
+    // Check Date of current vs message BEFORE it (index - 1).
+
+    final prevDate = DateTime(previous.timestamp.year, previous.timestamp.month,
+        previous.timestamp.day);
+    final currDate = DateTime(
+        current.timestamp.year, current.timestamp.month, current.timestamp.day);
+    return prevDate != currDate;
+  }
+
   Future<void> _handleLoadMore() async {
     try {
       await ref.read(chatRepositoryProvider).loadMoreMessages(widget.chatId);
@@ -275,27 +303,175 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     }
   }
 
+  Color _getStatusColor(String status) {
+    switch (status.toUpperCase()) {
+      case 'PENDING':
+        return Colors.orangeAccent;
+      case 'IN_PROGRESS':
+        return Colors.lightBlueAccent;
+      case 'COMPLETED':
+        return Colors.lightGreenAccent.shade400;
+      case 'CANCELLED':
+      case 'REJECTED':
+      case 'DISPUTED':
+        return Colors.redAccent;
+      default:
+        return Colors.white24;
+    }
+  }
+
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
   }
+}
 
-  String _formatTimestamp(DateTime timestamp) {
+class _DateHeader extends StatelessWidget {
+  const _DateHeader({required this.timestamp});
+  final DateTime timestamp;
+
+  @override
+  Widget build(BuildContext context) {
     final now = DateTime.now();
-    final difference = now.difference(timestamp);
+    final today = DateTime(now.year, now.month, now.day);
+    final date = DateTime(timestamp.year, timestamp.month, timestamp.day);
 
-    if (difference.inMinutes < 1) {
-      return 'Sekarang';
-    } else if (difference.inHours < 1) {
-      return '${difference.inMinutes} minit lalu';
-    } else if (difference.inDays < 1) {
-      return '${difference.inHours} jam lalu';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} hari lalu';
+    String label;
+    if (date == today) {
+      label = 'Hari Ini';
+    } else if (date == today.subtract(const Duration(days: 1))) {
+      label = 'Semalam';
     } else {
-      return '${timestamp.day}/${timestamp.month}/${timestamp.year}';
+      label = DateFormat('dd/MM/yyyy').format(timestamp);
     }
+
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          color: const Color(0xFFD1E4E8),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(label,
+            style: const TextStyle(fontSize: 12, color: Colors.black54)),
+      ),
+    );
+  }
+}
+
+class _MessageBubble extends StatelessWidget {
+  const _MessageBubble({required this.message, required this.isMe});
+  final ChatMessage message;
+  final bool isMe;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        constraints:
+            BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isMe
+              ? const Color(0xFFE3F2FD) // Light Blue for me
+              : Colors.white, // White for others
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(12),
+            topRight: const Radius.circular(12),
+            bottomLeft: isMe ? const Radius.circular(12) : Radius.zero,
+            bottomRight: isMe ? Radius.zero : const Radius.circular(12),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            )
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            // Image message
+            if (message.type == 'image' && message.attachmentUrl != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: 250,
+                      maxHeight: 250,
+                    ),
+                    child: Image.network(
+                      UrlUtils.resolveImageUrl(message.attachmentUrl),
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: 150,
+                          width: 200,
+                          color: Colors.grey.shade300,
+                          child: const Icon(Icons.broken_image,
+                              color: Colors.grey),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            if (message.type == 'file' && message.attachmentUrl != null)
+              Container(
+                padding: const EdgeInsets.all(8),
+                margin: const EdgeInsets.only(bottom: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.insert_drive_file, color: Colors.blueGrey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: Text(message.text,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.black87))),
+                  ],
+                ),
+              ),
+            if (message.type == 'text' ||
+                (message.text.isNotEmpty && message.type != 'file'))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Text(
+                  message.text,
+                  style: const TextStyle(fontSize: 15, color: Colors.black87),
+                  textAlign: TextAlign.left,
+                ),
+              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  DateFormat('hh:mm a').format(message.timestamp),
+                  style: const TextStyle(fontSize: 11, color: Colors.black54),
+                ),
+                if (isMe) ...[
+                  const SizedBox(width: 4),
+                  const Icon(Icons.done_all,
+                      size: 16, color: Colors.blue), // Blue ticks
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -304,12 +480,14 @@ class _MessageComposer extends StatefulWidget {
     required this.controller,
     required this.onSendText,
     required this.onSendImage,
+    required this.onSendFile,
     this.enabled = true,
   });
 
   final TextEditingController controller;
   final ValueChanged<String> onSendText;
-  final ValueChanged<File> onSendImage;
+  final ValueChanged<PlatformFile> onSendImage;
+  final ValueChanged<PlatformFile> onSendFile;
   final bool enabled;
 
   @override
@@ -317,49 +495,53 @@ class _MessageComposer extends StatefulWidget {
 }
 
 class _MessageComposerState extends State<_MessageComposer> {
+  // ... (keep build method)
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       top: false,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          border: Border(
-            top: BorderSide(color: Colors.grey.shade300),
-          ),
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        color: Colors.white,
         child: Row(
           children: <Widget>[
             IconButton(
-              icon: const Icon(Icons.add_photo_alternate_outlined),
-              onPressed: widget.enabled ? _pickImage : null,
-              color: AppColors.primary,
+              icon: const Icon(Icons.add_circle,
+                  color: Color(0xFF1976D2)), // Primary Blue
+              onPressed: widget.enabled ? _showAttachmentMenu : null,
             ),
-            const SizedBox(width: 8),
             Expanded(
-              child: TextField(
-                controller: widget.controller,
-                readOnly: !widget.enabled,
-                textInputAction: widget.enabled
-                    ? TextInputAction.send
-                    : TextInputAction.none,
-                decoration: InputDecoration(
-                  hintText: widget.enabled
-                      ? 'Tulis mesej...'
-                      : 'Chat akan datang (Coming Soon)',
-                  border: const OutlineInputBorder(),
-                  isDense: true,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(24),
                 ),
-                onSubmitted: widget.enabled ? widget.onSendText : null,
+                child: TextField(
+                  controller: widget.controller,
+                  readOnly: !widget.enabled,
+                  maxLines: null, // Allow multiline
+                  textInputAction: TextInputAction.send,
+                  decoration: InputDecoration(
+                    hintText: 'Mesej',
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                  onSubmitted: widget.enabled ? widget.onSendText : null,
+                ),
               ),
             ),
             const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.send),
-              onPressed: widget.enabled
-                  ? () => widget.onSendText(widget.controller.text)
-                  : null,
+            CircleAvatar(
+              backgroundColor: const Color(0xFF1976D2),
+              radius: 22,
+              child: IconButton(
+                icon: const Icon(Icons.send, color: Colors.white, size: 20),
+                onPressed: widget.enabled
+                    ? () => widget.onSendText(widget.controller.text)
+                    : null,
+              ),
             ),
           ],
         ),
@@ -367,15 +549,96 @@ class _MessageComposerState extends State<_MessageComposer> {
     );
   }
 
-  Future<void> _pickImage() async {
+  void _showAttachmentMenu() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        height: 150,
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _AttachmentOption(
+              icon: Icons.image,
+              color: Colors.purple,
+              label: 'Galeri',
+              onTap: () {
+                Navigator.pop(context);
+                _pickFile(FileType.image);
+              },
+            ),
+            _AttachmentOption(
+              icon: Icons.camera_alt,
+              color: Colors.pink,
+              label: 'Kamera',
+              onTap: () {
+                Navigator.pop(context);
+                _pickFile(FileType.image);
+              },
+            ),
+            _AttachmentOption(
+              icon: Icons.insert_drive_file,
+              color: Colors.indigo,
+              label: 'Dokumen',
+              onTap: () {
+                Navigator.pop(context);
+                _pickFile(FileType.any);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickFile(FileType type) async {
     final result = await FilePicker.platform.pickFiles(
-      type: FileType.image,
+      type: type,
       allowMultiple: false,
+      withData: kIsWeb,
     );
 
-    if (result != null && result.files.single.path != null) {
-      widget.onSendImage(File(result.files.single.path!));
+    if (result != null && result.files.isNotEmpty) {
+      final file = result.files.single;
+      if (type == FileType.image) {
+        widget.onSendImage(file);
+      } else {
+        widget.onSendFile(file);
+      }
     }
+  }
+}
+
+class _AttachmentOption extends StatelessWidget {
+  const _AttachmentOption({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircleAvatar(
+            radius: 25,
+            backgroundColor: color,
+            child: Icon(icon, color: Colors.white),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontSize: 12)),
+        ],
+      ),
+    );
   }
 }
 

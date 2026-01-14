@@ -18,6 +18,8 @@ import '../features/services/service_detail_screen.dart';
 import '../features/services/service_list_screen.dart';
 import '../features/users/public_profile_screen.dart';
 import '../features/services/create_service_screen.dart';
+import '../features/services/edit_service_screen.dart';
+import '../models/service.dart';
 
 import '../models/job.dart';
 import '../features/auth/auth_repository.dart';
@@ -160,6 +162,22 @@ final appRouter = GoRouter(
       path: '/services/create',
       builder: (BuildContext context, GoRouterState state) {
         return const CreateServiceScreen();
+      },
+    ),
+    GoRoute(
+      path: '/services/:id/edit',
+      builder: (BuildContext context, GoRouterState state) {
+        final service = state.extra as Service?;
+        if (service == null) {
+          // Fallback to home if no service provided
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            context.go('/home');
+          });
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return EditServiceScreen(service: service);
       },
     ),
     GoRoute(

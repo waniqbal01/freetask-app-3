@@ -401,10 +401,38 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
                             ),
                             const SizedBox(height: AppSpacing.s12),
                             SectionCard(
-                              title: 'Lampiran (Pautan)',
+                              title: '📎 Lampiran (Opsional)',
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  if (_attachments.isEmpty)
+                                    Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue.shade50,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: Colors.blue.shade100,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.info_outline,
+                                              color: Colors.blue.shade700,
+                                              size: 20),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Text(
+                                              'Tambah fail untuk memberi contoh atau maklumat tambahan kepada freelancer',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: Colors.blue.shade700,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   if (_attachments.isNotEmpty) ...[
                                     Wrap(
                                       spacing: 8,
@@ -415,13 +443,51 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
                                           .map((entry) {
                                         final index = entry.key;
                                         final url = entry.value;
+
+                                        // Determine file type icon
+                                        IconData fileIcon =
+                                            Icons.insert_drive_file;
+                                        Color iconColor = Colors.grey.shade600;
+
+                                        if (url
+                                            .toLowerCase()
+                                            .contains('.pdf')) {
+                                          fileIcon = Icons.picture_as_pdf;
+                                          iconColor = Colors.red.shade400;
+                                        } else if (url
+                                            .toLowerCase()
+                                            .contains('.doc')) {
+                                          fileIcon = Icons.description;
+                                          iconColor = Colors.blue.shade400;
+                                        } else if (url
+                                                .toLowerCase()
+                                                .contains('.jpg') ||
+                                            url
+                                                .toLowerCase()
+                                                .contains('.jpeg') ||
+                                            url
+                                                .toLowerCase()
+                                                .contains('.png')) {
+                                          fileIcon = Icons.image;
+                                          iconColor = Colors.green.shade400;
+                                        }
+
                                         return Chip(
+                                          avatar: Icon(
+                                            fileIcon,
+                                            size: 18,
+                                            color: iconColor,
+                                          ),
                                           label: Text(
                                             url.length > 30
                                                 ? '${url.substring(0, 30)}...'
                                                 : url,
                                             style:
                                                 const TextStyle(fontSize: 12),
+                                          ),
+                                          deleteIcon: const Icon(
+                                            Icons.close,
+                                            size: 18,
                                           ),
                                           onDeleted: () {
                                             setState(() {
@@ -435,186 +501,205 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
                                     ),
                                     const SizedBox(height: 12),
                                   ],
-                                  FTButton(
-                                    label: _isUploading
-                                        ? 'Uploading...'
-                                        : 'Tambah Pautan Document/Image',
-                                    size: FTButtonSize.small,
-                                    variant: FTButtonVariant.outline,
-                                    expanded: false,
-                                    isLoading: _isUploading,
-                                    onPressed: _isUploading
-                                        ? null
-                                        : () async {
-                                            await showModalBottomSheet(
-                                              context: context,
-                                              shape:
-                                                  const RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.vertical(
-                                                        top: Radius.circular(
-                                                            16)),
-                                              ),
-                                              builder: (context) => SafeArea(
-                                                child: Column(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    ListTile(
-                                                      leading: const Icon(Icons
-                                                          .upload_file_rounded),
-                                                      title: const Text(
-                                                          'Muat naik dari peranti'),
-                                                      onTap: () async {
-                                                        final messenger =
-                                                            ScaffoldMessenger
-                                                                .of(context);
-                                                        Navigator.pop(context);
-                                                        try {
-                                                          final result =
-                                                              await FilePicker
-                                                                  .platform
-                                                                  .pickFiles(
-                                                            withData: true,
-                                                            type:
-                                                                FileType.custom,
-                                                            allowedExtensions: [
-                                                              'jpg',
-                                                              'jpeg',
-                                                              'png',
-                                                              'pdf',
-                                                              'doc',
-                                                              'docx'
-                                                            ],
-                                                          );
-
-                                                          if (result != null &&
-                                                              result.files
-                                                                  .isNotEmpty) {
-                                                            final file = result
-                                                                .files.first;
-                                                            final bytes =
-                                                                file.bytes;
-                                                            final name =
-                                                                file.name;
-
-                                                            if (bytes == null) {
-                                                              throw Exception(
-                                                                  'Gagal membaca fail.');
-                                                            }
-
-                                                            setState(() {
-                                                              _isUploading =
-                                                                  true;
-                                                            });
-
-                                                            try {
-                                                              final mimeType =
-                                                                  lookupMimeType(
-                                                                      name);
-                                                              final uploadResult =
-                                                                  await uploadService
-                                                                      .uploadData(
-                                                                          name,
-                                                                          bytes,
-                                                                          mimeType);
-
-                                                              if (mounted) {
-                                                                setState(() {
-                                                                  _attachments.add(
-                                                                      uploadResult
-                                                                          .url);
-                                                                });
-                                                              }
-                                                            } catch (e) {
-                                                              messenger
-                                                                  .showSnackBar(
-                                                                SnackBar(
-                                                                    content: Text(
-                                                                        'Ralat muat naik: $e')),
-                                                              );
-                                                            } finally {
-                                                              if (mounted) {
-                                                                setState(() {
-                                                                  _isUploading =
-                                                                      false;
-                                                                });
-                                                              }
-                                                            }
-                                                          }
-                                                        } catch (e) {
-                                                          messenger.showSnackBar(
-                                                              SnackBar(
-                                                                  content: Text(
-                                                                      'Ralat: $e')));
-                                                        }
-                                                      },
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: FTButton(
+                                          label: _isUploading
+                                              ? 'Memuat naik...'
+                                              : 'Tambah Fail',
+                                          size: FTButtonSize.small,
+                                          variant: FTButtonVariant.outline,
+                                          expanded: true,
+                                          isLoading: _isUploading,
+                                          onPressed: _isUploading
+                                              ? null
+                                              : () async {
+                                                  await showModalBottomSheet(
+                                                    context: context,
+                                                    shape:
+                                                        const RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.vertical(
+                                                              top: Radius
+                                                                  .circular(
+                                                                      16)),
                                                     ),
-                                                    ListTile(
-                                                      leading: const Icon(
-                                                          Icons.link_rounded),
-                                                      title: const Text(
-                                                          'Tampal Pautan URL'),
-                                                      onTap: () async {
-                                                        Navigator.pop(context);
-                                                        final controller =
-                                                            TextEditingController();
-                                                        final url =
-                                                            await showDialog<
-                                                                String>(
-                                                          context: context,
-                                                          builder: (context) =>
-                                                              AlertDialog(
+                                                    builder: (context) =>
+                                                        SafeArea(
+                                                      child: Column(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          ListTile(
+                                                            leading: const Icon(
+                                                                Icons
+                                                                    .upload_file_rounded),
                                                             title: const Text(
-                                                                'Tambah Pautan'),
-                                                            content: TextField(
-                                                              controller:
-                                                                  controller,
-                                                              decoration:
-                                                                  const InputDecoration(
-                                                                hintText:
-                                                                    'https://example.com/file.pdf',
-                                                                labelText:
-                                                                    'URL Pautan',
-                                                              ),
-                                                            ),
-                                                            actions: [
-                                                              TextButton(
-                                                                onPressed: () =>
-                                                                    Navigator.pop(
-                                                                        context),
-                                                                child:
-                                                                    const Text(
-                                                                        'Batal'),
-                                                              ),
-                                                              FilledButton(
-                                                                onPressed: () =>
-                                                                    Navigator.pop(
-                                                                        context,
-                                                                        controller
-                                                                            .text),
-                                                                child: const Text(
-                                                                    'Tambah'),
-                                                              ),
-                                                            ],
+                                                                'Muat naik dari peranti'),
+                                                            onTap: () async {
+                                                              final messenger =
+                                                                  ScaffoldMessenger
+                                                                      .of(context);
+                                                              Navigator.pop(
+                                                                  context);
+                                                              try {
+                                                                final result =
+                                                                    await FilePicker
+                                                                        .platform
+                                                                        .pickFiles(
+                                                                  withData:
+                                                                      true,
+                                                                  type: FileType
+                                                                      .custom,
+                                                                  allowedExtensions: [
+                                                                    'jpg',
+                                                                    'jpeg',
+                                                                    'png',
+                                                                    'pdf',
+                                                                    'doc',
+                                                                    'docx'
+                                                                  ],
+                                                                );
+
+                                                                if (result !=
+                                                                        null &&
+                                                                    result.files
+                                                                        .isNotEmpty) {
+                                                                  final file =
+                                                                      result
+                                                                          .files
+                                                                          .first;
+                                                                  final bytes =
+                                                                      file.bytes;
+                                                                  final name =
+                                                                      file.name;
+
+                                                                  if (bytes ==
+                                                                      null) {
+                                                                    throw Exception(
+                                                                        'Gagal membaca fail.');
+                                                                  }
+
+                                                                  setState(() {
+                                                                    _isUploading =
+                                                                        true;
+                                                                  });
+
+                                                                  try {
+                                                                    final mimeType =
+                                                                        lookupMimeType(
+                                                                            name);
+                                                                    final uploadResult =
+                                                                        await uploadService.uploadData(
+                                                                            name,
+                                                                            bytes,
+                                                                            mimeType);
+
+                                                                    if (mounted) {
+                                                                      setState(
+                                                                          () {
+                                                                        _attachments
+                                                                            .add(uploadResult.url);
+                                                                      });
+                                                                    }
+                                                                  } catch (e) {
+                                                                    messenger
+                                                                        .showSnackBar(
+                                                                      SnackBar(
+                                                                          content:
+                                                                              Text('Ralat muat naik: $e')),
+                                                                    );
+                                                                  } finally {
+                                                                    if (mounted) {
+                                                                      setState(
+                                                                          () {
+                                                                        _isUploading =
+                                                                            false;
+                                                                      });
+                                                                    }
+                                                                  }
+                                                                }
+                                                              } catch (e) {
+                                                                messenger.showSnackBar(
+                                                                    SnackBar(
+                                                                        content:
+                                                                            Text('Ralat: $e')));
+                                                              }
+                                                            },
                                                           ),
-                                                        );
-                                                        if (url != null &&
-                                                            url
-                                                                .trim()
-                                                                .isNotEmpty) {
-                                                          setState(() {
-                                                            _attachments.add(
-                                                                url.trim());
-                                                          });
-                                                        }
-                                                      },
+                                                          ListTile(
+                                                            leading: const Icon(
+                                                                Icons
+                                                                    .link_rounded),
+                                                            title: const Text(
+                                                                'Tampal Pautan URL'),
+                                                            onTap: () async {
+                                                              Navigator.pop(
+                                                                  context);
+                                                              final controller =
+                                                                  TextEditingController();
+                                                              final url =
+                                                                  await showDialog<
+                                                                      String>(
+                                                                context:
+                                                                    context,
+                                                                builder:
+                                                                    (context) =>
+                                                                        AlertDialog(
+                                                                  title: const Text(
+                                                                      'Tambah Pautan'),
+                                                                  content:
+                                                                      TextField(
+                                                                    controller:
+                                                                        controller,
+                                                                    decoration:
+                                                                        const InputDecoration(
+                                                                      hintText:
+                                                                          'https://example.com/file.pdf',
+                                                                      labelText:
+                                                                          'URL Pautan',
+                                                                    ),
+                                                                  ),
+                                                                  actions: [
+                                                                    TextButton(
+                                                                      onPressed:
+                                                                          () =>
+                                                                              Navigator.pop(context),
+                                                                      child: const Text(
+                                                                          'Batal'),
+                                                                    ),
+                                                                    FilledButton(
+                                                                      onPressed: () => Navigator.pop(
+                                                                          context,
+                                                                          controller
+                                                                              .text),
+                                                                      child: const Text(
+                                                                          'Tambah'),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                              );
+                                                              if (url != null &&
+                                                                  url
+                                                                      .trim()
+                                                                      .isNotEmpty) {
+                                                                setState(() {
+                                                                  _attachments
+                                                                      .add(url
+                                                                          .trim());
+                                                                });
+                                                              }
+                                                            },
+                                                          ),
+                                                        ],
+                                                      ),
                                                     ),
-                                                  ],
-                                                ),
-                                              ),
-                                            );
-                                          },
+                                                  );
+                                                },
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),

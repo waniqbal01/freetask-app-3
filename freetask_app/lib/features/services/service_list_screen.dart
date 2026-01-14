@@ -29,6 +29,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
   String? _errorMessage;
   List<String> _categories = const <String>['Semua'];
   String _selectedCategory = 'Semua';
+  String? _selectedSortOption;
   Timer? _debounce;
   AppUser? _currentUser;
 
@@ -63,6 +64,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
       final services = await servicesRepository.getServices(
         q: _searchController.text,
         category: _selectedCategory == 'Semua' ? null : _selectedCategory,
+        sortBy: _selectedSortOption,
       );
 
       if (!mounted) {
@@ -166,6 +168,11 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                                 selectedCategory: _selectedCategory,
                                 onCategorySelected: (String value) {
                                   setState(() => _selectedCategory = value);
+                                  _fetchServices();
+                                },
+                                selectedSortOption: _selectedSortOption,
+                                onSortOptionSelected: (String? value) {
+                                  setState(() => _selectedSortOption = value);
                                   _fetchServices();
                                 },
                               ),
@@ -304,6 +311,8 @@ class _MarketplaceHero extends StatelessWidget {
     required this.categories,
     required this.selectedCategory,
     required this.onCategorySelected,
+    required this.selectedSortOption,
+    required this.onSortOptionSelected,
   });
 
   final TextEditingController searchController;
@@ -311,6 +320,8 @@ class _MarketplaceHero extends StatelessWidget {
   final List<String> categories;
   final String selectedCategory;
   final ValueChanged<String> onCategorySelected;
+  final String? selectedSortOption;
+  final ValueChanged<String?> onSortOptionSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -367,7 +378,8 @@ class _MarketplaceHero extends StatelessWidget {
               prefixIcon: Icon(Icons.search_rounded),
             ),
           ),
-          const SizedBox(height: AppSpacing.s12),
+          const SizedBox(height: AppSpacing.s16),
+          // Category Chips
           SizedBox(
             height: 42,
             child: ListView.separated(
@@ -400,7 +412,188 @@ class _MarketplaceHero extends StatelessWidget {
               itemCount: categories.length,
             ),
           ),
+          const SizedBox(height: AppSpacing.s12),
+          // Sort Filter Buttons
+          Row(
+            children: [
+              _FilterButton(
+                label: 'Popular',
+                isSelected: selectedSortOption == 'popular',
+                onTap: () => onSortOptionSelected(
+                  selectedSortOption == 'popular' ? null : 'popular',
+                ),
+                icon: Icons.local_fire_department_rounded,
+                color: Colors.orange,
+              ),
+              const SizedBox(width: 8),
+              _FilterButton(
+                label: 'Baru',
+                isSelected: selectedSortOption == 'newest',
+                onTap: () => onSortOptionSelected(
+                  selectedSortOption == 'newest' ? null : 'newest',
+                ),
+                icon: Icons.auto_awesome_rounded,
+                color: Colors.purple,
+              ),
+              const SizedBox(width: 8),
+              _FilterButton(
+                label: 'Murah',
+                isSelected: selectedSortOption == 'cheapest',
+                onTap: () => onSortOptionSelected(
+                  selectedSortOption == 'cheapest' ? null : 'cheapest',
+                ),
+                icon: Icons.savings_rounded,
+                color: Colors.green,
+              ),
+              const SizedBox(width: 8),
+              _FilterButton(
+                label: 'Mahal',
+                isSelected: selectedSortOption == 'expensive',
+                onTap: () => onSortOptionSelected(
+                  selectedSortOption == 'expensive' ? null : 'expensive',
+                ),
+                icon: Icons.diamond_rounded,
+                color: Colors.blue,
+              ),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _FilterButton extends StatefulWidget {
+  const _FilterButton({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+    this.icon,
+    this.color,
+  });
+
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final IconData? icon;
+  final Color? color;
+
+  @override
+  State<_FilterButton> createState() => _FilterButtonState();
+}
+
+class _FilterButtonState extends State<_FilterButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleTapDown(TapDownDetails details) {
+    _controller.forward();
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    _controller.reverse();
+    widget.onTap();
+  }
+
+  void _handleTapCancel() {
+    _controller.reverse();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = widget.color ?? AppColors.primary;
+
+    return Expanded(
+      child: GestureDetector(
+        onTapDown: _handleTapDown,
+        onTapUp: _handleTapUp,
+        onTapCancel: _handleTapCancel,
+        child: ScaleTransition(
+          scale: _scaleAnimation,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 10),
+            decoration: BoxDecoration(
+              gradient: widget.isSelected
+                  ? LinearGradient(
+                      colors: [color, color.withValues(alpha: 0.8)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : null,
+              color: widget.isSelected ? null : Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: widget.isSelected ? color : AppColors.neutral200,
+                width: widget.isSelected ? 1.5 : 1,
+              ),
+              boxShadow: widget.isSelected
+                  ? [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ]
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (widget.icon != null) ...[
+                  Icon(
+                    widget.icon,
+                    size: 15,
+                    color: widget.isSelected ? Colors.white : color,
+                  ),
+                  const SizedBox(width: 5),
+                ],
+                Flexible(
+                  child: Text(
+                    widget.label,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: widget.isSelected
+                              ? Colors.white
+                              : AppColors.neutral600,
+                          fontWeight: widget.isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

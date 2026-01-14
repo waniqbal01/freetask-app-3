@@ -38,4 +38,9 @@ export class ReviewsController {
   findMine(@GetUser('userId') userId: number) {
     return this.reviewsService.findMine(userId);
   }
+
+  @Get('submitted')
+  findSubmitted(@GetUser('userId') userId: number) {
+    return this.reviewsService.findSubmitted(userId);
+  }
 }

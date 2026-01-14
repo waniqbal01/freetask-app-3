@@ -135,6 +135,27 @@ class ReviewsRepository {
     }
   }
 
+  Future<List<Review>> getSubmittedReviews() async {
+    final token = await _requireAuthToken();
+    try {
+      final response = await _dio.get<List<dynamic>>(
+        '/reviews/submitted',
+        options: Options(
+            headers: <String, String>{'Authorization': 'Bearer $token'}),
+      );
+      final data = response.data ?? <dynamic>[];
+      final reviews = data
+          .whereType<Map<String, dynamic>>()
+          .map(Review.fromJson)
+          .toList(growable: false);
+      _syncSubmittedJobs(reviews);
+      return reviews;
+    } on DioException catch (error) {
+      await handleApiError(error);
+      rethrow;
+    }
+  }
+
   void _syncSubmittedJobs(Iterable<Review> reviews) {
     for (final review in reviews) {
       _submittedJobIds.add(review.jobId);

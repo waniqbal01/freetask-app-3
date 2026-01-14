@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/service.dart';
 import 'users_repository.dart';
+import '../../core/utils/url_utils.dart';
 
 class PublicProfileScreen extends StatefulWidget {
   const PublicProfileScreen({super.key, required this.userId});
@@ -119,8 +120,11 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         children: [
           CircleAvatar(
             radius: 50,
-            backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-            child: avatarUrl == null
+            backgroundColor: Colors.grey.shade200,
+            backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                ? NetworkImage(UrlUtils.resolveImageUrl(avatarUrl))
+                : null,
+            child: avatarUrl == null || avatarUrl.isEmpty
                 ? Text(
                     name[0].toUpperCase(),
                     style: const TextStyle(fontSize: 32),
@@ -210,17 +214,21 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     decoration: BoxDecoration(
                       color: Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(8),
-                      image: service.thumbnailUrl != null
-                          ? DecorationImage(
-                              image: NetworkImage(service.thumbnailUrl!),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
                     ),
-                    child: service.thumbnailUrl == null
-                        ? const Icon(Icons.image_not_supported,
-                            color: Colors.grey)
-                        : null,
+                    child: service.thumbnailUrl != null &&
+                            service.thumbnailUrl!.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              UrlUtils.resolveImageUrl(service.thumbnailUrl),
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(Icons.image_not_supported,
+                                      color: Colors.grey),
+                            ),
+                          )
+                        : const Icon(Icons.image_not_supported,
+                            color: Colors.grey),
                   ),
                   const SizedBox(width: 12),
                   Expanded(

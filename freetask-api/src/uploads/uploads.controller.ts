@@ -32,7 +32,7 @@ export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) { }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard) // Auth required only for upload
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // Stricter limit for uploads: 5 per minute
   @UseFilters(UploadsMulterExceptionFilter)
   @UseInterceptors(
@@ -98,12 +98,21 @@ export class UploadsController {
   // Public endpoint for serving avatars and public images (no JWT required)
   // Only allows access to UUID-pattern image files for security
   @Get('public/:filename')
-  async getPublicFile(@Param('filename') filename: string, @Res({ passthrough: true }) res: Response) {
-    const { stream, mimeType, filename: safeName, asAttachment } = await this.uploadsService.getPublicFileStream(filename);
+  async getPublicFile(
+    @Param('filename') filename: string,
+    @Res() res: Response
+  ) {
+    const { stream, mimeType, filename: safeName, asAttachment } =
+      await this.uploadsService.getPublicFileStream(filename);
+
+    // Explicit CORS for public images to allow Flutter Web <img /> tags
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Type', mimeType);
+
     const dispositionType = asAttachment ? 'attachment' : 'inline';
     res.setHeader('Content-Disposition', `${dispositionType}; filename="${safeName}"`);
-    return new StreamableFile(stream);
+
+    stream.pipe(res);
   }
 
   // Protected endpoint for authenticated users

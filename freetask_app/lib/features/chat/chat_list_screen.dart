@@ -103,11 +103,19 @@ class ChatListScreen extends ConsumerWidget {
         }
 
         return Scaffold(
-          appBar: AppBar(title: const Text('Chat')),
+          backgroundColor: const Color(0xFFF5F7FB), // Light Blue-Grey
+          appBar: AppBar(
+            title: const Text('Chat',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            backgroundColor: const Color(0xFF1976D2), // Primary Blue
+            foregroundColor: Colors.white,
+            elevation: 0,
+          ),
           bottomNavigationBar: const AppBottomNav(currentTab: AppTab.chats),
           body: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             itemCount: threads.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
             itemBuilder: (BuildContext context, int index) {
               final thread = threads[index];
               final snippet = thread.lastMessage?.isNotEmpty == true
@@ -117,30 +125,125 @@ class ChatListScreen extends ConsumerWidget {
                   ? DateFormat('dd MMM, h:mm a')
                       .format(thread.lastAt!.toLocal())
                   : '—';
-              return ListTile(
-                title: Text(thread.jobTitle),
-                subtitle: Text(
-                  '${thread.participantName} · $snippet',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                trailing: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      lastAtLabel,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.copyWith(color: Colors.grey.shade700),
+
+              Color statusColor;
+              switch (thread.jobStatus.toUpperCase()) {
+                case 'PENDING':
+                  statusColor = Colors.orangeAccent;
+                  break;
+                case 'IN_PROGRESS':
+                  statusColor = Colors.lightBlueAccent;
+                  break;
+                case 'COMPLETED':
+                  statusColor = Colors.green;
+                  break;
+                case 'CANCELLED':
+                case 'REJECTED':
+                  statusColor = Colors.redAccent;
+                  break;
+                default:
+                  statusColor = Colors.grey;
+              }
+
+              return Card(
+                elevation: 2,
+                shadowColor: Colors.black12,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () {
+                    context.push('/chats/${thread.id}/messages');
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor:
+                              const Color(0xFF1976D2).withValues(alpha: 0.1),
+                          child: Text(
+                            thread.participantName.isNotEmpty
+                                ? thread.participantName[0].toUpperCase()
+                                : '?',
+                            style: const TextStyle(
+                                color: Color(0xFF1976D2),
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      thread.participantName,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Text(
+                                    lastAtLabel,
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey.shade600),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                thread.jobTitle,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 13,
+                                    color: Colors.black87),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                snippet,
+                                style: TextStyle(
+                                    color: Colors.grey.shade600, fontSize: 13),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: statusColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                      color:
+                                          statusColor.withValues(alpha: 0.3)),
+                                ),
+                                child: Text(
+                                  thread.jobStatus.replaceAll('_', ' '),
+                                  style: TextStyle(
+                                      fontSize: 10,
+                                      color: statusColor,
+                                      fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    const Icon(Icons.chevron_right),
-                  ],
+                  ),
                 ),
-                onTap: () {
-                  context.push('/chats/${thread.id}/messages');
-                },
               );
             },
           ),

@@ -186,8 +186,8 @@ export class UploadsService {
       return false;
     }
 
-    // RFC 4122 compliant UUID pattern: version field (1-5), variant field (8/9/a/b/A/B)
-    const uuidPattern = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}\.(jpg|jpeg|png|gif)$/i;
+    // Relaxed UUID pattern to avoid version/variant mismatches
+    const uuidPattern = /^[0-9a-fA-F-]+\.(jpg|jpeg|png|gif)$/i;
     return uuidPattern.test(filename);
   }
 

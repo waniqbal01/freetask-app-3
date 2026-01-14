@@ -5,6 +5,7 @@ class ChatThread {
     required this.participantName,
     this.lastMessage,
     this.lastAt,
+    this.jobStatus = 'PENDING',
   });
 
   factory ChatThread.fromJson(Map<String, dynamic> json) {
@@ -20,6 +21,9 @@ class ChatThread {
       lastAt: DateTime.tryParse(
         json['lastAt']?.toString() ?? json['last_at']?.toString() ?? '',
       ),
+      jobStatus: json['jobStatus']?.toString() ??
+          json['job_status']?.toString() ??
+          'PENDING',
     );
   }
 
@@ -28,6 +32,7 @@ class ChatThread {
   final String participantName;
   final String? lastMessage;
   final DateTime? lastAt;
+  final String jobStatus;
 }
 
 class ChatMessage {

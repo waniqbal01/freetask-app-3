@@ -42,7 +42,24 @@ export class ServicesService {
     return this.serializeService(created);
   }
 
-  async findAll(q?: string, category?: string, freelancerId?: number) {
+  async findAll(q?: string, category?: string, freelancerId?: number, sortBy?: 'popular' | 'newest' | 'cheapest' | 'expensive') {
+    // Build orderBy clause based on sortBy parameter
+    let orderBy: Prisma.ServiceOrderByWithRelationInput | Prisma.ServiceOrderByWithRelationInput[] = [];
+
+    if (sortBy === 'popular') {
+      // Sort by number of completed orders (requires counting related jobs)
+      orderBy = { jobs: { _count: 'desc' } };
+    } else if (sortBy === 'newest') {
+      orderBy = { createdAt: 'desc' };
+    } else if (sortBy === 'cheapest') {
+      orderBy = { price: 'asc' };
+    } else if (sortBy === 'expensive') {
+      orderBy = { price: 'desc' };
+    } else {
+      // Default sorting by createdAt descending
+      orderBy = { createdAt: 'desc' };
+    }
+
     const services = await this.prisma.service.findMany({
       where: {
         ...(q
@@ -60,8 +77,27 @@ export class ServicesService {
         freelancer: {
           select: { id: true, name: true, avatarUrl: true },
         },
+        ...(sortBy === 'popular' ? {
+          jobs: {
+            where: { status: 'COMPLETED' },
+            select: { id: true },
+          },
+        } : {}),
       },
+      orderBy,
     });
+
+    // For popular sort, we need to manually sort by job count since Prisma orderBy with _count might not work as expected
+    if (sortBy === 'popular') {
+      return services
+        .map((service) => this.serializeService(service))
+        .sort((a, b) => {
+          const aJobs = (a as any).jobs?.length || 0;
+          const bJobs = (b as any).jobs?.length || 0;
+          return bJobs - aJobs;
+        });
+    }
+
     return services.map((service) => this.serializeService(service));
   }
 

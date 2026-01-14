@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/api/api_client.dart';
+import '../core/utils/url_utils.dart';
 
 class FreelancerAvatar extends StatelessWidget {
   final String? avatarUrl;
@@ -13,18 +13,9 @@ class FreelancerAvatar extends StatelessWidget {
     super.key,
   });
 
-  String _getAbsoluteUrl(String? url) {
-    if (url == null || url.isEmpty) return '';
-    if (url.startsWith('http')) return url;
-
-    // Convert relative URL to absolute
-    final apiUrl = ApiClient().baseUrl;
-    return '$apiUrl$url';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final absoluteUrl = _getAbsoluteUrl(avatarUrl);
+    final resolvedUrl = UrlUtils.resolveImageUrl(avatarUrl);
 
     return GestureDetector(
       onTap: onTap,
@@ -32,8 +23,8 @@ class FreelancerAvatar extends StatelessWidget {
         radius: size / 2,
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         backgroundImage:
-            absoluteUrl.isNotEmpty ? NetworkImage(absoluteUrl) : null,
-        child: absoluteUrl.isEmpty
+            resolvedUrl.isNotEmpty ? NetworkImage(resolvedUrl) : null,
+        child: resolvedUrl.isEmpty
             ? Icon(
                 Icons.person,
                 size: size * 0.6,

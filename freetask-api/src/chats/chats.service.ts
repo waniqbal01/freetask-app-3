@@ -54,6 +54,7 @@ export class ChatsService {
         participantName,
         lastMessage: job.messages[0]?.content ?? null,
         lastAt: job.messages[0]?.createdAt ?? job.updatedAt,
+        jobStatus: job.status,
       } satisfies ChatThreadDto;
     });
   }

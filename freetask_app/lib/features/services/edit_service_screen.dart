@@ -8,23 +8,29 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/utils/error_utils.dart';
 import '../../core/widgets/ft_button.dart';
+import '../../models/service.dart';
+import '../../theme/app_theme.dart';
 import 'services_repository.dart';
 
-class CreateServiceScreen extends StatefulWidget {
-  const CreateServiceScreen({super.key});
+class EditServiceScreen extends StatefulWidget {
+  const EditServiceScreen({required this.service, super.key});
+
+  final Service service;
 
   @override
-  State<CreateServiceScreen> createState() => _CreateServiceScreenState();
+  State<EditServiceScreen> createState() => _EditServiceScreenState();
 }
 
-class _CreateServiceScreenState extends State<CreateServiceScreen> {
+class _EditServiceScreenState extends State<EditServiceScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _priceController = TextEditingController();
+  late TextEditingController _titleController;
+  late TextEditingController _descriptionController;
+  late TextEditingController _priceController;
   String? _selectedCategory;
   bool _isLoading = false;
+  bool _isDeleting = false;
   PlatformFile? _selectedImage;
+  String? _currentThumbnailUrl;
 
   final List<String> _categories = [
     'Digital & Tech',
@@ -37,7 +43,17 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
     'Education & Coaching',
   ];
 
-  bool _isUploading = false;
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.service.title);
+    _descriptionController =
+        TextEditingController(text: widget.service.description);
+    _priceController =
+        TextEditingController(text: widget.service.price.toString());
+    _selectedCategory = widget.service.category;
+    _currentThumbnailUrl = widget.service.thumbnailUrl;
+  }
 
   @override
   void dispose() {
@@ -79,20 +95,15 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
 
     try {
       // 1. Upload Image if selected
-      String? thumbnailUrl;
+      String? thumbnailUrl = _currentThumbnailUrl;
       if (_selectedImage != null) {
-        setState(() {
-          _isUploading = true;
-        });
         thumbnailUrl =
             await servicesRepository.uploadServiceImage(_selectedImage!);
-        setState(() {
-          _isUploading = false;
-        });
       }
 
-      // 2. Create Service
-      await servicesRepository.createService(
+      // 2. Update Service
+      await servicesRepository.updateService(
+        serviceId: widget.service.id,
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         price: double.parse(_priceController.text),
@@ -102,7 +113,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Servis berjaya dicipta!')),
+        const SnackBar(content: Text('Servis berjaya dikemaskini!')),
       );
       context.pop(true); // Return result to refresh list
     } on DioException catch (e) {
@@ -115,7 +126,56 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _isUploading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _deleteService() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Padam Servis?'),
+        content: const Text(
+          'Adakah anda pasti mahu memadamkan servis ini? Tindakan ini tidak boleh dibatalkan.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Padam'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _isDeleting = true;
+    });
+
+    try {
+      await servicesRepository.deleteService(widget.service.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Servis berjaya dipadamkan')),
+      );
+      context.pop(true); // Return true to indicate deletion
+    } on DioException catch (e) {
+      if (!mounted) return;
+      showErrorSnackBar(context, resolveDioErrorMessage(e));
+    } catch (e) {
+      if (!mounted) return;
+      showErrorSnackBar(context, 'Ralat tidak diketahui: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDeleting = false;
         });
       }
     }
@@ -134,11 +194,21 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
           imageProvider = FileImage(File(_selectedImage!.path!));
         }
       }
+    } else if (_currentThumbnailUrl != null &&
+        _currentThumbnailUrl!.isNotEmpty) {
+      imageProvider = NetworkImage(_currentThumbnailUrl!);
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cipta Servis Baru'),
+        title: const Text('Edit Servis'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.red),
+            onPressed: _isLoading || _isDeleting ? null : _deleteService,
+            tooltip: 'Padam Servis',
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -147,105 +217,62 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Image Picker with Upload Indicator
-              Stack(
-                children: [
-                  GestureDetector(
-                    onTap: _isLoading ? null : _pickImage,
-                    child: Container(
-                      height: 200,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _selectedImage != null
-                              ? Colors.green.shade300
-                              : Colors.grey.shade300,
-                          width: 2,
-                        ),
-                        image: imageProvider != null
-                            ? DecorationImage(
-                                image: imageProvider,
-                                fit: BoxFit.cover,
-                              )
-                            : null,
-                      ),
-                      child: imageProvider == null
-                          ? Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.add_photo_alternate_outlined,
-                                    size: 56, color: Colors.grey.shade400),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'Tambah Gambar Servis',
-                                  style: TextStyle(
-                                    color: Colors.grey.shade700,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Ketik untuk pilih gambar',
-                                  style: TextStyle(
-                                    color: Colors.grey.shade500,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            )
-                          : null,
-                    ),
+              // Image Picker
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  height: 200,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
+                    image: imageProvider != null
+                        ? DecorationImage(
+                            image: imageProvider,
+                            fit: BoxFit.cover,
+                          )
+                        : null,
                   ),
-                  // Upload Progress Overlay
-                  if (_isUploading)
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            CircularProgressIndicator(
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                            SizedBox(height: 12),
-                            Text(
-                              'Memuat naik gambar...',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
+                  child: Stack(
+                    children: [
+                      if (imageProvider == null)
+                        Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.add_photo_alternate_outlined,
+                                  size: 48, color: Colors.grey.shade400),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Tambah Gambar (Thumbnail)',
+                                style: TextStyle(color: Colors.grey.shade600),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
+                        ),
+                      Positioned(
+                        bottom: 12,
+                        right: 12,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: AppShadows.card,
+                          ),
+                          child: const Icon(
+                            Icons.edit,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
                       ),
-                    ),
-                  // Change Image Button
-                  if (imageProvider != null && !_isUploading)
-                    Positioned(
-                      bottom: 8,
-                      right: 8,
-                      child: ElevatedButton.icon(
-                        onPressed: _pickImage,
-                        icon: const Icon(Icons.edit, size: 16),
-                        label: const Text('Tukar Gambar'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black87,
-                          elevation: 2,
-                        ),
-                      ),
-                    ),
-                ],
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 24),
 
-              // Title
               // Title
               TextFormField(
                 controller: _titleController,
@@ -268,7 +295,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
 
               // Category
               DropdownButtonFormField<String>(
-                initialValue: _selectedCategory,
+                value: _selectedCategory,
                 decoration: const InputDecoration(
                   labelText: 'Kategori',
                   border: OutlineInputBorder(),
@@ -289,7 +316,6 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Price
               // Price
               TextFormField(
                 controller: _priceController,
@@ -313,7 +339,6 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
               const SizedBox(height: 16),
 
               // Description
-              // Description
               TextFormField(
                 controller: _descriptionController,
                 decoration: const InputDecoration(
@@ -332,13 +357,11 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
-
               const SizedBox(height: 32),
 
               FTButton(
-                label: _isLoading ? 'Sedang Cipta...' : 'Cipta Servis',
-                onPressed: _isLoading ? null : _submit,
+                label: _isLoading ? 'Sedang Kemaskini...' : 'Kemaskini Servis',
+                onPressed: _isLoading || _isDeleting ? null : _submit,
                 expanded: true,
               ),
             ],
