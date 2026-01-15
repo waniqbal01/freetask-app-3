@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../features/admin/admin_dashboard_screen.dart';
 import '../features/admin/admin_unauthorized_screen.dart';
+import '../features/admin/new_admin_dashboard_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/auth/startup_screen.dart';
@@ -19,6 +20,7 @@ import '../features/services/service_list_screen.dart';
 import '../features/users/public_profile_screen.dart';
 import '../features/services/create_service_screen.dart';
 import '../features/services/edit_service_screen.dart';
+import '../features/withdrawals/withdrawal_screen.dart';
 import '../models/service.dart';
 
 import '../models/job.dart';
@@ -253,7 +255,13 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/admin',
       builder: (BuildContext context, GoRouterState state) {
-        return const AdminDashboardScreen();
+        return const NewAdminDashboardScreen(); // Use new comprehensive dashboard
+      },
+    ),
+    GoRoute(
+      path: '/admin/old',
+      builder: (BuildContext context, GoRouterState state) {
+        return const AdminDashboardScreen(); // Old dashboard still available
       },
     ),
     GoRoute(
@@ -261,6 +269,12 @@ final appRouter = GoRouter(
       builder: (BuildContext context, GoRouterState state) {
         final from = state.uri.queryParameters['from'];
         return AdminUnauthorizedScreen(from: from);
+      },
+    ),
+    GoRoute(
+      path: '/withdrawals',
+      builder: (BuildContext context, GoRouterState state) {
+        return const WithdrawalScreen();
       },
     ),
     GoRoute(
