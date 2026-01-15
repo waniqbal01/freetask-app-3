@@ -41,6 +41,18 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id           Int           @id @default(autoincrement())
   createdAt    DateTime      @default(now())
@@ -53,6 +65,8 @@ model User {
   bio          String?
   skills       Json?
   rate         Decimal?      @db.Decimal(10, 2)
+  balance      Decimal       @default(0) @db.Decimal(10, 2)
+  isActive     Boolean       @default(true)
   services     Service[]
   jobsAsClient Job[]         @relation("ClientJobs")
   jobsAsFreelancer Job[]     @relation("FreelancerJobs")
@@ -63,6 +77,8 @@ model User {
   notifications Notification[]
   deviceTokens DeviceToken[]
   adminLogs    AdminLog[]
+  withdrawals  Withdrawal[]
+  processedWithdrawals Withdrawal[] @relation("ProcessedWithdrawals")
   phoneNumber  String?
   location     String?
   portfolioItems PortfolioItem[]
@@ -70,19 +86,23 @@ model User {
 }
 
 model Service {
-  id           Int       @id @default(autoincrement())
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  title        String
-  description  String
-  price        Decimal   @db.Decimal(10, 2)
-  category     String
-  thumbnailUrl String?
-  deliveryTime String?
-  isActive     Boolean   @default(true)
-  freelancer   User      @relation(fields: [freelancerId], references: [id])
-  freelancerId Int
-  jobs         Job[]
+  id              Int            @id @default(autoincrement())
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  title           String
+  description     String
+  price           Decimal        @db.Decimal(10, 2)
+  category        String
+  thumbnailUrl    String?
+  deliveryTime    String?
+  isActive        Boolean        @default(true)
+  approvalStatus  ApprovalStatus @default(PENDING)
+  rejectionReason String?
+  freelancer      User           @relation(fields: [freelancerId], references: [id])
+  freelancerId    Int
+  jobs            Job[]
+
+  @@index([approvalStatus])
 }
 
 model PortfolioItem {
@@ -226,5 +246,23 @@ model AdminLog {
 
   @@index([adminId])
   @@index([createdAt])
+}
+
+model Withdrawal {
+  id              Int              @id @default(autoincrement())
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  freelancer      User             @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+  freelancerId    Int
+  amount          Decimal          @db.Decimal(10, 2)
+  status          WithdrawalStatus @default(PENDING)
+  bankDetails     Json
+  processedAt     DateTime?
+  processedBy     User?            @relation("ProcessedWithdrawals", fields: [processedById], references: [id])
+  processedById   Int?
+  rejectionReason String?
+
+  @@index([freelancerId])
+  @@index([status])
 }
 

@@ -31,6 +31,8 @@ export class ServicesService {
         category: dto.category,
         thumbnailUrl: dto.thumbnailUrl,
         freelancerId: userId,
+        // New services require approval
+        approvalStatus: 'PENDING',
       },
       include: {
         freelancer: {
@@ -62,6 +64,8 @@ export class ServicesService {
 
     const services = await this.prisma.service.findMany({
       where: {
+        // Only show approved services in public listing
+        approvalStatus: 'APPROVED',
         ...(q
           ? {
             OR: [

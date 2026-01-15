@@ -18,6 +18,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { PaymentsModule } from './payments/payments.module';
 import { AdminModule } from './admin/admin.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
+import { WithdrawalsModule } from './withdrawals/withdrawals.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { PortfolioModule } from './portfolio/portfolio.module';
     PaymentsModule,
     AdminModule,
     PortfolioModule,
+    WithdrawalsModule,
   ],
   controllers: [HealthController],
   providers: [
@@ -52,4 +54,3 @@ import { PortfolioModule } from './portfolio/portfolio.module';
   ],
 })
 export class AppModule { }
-
