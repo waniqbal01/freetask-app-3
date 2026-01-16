@@ -12,6 +12,7 @@ import '../../models/user.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/service_card.dart';
 import '../../widgets/app_bottom_nav.dart';
+import '../../widgets/notification_bell_button.dart';
 import '../auth/auth_repository.dart';
 import 'services_repository.dart';
 
@@ -158,6 +159,13 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Notification bell button at top right
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: const [
+                                  NotificationBellButton(),
+                                ],
+                              ),
                               if (_currentUser != null) ...[
                                 const SizedBox(height: AppSpacing.s12),
                               ],

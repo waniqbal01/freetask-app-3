@@ -19,6 +19,7 @@ import 'jobs_repository.dart';
 import 'widgets/job_card_skeleton.dart';
 import 'widgets/job_status_badge.dart';
 import '../../widgets/app_bottom_nav.dart';
+import '../../widgets/notification_bell_button.dart';
 import '../services/user_services_list_screen.dart';
 
 class JobListScreen extends StatefulWidget {
@@ -808,8 +809,10 @@ class _JobListScreenState extends State<JobListScreen> {
                           .headlineSmall
                           ?.copyWith(fontWeight: FontWeight.w700),
                     ),
+                    const Spacer(),
+                    const NotificationBellButton(),
                     if (showCreateServiceButton) ...[
-                      const Spacer(),
+                      const SizedBox(width: 8),
                       ElevatedButton.icon(
                         onPressed: () async {
                           await context.push('/services/create');

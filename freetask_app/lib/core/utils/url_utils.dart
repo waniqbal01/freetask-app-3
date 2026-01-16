@@ -1,13 +1,20 @@
 import '../env.dart';
 
 class UrlUtils {
+  static String? _dynamicBaseUrl;
+
+  static void setDynamicBaseUrl(String url) {
+    if (url.isNotEmpty) {
+      _dynamicBaseUrl = url;
+    }
+  }
+
   static String resolveImageUrl(String? url) {
     if (url == null || url.isEmpty) {
       return '';
     }
 
     // 1. Rewrite protected paths to public paths (Robust logic)
-    // Works for both relative ("/uploads/file.jpg") and absolute ("http://.../uploads/file.jpg")
     String processedUrl = url;
     if (processedUrl.contains('/uploads/') &&
         !processedUrl.contains('/uploads/public/')) {
@@ -20,9 +27,8 @@ class UrlUtils {
       return processedUrl;
     }
 
-    // 3. Build absolute URL using env default baseUrl
-    // Avoid accessing dio.options.baseUrl which may not be initialized yet
-    final baseUrl = Env.defaultApiBaseUrl;
+    // 3. Build absolute URL using dynamic base url or env default
+    final baseUrl = _dynamicBaseUrl ?? Env.defaultApiBaseUrl;
     final normalizedBase = baseUrl.endsWith('/')
         ? baseUrl.substring(0, baseUrl.length - 1)
         : baseUrl;
@@ -31,7 +37,8 @@ class UrlUtils {
         processedUrl.startsWith('/') ? processedUrl : '/$processedUrl';
 
     final result = '$normalizedBase$normalizedUrl';
-    print('UrlUtils: Resolving "$url" -> "$result"');
+    // Remove print to reduce noise, or keep for debugging
+    // print('UrlUtils: Resolving "$url" -> "$result"');
     return result;
   }
 }

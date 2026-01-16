@@ -1,0 +1,35 @@
+﻿Analyzing freetask_app...                                       
+
+   info - Don't use 'BuildContext's across async gaps - lib\core\notifications\notification_overlay.dart:57:23 - use_build_context_synchronously
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\features\admin\new_admin_dashboard_screen.dart:361:23 - deprecated_member_use
+   info - Statements in an if should be enclosed in a block - lib\features\admin\new_admin_dashboard_screen.dart:411:9 - curly_braces_in_flow_control_structures
+   info - Don't use 'BuildContext's across async gaps - lib\features\admin\new_admin_dashboard_screen.dart:419:27 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\admin\new_admin_dashboard_screen.dart:422:25 - use_build_context_synchronously
+   info - Statements in an if should be enclosed in a block - lib\features\admin\new_admin_dashboard_screen.dart:600:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\admin\new_admin_dashboard_screen.dart:954:9 - curly_braces_in_flow_control_structures
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\admin\new_admin_dashboard_screen.dart:977:19 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\admin\new_admin_dashboard_screen.dart:978:19 - deprecated_member_use
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\admin\new_admin_dashboard_screen.dart:984:19 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\admin\new_admin_dashboard_screen.dart:985:19 - deprecated_member_use
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\admin\new_admin_dashboard_screen.dart:991:19 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\admin\new_admin_dashboard_screen.dart:992:19 - deprecated_member_use
+
+flutter : 13 issues 
+found. (ran in 9.8s)
+At line:1 char:1
++ flutter analyze 
+--no-pub 2>&1 | 
+Out-File -FilePath 
+"analyze_output.tx ...
++ ~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~
+    + CategoryInfo    
+          : NotSpeci  
+  fied: (13 issues    
+ found. (ran in 9.    
+8s):String) [], R    
+emoteException
+    + FullyQualifiedE 
+   rrorId : NativeCo  
+  mmandError
+ 

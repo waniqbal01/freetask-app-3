@@ -53,6 +53,12 @@ export class NotificationsController {
         return this.notificationsService.markAllAsRead(req.user.userId);
     }
 
+    @Get('unread-count')
+    async getUnreadCount(@Request() req) {
+        const count = await this.notificationsService.getUnreadCount(req.user.userId);
+        return { count };
+    }
+
     @Post('send')
     @Roles('ADMIN')
     @UseGuards(RolesGuard)

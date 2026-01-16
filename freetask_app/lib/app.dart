@@ -14,6 +14,13 @@ class App extends StatelessWidget {
       theme: AppTheme.lightTheme,
       routerConfig: appRouter,
       scaffoldMessengerKey: notificationService.messengerKey,
+      builder: (context, child) {
+        // Set context for overlay notifications
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          notificationService.setContext(context);
+        });
+        return child ?? const SizedBox.shrink();
+      },
     );
   }
 }

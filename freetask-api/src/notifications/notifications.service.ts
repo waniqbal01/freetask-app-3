@@ -89,6 +89,12 @@ export class NotificationsService {
         });
     }
 
+    async getUnreadCount(userId: number): Promise<number> {
+        return this.prisma.notification.count({
+            where: { userId, read: false },
+        });
+    }
+
     async createNotification(dto: CreateNotificationDto) {
         return this.prisma.notification.create({
             data: {

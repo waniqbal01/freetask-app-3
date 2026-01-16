@@ -10,6 +10,7 @@ import '../core/router.dart';
 import '../core/notifications/notification_service.dart';
 import '../features/auth/auth_repository.dart';
 import '../core/storage/storage.dart';
+import '../core/utils/url_utils.dart';
 
 class HttpClient {
   factory HttpClient({AppStorage? storage}) {
@@ -307,6 +308,10 @@ class HttpClient {
     _currentBaseUrl = baseUrl;
     dio.options.baseUrl = baseUrl;
     _refreshDio.options.baseUrl = baseUrl;
+
+    // Update global UrlUtils to ensure images use the correct server
+    UrlUtils.setDynamicBaseUrl(baseUrl);
+
     if (!skipSwap) {
       _baseUrlFuture = Future.value(baseUrl);
     }

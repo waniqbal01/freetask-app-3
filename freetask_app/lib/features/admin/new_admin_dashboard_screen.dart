@@ -358,7 +358,6 @@ class _UsersTabState extends State<_UsersTab>
                       value: isActive,
                       onChanged: (value) =>
                           _toggleUserStatus(user['id'], isActive),
-                      activeColor: Colors.green,
                       inactiveThumbColor: Colors.red,
                     ),
                     isThreeLine: true,
@@ -407,8 +406,9 @@ class _ServicesTabState extends State<_ServicesTab>
       });
     } else {
       setState(() => _isLoading = false);
-      if (mounted)
+      if (mounted) {
         showErrorSnackBar(context, response.error ?? 'Failed to load services');
+      }
     }
   }
 
@@ -416,10 +416,15 @@ class _ServicesTabState extends State<_ServicesTab>
     final response = await widget.adminRepo.approveService(serviceId);
 
     if (response.isSuccess) {
-      showSuccessSnackBar(context, 'Service approved');
+      if (mounted) {
+        showSuccessSnackBar(context, 'Service approved');
+      }
       _loadServices();
     } else {
-      showErrorSnackBar(context, response.error ?? 'Failed to approve service');
+      if (mounted) {
+        showErrorSnackBar(
+            context, response.error ?? 'Failed to approve service');
+      }
     }
   }
 
@@ -596,8 +601,9 @@ class _OrdersTabState extends State<_OrdersTab>
       });
     } else {
       setState(() => _isLoading = false);
-      if (mounted)
+      if (mounted) {
         showErrorSnackBar(context, response.error ?? 'Failed to load orders');
+      }
     }
   }
 
@@ -950,8 +956,9 @@ class _DisputesTabState extends State<_DisputesTab>
       });
     } else {
       setState(() => _isLoading = false);
-      if (mounted)
+      if (mounted) {
         showErrorSnackBar(context, response.error ?? 'Failed to load disputes');
+      }
     }
   }
 
@@ -971,26 +978,44 @@ class _DisputesTabState extends State<_DisputesTab>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text('Resolution Type:'),
-                RadioListTile<String>(
+                ListTile(
                   title: const Text('Release (Give to Freelancer)'),
-                  value: 'RELEASE',
-                  groupValue: resolution,
-                  onChanged: (value) =>
-                      setDialogState(() => resolution = value),
+                  leading: Radio<String?>(
+                    value: 'RELEASE',
+                    groupValue: resolution,
+                    onChanged: (value) {
+                      setDialogState(() => resolution = value);
+                    },
+                  ),
+                  onTap: () {
+                    setDialogState(() => resolution = 'RELEASE');
+                  },
                 ),
-                RadioListTile<String>(
+                ListTile(
                   title: const Text('Refund (Return to Client)'),
-                  value: 'REFUND',
-                  groupValue: resolution,
-                  onChanged: (value) =>
-                      setDialogState(() => resolution = value),
+                  leading: Radio<String?>(
+                    value: 'REFUND',
+                    groupValue: resolution,
+                    onChanged: (value) {
+                      setDialogState(() => resolution = value);
+                    },
+                  ),
+                  onTap: () {
+                    setDialogState(() => resolution = 'REFUND');
+                  },
                 ),
-                RadioListTile<String>(
+                ListTile(
                   title: const Text('Partial (Split Amount)'),
-                  value: 'PARTIAL',
-                  groupValue: resolution,
-                  onChanged: (value) =>
-                      setDialogState(() => resolution = value),
+                  leading: Radio<String?>(
+                    value: 'PARTIAL',
+                    groupValue: resolution,
+                    onChanged: (value) {
+                      setDialogState(() => resolution = value);
+                    },
+                  ),
+                  onTap: () {
+                    setDialogState(() => resolution = 'PARTIAL');
+                  },
                 ),
                 if (resolution == 'PARTIAL')
                   TextField(

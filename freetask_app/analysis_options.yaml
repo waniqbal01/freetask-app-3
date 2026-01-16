@@ -1,5 +1,7 @@
 include: package:flutter_lints/flutter.yaml
 
-linter:
-  rules:
-    avoid_print: false
+analyzer:
+  errors:
+    # Temporarily suppress deprecated member use warnings
+    # These are related to Radio/RadioListTile API changes in Flutter 3.35
+    deprecated_member_use: ignore

@@ -52,6 +52,15 @@ class NotificationsRepository {
     );
   }
 
+  Future<int> getUnreadCount() async {
+    try {
+      final response = await _apiClient.dio.get('/notifications/unread-count');
+      return response.data['count'] ?? 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+
   Future<void> deleteToken(String token) async {
     await _apiClient.dio.delete('/notifications/token/$token');
   }

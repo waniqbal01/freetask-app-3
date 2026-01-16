@@ -1,4 +1,4 @@
-package com.freetask.freetask_app
+package com.freetask.apps
 
 import io.flutter.embedding.android.FlutterActivity
 

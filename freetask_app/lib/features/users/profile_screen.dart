@@ -8,6 +8,7 @@ import '../../models/user.dart';
 import '../../models/portfolio_item.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_bottom_nav.dart';
+import '../../widgets/notification_bell_button.dart';
 import '../auth/auth_repository.dart';
 
 import 'package:file_picker/file_picker.dart';
@@ -236,6 +237,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Profil Saya'), actions: [
+        const NotificationBellButton(),
         IconButton(
           icon: const Icon(Icons.settings),
           onPressed: () {}, // Settings placeholder

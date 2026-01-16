@@ -9,6 +9,7 @@ import '../../models/user.dart';
 import 'chat_models.dart';
 import 'chat_repository.dart';
 import '../../widgets/app_bottom_nav.dart';
+import '../../widgets/notification_bell_button.dart';
 import '../auth/auth_repository.dart';
 
 final _currentUserProvider = FutureProvider<AppUser?>((ref) async {
@@ -54,7 +55,10 @@ class ChatListScreen extends ConsumerWidget {
           void secondaryAction() => context.go('/home');
 
           return Scaffold(
-            appBar: AppBar(title: const Text('Chat')),
+            appBar: AppBar(
+              title: const Text('Chat'),
+              actions: const [NotificationBellButton()],
+            ),
             bottomNavigationBar: const AppBottomNav(currentTab: AppTab.chats),
             body: Center(
               child: Column(
@@ -110,6 +114,7 @@ class ChatListScreen extends ConsumerWidget {
             backgroundColor: const Color(0xFF1976D2), // Primary Blue
             foregroundColor: Colors.white,
             elevation: 0,
+            actions: const [NotificationBellButton()],
           ),
           bottomNavigationBar: const AppBottomNav(currentTab: AppTab.chats),
           body: ListView.separated(
@@ -250,7 +255,10 @@ class ChatListScreen extends ConsumerWidget {
         );
       },
       loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Chat')),
+        appBar: AppBar(
+          title: const Text('Chat'),
+          actions: const [NotificationBellButton()],
+        ),
         bottomNavigationBar: const AppBottomNav(currentTab: AppTab.chats),
         body: const Center(child: CircularProgressIndicator()),
       ),
@@ -269,7 +277,10 @@ class ChatListScreen extends ConsumerWidget {
           });
         }
         return Scaffold(
-          appBar: AppBar(title: const Text('Chat')),
+          appBar: AppBar(
+            title: const Text('Chat'),
+            actions: const [NotificationBellButton()],
+          ),
           bottomNavigationBar: const AppBottomNav(currentTab: AppTab.chats),
           body: Center(
             child: Padding(
