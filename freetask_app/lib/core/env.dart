@@ -7,7 +7,10 @@ class Env {
     // Local development - backend running with npm run start:dev
     // return 'http://localhost:4000';
 
+    // CUSTOM BUILD: Local Computer IP
+    return 'http://192.168.68.104:4000';
+
     // Production Render Backend (uncomment when deploying)
-    return 'https://freetask-backend.onrender.com';
+    // return 'https://freetask-backend.onrender.com';
   }
 }

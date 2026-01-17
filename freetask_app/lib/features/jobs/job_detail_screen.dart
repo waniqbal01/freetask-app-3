@@ -14,6 +14,8 @@ import '../escrow/escrow_repository.dart';
 import 'jobs_repository.dart';
 import 'job_transition_rules.dart';
 import 'widgets/job_status_badge.dart';
+import 'widgets/submit_work_dialog.dart';
+import 'widgets/attachment_viewer.dart';
 import '../reviews/reviews_repository.dart';
 
 bool resolveClientViewMode({bool? navigationFlag, String? role}) {
@@ -232,6 +234,74 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   JobStatusVisual _statusVisual(JobStatus status) {
     return mapJobStatusVisual(status);
+  }
+
+  Future<void> _showRevisionRequestDialog(Job job) async {
+    final reasonController = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Minta Semakan Semula'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Nyatakan apa yang perlu diperbaiki oleh freelancer:',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                labelText: 'Sebab (Wajib)',
+                hintText: 'Contoh: Sila tambah logo di sebelah kanan...',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+              maxLength: 500,
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (reasonController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Sebab wajib diisi')),
+                );
+                return;
+              }
+              if (reasonController.text.trim().length < 10) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Sebab perlu sekurang-kurangnya 10 aksara'),
+                  ),
+                );
+                return;
+              }
+              Navigator.of(context).pop(true);
+            },
+            child: const Text('Hantar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _guardedJobAction(
+        allowed: true,
+        action: () => jobsRepository.requestRevision(
+            job.id, reasonController.text.trim()),
+        successMessage: 'Permintaan semakan dihantar kepada freelancer.',
+      );
+    }
   }
 
   Future<void> _showDisputeDialog(Job job) async {
@@ -493,13 +563,25 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       }
       if (canFreelancerComplete(job.status)) {
         return _ActionBarButton(
-          label: 'Hantar & Tandakan Selesai',
+          label: 'Hantar Kerja',
           isLoading: _isProcessing,
-          onPressed: () => _guardedJobAction(
-            allowed: true,
-            action: () => jobsRepository.markCompleted(job.id),
-            successMessage: 'Job ditandakan selesai. Status kini Completed.',
-          ),
+          onPressed: () async {
+            final result = await showDialog<bool>(
+              context: context,
+              builder: (context) => SubmitWorkDialog(jobId: job.id),
+            );
+
+            if (result == true && mounted) {
+              // Refresh job after successful submission
+              await _fetchJob();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Kerja dihantar untuk semakan!')),
+                );
+              }
+            }
+          },
         );
       }
       if (job.status == JobStatus.completed) {
@@ -527,19 +609,19 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         );
       }
       if (job.status == JobStatus.inReview) {
-        return _ActionBarButton(
-          label: 'Confirm / Revision',
-          isLoading: _isProcessing,
-          onPressed: () {
-            // Scroll to actions or show dialog?
-            // Ideally we just point them to use the main action buttons in the body
-            // But let's put a primary action here
-            _guardedJobAction(
-                allowed: true,
-                action: () => jobsRepository.confirmJob(job.id),
-                successMessage: 'Job confirmed');
+        return _ActionBarDualButton(
+          primaryLabel: 'Terima & Selesai',
+          primaryOnPressed: () => _guardedJobAction(
+            allowed: true,
+            action: () => jobsRepository.confirmJob(job.id),
+            successMessage: 'Job diterima dan selesai!',
+          ),
+          secondaryLabel: 'Minta Semakan',
+          secondaryOnPressed: () {
+            // Show revision dialog
+            _showRevisionRequestDialog(job);
           },
-          variant: FTButtonVariant.filled,
+          isLoading: _isProcessing,
         );
       }
       // ... existing logic
@@ -746,28 +828,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             if (job.orderAttachments?.isNotEmpty ?? false)
               _buildInfoCard(
                 title: 'Lampiran Order',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: job.orderAttachments!
-                      .map((url) => Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.link,
-                                    size: 16, color: Colors.blue),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    url,
-                                    style: const TextStyle(
-                                        color: Colors.blue,
-                                        decoration: TextDecoration.underline),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ))
-                      .toList(),
+                child: AttachmentViewer(
+                  attachments: job.orderAttachments!,
+                  label: 'Fail dilampirkan oleh pelanggan:',
                 ),
               ),
             if (job.orderAttachments?.isNotEmpty ?? false)
@@ -797,27 +860,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       Text(job.submissionMessage!, style: textTheme.bodyMedium),
                     ],
                     if (job.submissionAttachments?.isNotEmpty ?? false) ...[
-                      const SizedBox(height: 8),
-                      Text('Fail:', style: textTheme.labelLarge),
-                      const SizedBox(height: 4),
-                      ...job.submissionAttachments!.map((url) => Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.attachment,
-                                    size: 16, color: Colors.blue),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    url,
-                                    style: const TextStyle(
-                                        color: Colors.blue,
-                                        decoration: TextDecoration.underline),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )),
+                      const SizedBox(height: 12),
+                      AttachmentViewer(
+                        attachments: job.submissionAttachments!,
+                        label: 'Fail dihantar oleh freelancer:',
+                      ),
                     ],
                   ],
                 ),
@@ -1121,6 +1168,62 @@ class _ActionBarLabelButton extends StatelessWidget {
           label: Text(label),
           style:
               ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionBarDualButton extends StatelessWidget {
+  const _ActionBarDualButton({
+    required this.primaryLabel,
+    required this.primaryOnPressed,
+    required this.secondaryLabel,
+    required this.secondaryOnPressed,
+    this.isLoading = false,
+  });
+
+  final String primaryLabel;
+  final VoidCallback primaryOnPressed;
+  final String secondaryLabel;
+  final VoidCallback secondaryOnPressed;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x11000000),
+              blurRadius: 12,
+              offset: Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: FTButton(
+                label: primaryLabel,
+                onPressed: isLoading ? () {} : primaryOnPressed,
+                isLoading: isLoading,
+                variant: FTButtonVariant.filled,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FTButton(
+                label: secondaryLabel,
+                onPressed: isLoading ? () {} : secondaryOnPressed,
+                variant: FTButtonVariant.outline,
+              ),
+            ),
+          ],
         ),
       ),
     );

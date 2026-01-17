@@ -159,17 +159,65 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Notification bell button at top right
+                              // Compact Banner with all elements in one row
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: const [
-                                  NotificationBellButton(),
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppColors.primary
+                                              .withValues(alpha: 0.15),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(
+                                        Icons.store_mall_directory_outlined,
+                                        color: AppColors.primary),
+                                  ),
+                                  const SizedBox(width: AppSpacing.s16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Marketplace Servis',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .headlineSmall
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w800,
+                                                color: AppColors.neutral900,
+                                                height: 1.2,
+                                              ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Cari servis terbaik untuk projek anda',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(
+                                                color: AppColors.neutral600,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (_currentUser != null) ...[
+                                    const SizedBox(width: AppSpacing.s12),
+                                    const NotificationBellButton(),
+                                  ],
                                 ],
                               ),
-                              if (_currentUser != null) ...[
-                                const SizedBox(height: AppSpacing.s12),
-                              ],
-                              _MarketplaceHero(
+                              const SizedBox(height: AppSpacing.s24),
+                              _SearchAndFilterCard(
                                 searchController: _searchController,
                                 onSearchChanged: _onSearchChanged,
                                 categories: _categories,
@@ -312,8 +360,8 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
   }
 }
 
-class _MarketplaceHero extends StatelessWidget {
-  const _MarketplaceHero({
+class _SearchAndFilterCard extends StatelessWidget {
+  const _SearchAndFilterCard({
     required this.searchController,
     required this.onSearchChanged,
     required this.categories,
@@ -338,55 +386,43 @@ class _MarketplaceHero extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: AppRadius.largeRadius,
-        boxShadow: AppShadows.card,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.all(AppSpacing.s16),
+      padding: const EdgeInsets.all(AppSpacing.s24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.store_mall_directory_outlined,
-                    color: AppColors.primary),
-              ),
-              const SizedBox(width: AppSpacing.s12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Marketplace Servis',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.neutral900,
-                          ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Pilih servis berkualiti dengan reka bentuk marketplace moden.',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.s16),
           TextField(
             controller: searchController,
             onChanged: (_) => onSearchChanged(),
-            decoration: const InputDecoration(
-              hintText: 'Cari servis, kategori atau freelancer...',
-              prefixIcon: Icon(Icons.search_rounded),
+            decoration: InputDecoration(
+              hintText: 'Cari servis...',
+              prefixIcon: const Icon(Icons.search_rounded),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.neutral200),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.neutral200),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.primary),
+              ),
+              filled: true,
+              fillColor: AppColors.neutral50,
             ),
           ),
-          const SizedBox(height: AppSpacing.s16),
+          const SizedBox(height: AppSpacing.s24),
           // Category Chips
           SizedBox(
             height: 42,
@@ -399,20 +435,22 @@ class _MarketplaceHero extends StatelessWidget {
                   label: Text(category),
                   selected: isSelected,
                   onSelected: (_) => onCategorySelected(category),
-                  selectedColor: AppColors.primary.withValues(alpha: 0.12),
+                  selectedColor: AppColors.primary,
+                  backgroundColor: Colors.white,
                   labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: isSelected
-                            ? AppColors.primary
-                            : AppColors.neutral400,
+                        color: isSelected ? Colors.white : AppColors.neutral600,
                         fontWeight: FontWeight.w600,
                       ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(999),
                     side: BorderSide(
                       color:
-                          isSelected ? AppColors.primary : AppColors.neutral100,
+                          isSelected ? AppColors.primary : AppColors.neutral200,
                     ),
                   ),
+                  showCheckmark: false,
                 );
               },
               separatorBuilder: (BuildContext context, int _) =>
@@ -420,50 +458,53 @@ class _MarketplaceHero extends StatelessWidget {
               itemCount: categories.length,
             ),
           ),
-          const SizedBox(height: AppSpacing.s12),
+          const SizedBox(height: AppSpacing.s24),
           // Sort Filter Buttons
-          Row(
-            children: [
-              _FilterButton(
-                label: 'Popular',
-                isSelected: selectedSortOption == 'popular',
-                onTap: () => onSortOptionSelected(
-                  selectedSortOption == 'popular' ? null : 'popular',
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _FilterButton(
+                  label: 'Popular',
+                  isSelected: selectedSortOption == 'popular',
+                  onTap: () => onSortOptionSelected(
+                    selectedSortOption == 'popular' ? null : 'popular',
+                  ),
+                  icon: Icons.local_fire_department_rounded,
+                  color: Colors.orange,
                 ),
-                icon: Icons.local_fire_department_rounded,
-                color: Colors.orange,
-              ),
-              const SizedBox(width: 8),
-              _FilterButton(
-                label: 'Baru',
-                isSelected: selectedSortOption == 'newest',
-                onTap: () => onSortOptionSelected(
-                  selectedSortOption == 'newest' ? null : 'newest',
+                const SizedBox(width: 12),
+                _FilterButton(
+                  label: 'Baru',
+                  isSelected: selectedSortOption == 'newest',
+                  onTap: () => onSortOptionSelected(
+                    selectedSortOption == 'newest' ? null : 'newest',
+                  ),
+                  icon: Icons.auto_awesome_rounded,
+                  color: Colors.purple,
                 ),
-                icon: Icons.auto_awesome_rounded,
-                color: Colors.purple,
-              ),
-              const SizedBox(width: 8),
-              _FilterButton(
-                label: 'Murah',
-                isSelected: selectedSortOption == 'cheapest',
-                onTap: () => onSortOptionSelected(
-                  selectedSortOption == 'cheapest' ? null : 'cheapest',
+                const SizedBox(width: 12),
+                _FilterButton(
+                  label: 'Murah',
+                  isSelected: selectedSortOption == 'cheapest',
+                  onTap: () => onSortOptionSelected(
+                    selectedSortOption == 'cheapest' ? null : 'cheapest',
+                  ),
+                  icon: Icons.savings_rounded,
+                  color: Colors.green,
                 ),
-                icon: Icons.savings_rounded,
-                color: Colors.green,
-              ),
-              const SizedBox(width: 8),
-              _FilterButton(
-                label: 'Mahal',
-                isSelected: selectedSortOption == 'expensive',
-                onTap: () => onSortOptionSelected(
-                  selectedSortOption == 'expensive' ? null : 'expensive',
+                const SizedBox(width: 12),
+                _FilterButton(
+                  label: 'Mahal',
+                  isSelected: selectedSortOption == 'expensive',
+                  onTap: () => onSortOptionSelected(
+                    selectedSortOption == 'expensive' ? null : 'expensive',
+                  ),
+                  icon: Icons.diamond_rounded,
+                  color: Colors.blue,
                 ),
-                icon: Icons.diamond_rounded,
-                color: Colors.blue,
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -530,76 +571,74 @@ class _FilterButtonState extends State<_FilterButton>
   Widget build(BuildContext context) {
     final color = widget.color ?? AppColors.primary;
 
-    return Expanded(
-      child: GestureDetector(
-        onTapDown: _handleTapDown,
-        onTapUp: _handleTapUp,
-        onTapCancel: _handleTapCancel,
-        child: ScaleTransition(
-          scale: _scaleAnimation,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeInOut,
-            padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 10),
-            decoration: BoxDecoration(
-              gradient: widget.isSelected
-                  ? LinearGradient(
-                      colors: [color, color.withValues(alpha: 0.8)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : null,
-              color: widget.isSelected ? null : Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: widget.isSelected ? color : AppColors.neutral200,
-                width: widget.isSelected ? 1.5 : 1,
-              ),
-              boxShadow: widget.isSelected
-                  ? [
-                      BoxShadow(
-                        color: color.withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ]
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+    return GestureDetector(
+      onTapDown: _handleTapDown,
+      onTapUp: _handleTapUp,
+      onTapCancel: _handleTapCancel,
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 10),
+          decoration: BoxDecoration(
+            gradient: widget.isSelected
+                ? LinearGradient(
+                    colors: [color, color.withValues(alpha: 0.8)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: widget.isSelected ? null : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: widget.isSelected ? color : AppColors.neutral200,
+              width: widget.isSelected ? 1.5 : 1,
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (widget.icon != null) ...[
-                  Icon(
-                    widget.icon,
-                    size: 15,
-                    color: widget.isSelected ? Colors.white : color,
-                  ),
-                  const SizedBox(width: 5),
-                ],
-                Flexible(
-                  child: Text(
-                    widget.label,
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: widget.isSelected
-                              ? Colors.white
-                              : AppColors.neutral600,
-                          fontWeight: widget.isSelected
-                              ? FontWeight.w700
-                              : FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+            boxShadow: widget.isSelected
+                ? [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.icon != null) ...[
+                Icon(
+                  widget.icon,
+                  size: 15,
+                  color: widget.isSelected ? Colors.white : color,
                 ),
+                const SizedBox(width: 5),
               ],
-            ),
+              Flexible(
+                child: Text(
+                  widget.label,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: widget.isSelected
+                            ? Colors.white
+                            : AppColors.neutral600,
+                        fontWeight: widget.isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
         ),
       ),

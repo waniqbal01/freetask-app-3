@@ -44,13 +44,28 @@ export class ServicesService {
     return this.serializeService(created);
   }
 
-  async findAll(q?: string, category?: string, freelancerId?: number, sortBy?: 'popular' | 'newest' | 'cheapest' | 'expensive') {
+  async findAll(
+    q?: string,
+    category?: string,
+    freelancerId?: number,
+    sortBy?: 'popular' | 'newest' | 'cheapest' | 'expensive',
+    limit?: number,
+    offset?: number,
+  ) {
+    // Pagination with sensible defaults
+    const take = Math.min(Math.max(limit ?? 50, 1), 100);
+    const skip = Math.max(offset ?? 0, 0);
+
     // Build orderBy clause based on sortBy parameter
     let orderBy: Prisma.ServiceOrderByWithRelationInput | Prisma.ServiceOrderByWithRelationInput[] = [];
 
     if (sortBy === 'popular') {
-      // Sort by number of completed orders (requires counting related jobs)
-      orderBy = { jobs: { _count: 'desc' } };
+      // Use _count aggregation for efficient sorting
+      orderBy = {
+        jobs: {
+          _count: 'desc',
+        },
+      };
     } else if (sortBy === 'newest') {
       orderBy = { createdAt: 'desc' };
     } else if (sortBy === 'cheapest') {
@@ -81,26 +96,19 @@ export class ServicesService {
         freelancer: {
           select: { id: true, name: true, avatarUrl: true },
         },
-        ...(sortBy === 'popular' ? {
-          jobs: {
-            where: { status: 'COMPLETED' },
-            select: { id: true },
+        // Use _count instead of loading all job records
+        _count: {
+          select: {
+            jobs: {
+              where: { status: 'COMPLETED' },
+            },
           },
-        } : {}),
+        },
       },
       orderBy,
+      take,
+      skip,
     });
-
-    // For popular sort, we need to manually sort by job count since Prisma orderBy with _count might not work as expected
-    if (sortBy === 'popular') {
-      return services
-        .map((service) => this.serializeService(service))
-        .sort((a, b) => {
-          const aJobs = (a as any).jobs?.length || 0;
-          const bJobs = (b as any).jobs?.length || 0;
-          return bJobs - aJobs;
-        });
-    }
 
     return services.map((service) => this.serializeService(service));
   }

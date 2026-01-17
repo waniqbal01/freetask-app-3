@@ -5,7 +5,6 @@ import '../../core/constants/app_strings.dart';
 import '../../core/widgets/confirmation_dialog.dart';
 
 import '../../models/user.dart';
-import '../../models/portfolio_item.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/notification_bell_button.dart';
@@ -15,8 +14,6 @@ import 'package:file_picker/file_picker.dart';
 import '../../services/upload_service.dart';
 import '../../core/utils/url_utils.dart';
 import 'users_repository.dart';
-import 'widgets/portfolio_list_widget.dart';
-import 'widgets/edit_portfolio_dialog.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -209,26 +206,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _addPortfolio() async {
-    final result = await showDialog(
-      context: context,
-      builder: (_) => const EditPortfolioDialog(),
-    );
-    if (result == true) {
-      setState(() {}); // Rebuild to refresh portfolio list
-    }
-  }
-
-  void _editPortfolio(PortfolioItem item) async {
-    final result = await showDialog(
-      context: context,
-      builder: (_) => EditPortfolioDialog(item: item),
-    );
-    if (result == true) {
-      setState(() {});
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final role = _user?.role.toUpperCase();
@@ -255,20 +232,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     if (_user != null) _buildUserInfo(_user!, isFreelancer),
                     const SizedBox(height: 24),
-                    if (isFreelancer) ...[
-                      const Divider(),
-                      _buildSectionTitle('Portfolio',
-                          trailing: IconButton(
-                            icon: const Icon(Icons.add_circle_outline),
-                            onPressed: _addPortfolio,
-                          )),
-                      PortfolioListWidget(
-                        userId: int.tryParse(_user!.id) ?? 0,
-                        isEditable: true,
-                        onEdit: _addPortfolio,
-                        onItemTap: _editPortfolio,
-                      ),
-                    ],
+
                     if (isAdmin) ...[
                       const SizedBox(height: 24),
                       Card(
@@ -427,16 +391,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
 
-          _buildProfileItem(
-            fieldKey: 'rate',
-            label: 'Kadar Upah (RM/jam)',
-            value: user.rate != null ? 'RM ${user.rate}' : 'Belum ditetapkan',
-            icon: Icons.monetization_on,
-            inputType: TextInputType.number,
-            onSave: (val) =>
-                usersRepository.updateProfile(rate: num.tryParse(val) ?? 0),
-          ),
-
           const SizedBox(height: 16),
           // Active Status Toggle
           SwitchListTile(
@@ -528,16 +482,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         const Divider(height: 1),
-      ],
-    );
-  }
-
-  Widget _buildSectionTitle(String title, {Widget? trailing}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(title, style: AppTextStyles.titleMedium),
-        if (trailing != null) trailing,
       ],
     );
   }

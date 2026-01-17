@@ -37,8 +37,17 @@ export class ServicesController {
     @Query('category') category?: string,
     @Query('freelancerId') freelancerId?: string,
     @Query('sortBy') sortBy?: 'popular' | 'newest' | 'cheapest' | 'expensive',
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
   ) {
-    return this.servicesService.findAll(q, category, freelancerId ? parseInt(freelancerId) : undefined, sortBy);
+    return this.servicesService.findAll(
+      q,
+      category,
+      freelancerId ? parseInt(freelancerId) : undefined,
+      sortBy,
+      limit ? parseInt(limit) : undefined,
+      offset ? parseInt(offset) : undefined,
+    );
   }
 
   @Get('categories')

@@ -143,6 +143,12 @@ model Job {
   reviews        Review[]
   escrow         Escrow?
   payment        Payment?
+
+  @@index([clientId])
+  @@index([freelancerId])
+  @@index([status])
+  @@index([autoCompleteAt])
+  @@index([status, autoCompleteAt])
 }
 
 model ChatMessage {

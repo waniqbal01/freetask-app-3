@@ -616,24 +616,8 @@ class _JobListScreenState extends State<JobListScreen> {
       );
     }
 
-    if (!isClientView && job.status == JobStatus.inProgress) {
-      if (role != 'FREELANCER' || !isFreelancerOwner) {
-        return const SizedBox.shrink();
-      }
-      return Align(
-        alignment: Alignment.centerRight,
-        child: FTButton(
-          label: AppStrings.jobActionComplete,
-          isLoading: _isProcessing,
-          onPressed: () => _handleAction(
-            () => jobsRepository.markCompleted(job.id),
-            AppStrings.successJobCompleted,
-          ),
-          expanded: false,
-          size: FTButtonSize.small,
-        ),
-      );
-    }
+    // Removed "Selesai" button - freelancers should submit work instead
+    // Jobs in progress don't need a complete button here
 
     if (isClientView &&
         job.status == JobStatus.completed &&
@@ -812,19 +796,24 @@ class _JobListScreenState extends State<JobListScreen> {
                     const Spacer(),
                     const NotificationBellButton(),
                     if (showCreateServiceButton) ...[
-                      const SizedBox(width: 8),
-                      ElevatedButton.icon(
-                        onPressed: () async {
-                          await context.push('/services/create');
-                          setState(() {});
-                        },
-                        icon: const Icon(Icons.add, size: 18),
-                        label: const Text('Create Service'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      const SizedBox(width: 4),
+                      Container(
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          onPressed: () async {
+                            await context.push('/services/create');
+                            setState(() {});
+                          },
+                          icon: const Icon(Icons.add, color: Colors.white),
+                          tooltip: 'Create Service',
+                          padding: const EdgeInsets.all(8),
+                          constraints: const BoxConstraints(
+                            minWidth: 40,
+                            minHeight: 40,
+                          ),
                         ),
                       ),
                     ],
