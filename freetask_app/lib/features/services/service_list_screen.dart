@@ -154,70 +154,146 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                   child: CustomScrollView(
                     slivers: <Widget>[
                       SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Compact Banner with all elements in one row
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: AppColors.primary
-                                              .withValues(alpha: 0.15),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ],
-                                    ),
-                                    child: const Icon(
-                                        Icons.store_mall_directory_outlined,
-                                        color: AppColors.primary),
-                                  ),
-                                  const SizedBox(width: AppSpacing.s16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Marketplace Servis',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .headlineSmall
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.w800,
-                                                color: AppColors.neutral900,
-                                                height: 1.2,
-                                              ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Cari servis terbaik untuk projek anda',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyMedium
-                                              ?.copyWith(
-                                                color: AppColors.neutral600,
-                                              ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  if (_currentUser != null) ...[
-                                    const SizedBox(width: AppSpacing.s12),
-                                    const NotificationBellButton(),
+                        child: Stack(
+                          children: [
+                            // 1. Background Gradient Container
+                            Container(
+                              width: double.infinity,
+                              height: 260,
+                              padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppColors.primary,
+                                    const Color(0xFF1565C0), // Darker blue
                                   ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: const BorderRadius.vertical(
+                                  bottom: Radius.circular(32),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.primary
+                                        .withValues(alpha: 0.3),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 10),
+                                  ),
                                 ],
                               ),
-                              const SizedBox(height: AppSpacing.s24),
-                              _SearchAndFilterCard(
+                              child: SafeArea(
+                                bottom: false,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Top Bar: Logo/Brand & Notification
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white
+                                                .withValues(alpha: 0.15),
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                            border: Border.all(
+                                              color: Colors.white
+                                                  .withValues(alpha: 0.2),
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              const Icon(
+                                                Icons
+                                                    .store_mall_directory_outlined,
+                                                color: Colors.white,
+                                                size: 18,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Marketplace',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .labelLarge
+                                                    ?.copyWith(
+                                                      color: Colors.white,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        if (_currentUser != null)
+                                          Container(
+                                            decoration: BoxDecoration(
+                                              color: Colors.white
+                                                  .withValues(alpha: 0.15),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const NotificationBellButton(
+                                                color: Colors.white),
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 24),
+                                    RichText(
+                                      text: TextSpan(
+                                        children: [
+                                          TextSpan(
+                                            text: 'Hello, ',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .headlineSmall
+                                                ?.copyWith(
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.9),
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                          ),
+                                          TextSpan(
+                                            text: _currentUser?.name
+                                                    .split(' ')
+                                                    .first ??
+                                                'Tetamu',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .headlineSmall
+                                                ?.copyWith(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Cari pakar untuk bantu\nprojek anda hari ini.',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyLarge
+                                          ?.copyWith(
+                                            color: Colors.white
+                                                .withValues(alpha: 0.85),
+                                            height: 1.4,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            // 2. Overlapping Search Card
+                            Container(
+                              margin: const EdgeInsets.only(
+                                  top: 200, left: 20, right: 20, bottom: 20),
+                              child: _SearchAndFilterCard(
                                 searchController: _searchController,
                                 onSearchChanged: _onSearchChanged,
                                 categories: _categories,
@@ -232,8 +308,8 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                                   _fetchServices();
                                 },
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                       if (_isLoading)

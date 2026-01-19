@@ -1,17 +1,27 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EscrowService } from '../escrow/escrow.service';
+import { BillplzService } from './billplz.service';
 import { CreatePaymentDto, VerifyPaymentDto } from './dto/payment.dto';
 
 @Injectable()
 export class PaymentsService {
     private readonly logger = new Logger(PaymentsService.name);
 
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private billplzService: BillplzService,
+        private escrowService: EscrowService,
+    ) { }
 
     async createPayment(dto: CreatePaymentDto) {
         // Check if job exists
         const job = await this.prisma.job.findUnique({
             where: { id: dto.jobId },
+            include: {
+                client: true,
+                service: true
+            }
         });
 
         if (!job) {
@@ -23,37 +33,61 @@ export class PaymentsService {
             where: { jobId: dto.jobId },
         });
 
-        if (existing) {
-            throw new BadRequestException('Payment already exists for this job');
+        if (existing && existing.status === 'COMPLETED') {
+            throw new BadRequestException('Payment already completed for this job');
         }
 
-        // Create payment record
-        const payment = await this.prisma.payment.create({
-            data: {
-                jobId: dto.jobId,
-                amount: job.amount,
-                paymentMethod: dto.paymentMethod,
-                paymentGateway: dto.paymentGateway || 'manual',
-                status: 'PENDING',
-            },
-        });
+        // Calculate amount in cents (MYR)
+        const amountInCents = Math.round(Number(job.amount) * 100);
 
-        this.logger.log(`Created payment ${payment.id} for job ${dto.jobId}`);
+        // Call Billplz API
+        const billplzResponse = await this.billplzService.createCollection(
+            `Payment for Job #${job.id}: ${job.title}`,
+            amountInCents,
+            job.client.email,
+            job.client.name,
+            `Payment for service: ${job.service.title}`,
+            `${process.env.API_URL || 'http://localhost:3000'}/payments/callback`, // Helper callback page? Or just webhook
+            `${process.env.APP_URL || 'http://localhost:8080'}/jobs/${job.id}`, // Redirect back to app
+        );
 
-        // TODO: Integrate with actual payment gateway (Stripe/Razorpay)
-        // For now, return payment intent placeholder
+        // Create or Update payment record
+        // If pending payment exists, we might want to update it or create new one.
+        // For simplicity, let's assume one payment record per job.
+        let payment;
+        if (existing) {
+            payment = await this.prisma.payment.update({
+                where: { id: existing.id },
+                data: {
+                    paymentGateway: 'billplz',
+                    transactionId: billplzResponse.id, // Save Billplz Bill ID
+                    status: 'PENDING',
+                }
+            });
+        } else {
+            payment = await this.prisma.payment.create({
+                data: {
+                    jobId: dto.jobId,
+                    amount: job.amount,
+                    paymentMethod: dto.paymentMethod,
+                    paymentGateway: 'billplz',
+                    transactionId: billplzResponse.id,
+                    status: 'PENDING',
+                },
+            });
+        }
+
+        this.logger.log(`Created Billplz bill ${billplzResponse.id} for job ${dto.jobId}`);
+
         return {
             payment,
-            paymentIntent: {
-                id: `pi_${Date.now()}`,
-                amount: job.amount.toString(),
-                currency: 'MYR',
-                status: 'requires_payment_method',
-            },
+            url: billplzResponse.url, // Return Billplz payment page URL
         };
     }
 
     async verifyPayment(dto: VerifyPaymentDto) {
+        // This might be used for manual verification or checking status
+        // Implementation depends on need. For now, webhook handles completion.
         const payment = await this.prisma.payment.findUnique({
             where: { jobId: dto.jobId },
         });
@@ -62,19 +96,7 @@ export class PaymentsService {
             throw new NotFoundException('Payment not found');
         }
 
-        // TODO: Verify with actual payment gateway
-        // For now, just update the payment status
-        const updated = await this.prisma.payment.update({
-            where: { id: payment.id },
-            data: {
-                status: 'COMPLETED',
-                transactionId: dto.transactionId,
-            },
-        });
-
-        this.logger.log(`Payment ${payment.id} verified with transaction ${dto.transactionId}`);
-
-        return updated;
+        return payment;
     }
 
     async getPaymentByJobId(jobId: number) {
@@ -111,19 +133,21 @@ export class PaymentsService {
     }
 
     async refundPayment(jobId: number) {
+        // Logic for refunding payment (maybe call EscrowService.refund)
+        // This is triggered by Admin usually.
+        // TODO: Implement actual reversal via Billplz if API supported, otherwise just update record.
         const payment = await this.prisma.payment.findUnique({
             where: { jobId },
         });
 
-        if (!payment) {
-            throw new NotFoundException('Payment not found');
+        if (!payment || payment.status !== 'COMPLETED') {
+            throw new BadRequestException('Cannot refund incomplete payment');
         }
 
-        if (payment.status !== 'COMPLETED') {
-            throw new BadRequestException('Only completed payments can be refunded');
-        }
+        // This logic should align with EscrowService.refund
+        // Currently EscrowService.refund handles the wallet refund.
+        // We just update payment status here for record.
 
-        // TODO: Process refund with payment gateway
         const updated = await this.prisma.payment.update({
             where: { id: payment.id },
             data: {
@@ -131,14 +155,57 @@ export class PaymentsService {
             },
         });
 
-        this.logger.log(`Payment ${payment.id} refunded`);
-
         return updated;
     }
 
-    async handleWebhook(payload: any) {
-        // TODO: Implement webhook handling for payment gateway
-        this.logger.log('Payment webhook received', payload);
-        return { received: true };
+    async handleWebhook(payload: any, signature: string) {
+        // Verify X-Signature
+        const isValid = this.billplzService.verifyXSignature(payload, signature);
+        if (!isValid) {
+            this.logger.error('Invalid Billplz X-Signature');
+            // throw new ForbiddenException('Invalid signature'); // Don't throw to avoid retries if it's security issue?
+            return { status: 'failed', message: 'Invalid signature' };
+        }
+
+        const billId = payload.id;
+        const state = payload.state; // 'paid'
+
+        this.logger.log(`Received webhook for bill ${billId}, state: ${state}`);
+
+        const payment = await this.prisma.payment.findUnique({
+            where: { transactionId: billId },
+        });
+
+        if (!payment) {
+            this.logger.warn(`Payment not found for bill ${billId}`);
+            return { status: 'failed', message: 'Payment not found' };
+        }
+
+        if (payment.status === 'COMPLETED') {
+            this.logger.log(`Payment ${payment.id} already completed`);
+            return { status: 'success' };
+        }
+
+        if (state === 'paid') {
+            // Update Payment Status
+            await this.prisma.payment.update({
+                where: { id: payment.id },
+                data: {
+                    status: 'COMPLETED',
+                    paymentMethod: 'billplz', // or payload.payment_channel
+                },
+            });
+
+            // Trigger Escrow Hold
+            try {
+                await this.escrowService.internalHold(payment.jobId);
+                this.logger.log(`Escrow held for job ${payment.jobId}`);
+            } catch (error) {
+                this.logger.error(`Failed to hold escrow for job ${payment.jobId}`, error);
+                // We shouldn't fail the webhook response, but we need to alert admin/logs
+            }
+        }
+
+        return { status: 'success' };
     }
 }

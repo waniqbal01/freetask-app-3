@@ -6,7 +6,9 @@ import '../screens/notifications_screen.dart';
 /// Notification bell button untuk AppBar
 /// Menampilkan icon bell dengan badge count untuk unread notifications
 class NotificationBellButton extends ConsumerWidget {
-  const NotificationBellButton({super.key});
+  const NotificationBellButton({super.key, this.color});
+
+  final Color? color;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -27,7 +29,7 @@ class NotificationBellButton extends ConsumerWidget {
         return Stack(
           children: [
             IconButton(
-              icon: const Icon(Icons.notifications_outlined),
+              icon: Icon(Icons.notifications_outlined, color: color),
               onPressed: () {
                 Navigator.push(
                   context,

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import 'app.dart';
-// import 'core/notifications/fcm_service.dart';
+import 'core/notifications/fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,11 +13,11 @@ void main() async {
     if (const bool.fromEnvironment('dart.library.js_util')) {
       debugPrint('Skipping Firebase initialization on Web (Config missing)');
     } else {
-      // await Firebase.initializeApp();
-      // debugPrint('Firebase initialized successfully');
+      await Firebase.initializeApp();
+      debugPrint('Firebase initialized successfully');
 
       // Initialize FCM service
-      // await fcmService.initialize();
+      await fcmService.initialize();
     }
   } catch (e) {
     debugPrint('Firebase initialization error: $e');

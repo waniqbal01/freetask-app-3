@@ -6,6 +6,7 @@ import {
     Param,
     UseGuards,
     ParseIntPipe,
+    Headers as RequestHeaders,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PaymentsService } from './payments.service';
@@ -41,7 +42,10 @@ export class PaymentsController {
     }
 
     @Post('webhook')
-    async handleWebhook(@Body() payload: any) {
-        return this.paymentsService.handleWebhook(payload);
+    async handleWebhook(
+        @Body() payload: any,
+        @RequestHeaders('x-signature') signature: string
+    ) {
+        return this.paymentsService.handleWebhook(payload, signature);
     }
 }

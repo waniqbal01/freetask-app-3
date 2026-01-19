@@ -24,7 +24,7 @@ export class WithdrawalsService {
             throw new BadRequestException('Only freelancers can request withdrawals');
         }
 
-        if (user.balance < dto.amount) {
+        if (Number(user.balance) < dto.amount) {
             throw new BadRequestException(
                 `Insufficient balance. Available: ${user.balance}, Requested: ${dto.amount}`
             );

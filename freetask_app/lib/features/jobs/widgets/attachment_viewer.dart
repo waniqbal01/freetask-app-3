@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:html' as html;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../services/upload_service.dart';
 
@@ -30,10 +30,12 @@ class AttachmentViewer extends StatelessWidget {
     final lower = url.toLowerCase();
     if (_isImageUrl(url)) return Icons.image;
     if (lower.endsWith('.pdf')) return Icons.picture_as_pdf;
-    if (lower.endsWith('.doc') || lower.endsWith('.docx'))
+    if (lower.endsWith('.doc') || lower.endsWith('.docx')) {
       return Icons.description;
-    if (lower.endsWith('.zip') || lower.endsWith('.rar'))
+    }
+    if (lower.endsWith('.zip') || lower.endsWith('.rar')) {
       return Icons.folder_zip;
+    }
     return Icons.attachment;
   }
 
@@ -60,7 +62,12 @@ class AttachmentViewer extends StatelessWidget {
   Future<void> _openFile(BuildContext context, String url) async {
     try {
       final fullUrl = await uploadService.resolveAuthorizedUrl(url);
-      html.window.open(fullUrl, '_blank');
+      final uri = Uri.parse(fullUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'Tidak dapat membuka link';
+      }
     } catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

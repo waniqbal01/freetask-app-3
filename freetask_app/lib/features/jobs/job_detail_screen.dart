@@ -633,15 +633,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       }
     }
 
-    print(
-        'JobDetailScreen: _buildBottomActionBar called. Role: $role, Status: ${job.status}');
     return null;
   }
 
   @override
   Widget build(BuildContext context) {
-    print(
-        'JobDetailScreen: build called. Job: ${_job?.id}, Status: ${_job?.status}');
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final job = _job;
