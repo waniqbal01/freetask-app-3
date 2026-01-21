@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
@@ -103,11 +103,19 @@ export class ChatsService {
     role: UserRole,
     dto: CreateMessageDto,
   ): Promise<ChatMessageDto> {
+    // Validate that content is provided
+    if (!dto.content || dto.content.trim() === '') {
+      throw new BadRequestException('Message content is required');
+    }
+
+    // TypeScript now knows content is non-null
+    const validatedContent: string = dto.content;
+
     await this.ensureJobParticipant(jobId, userId, role);
     const message = await this.prisma.$transaction(async (tx) => {
       const createdMessage = await tx.chatMessage.create({
         data: {
-          content: dto.content,
+          content: validatedContent,
           type: dto.type ?? 'text',
           attachmentUrl: dto.attachmentUrl,
           jobId,
@@ -128,6 +136,7 @@ export class ChatsService {
       return createdMessage;
     });
 
+    // TypeScript might not infer sender properly, so we'll be explicit
     return {
       id: message.id,
       jobId: message.jobId,
