@@ -27,9 +27,19 @@ android {
     // Load keystore properties from key.properties file
     val keystorePropertiesFile = rootProject.file("key.properties")
     val keystoreProperties = Properties()
+    var hasValidKeystore = false
     
     if (keystorePropertiesFile.exists()) {
         keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+        
+        // Check if all required properties are present and non-null
+        val keyAliasValue = keystoreProperties["keyAlias"] as? String
+        val keyPasswordValue = keystoreProperties["keyPassword"] as? String
+        val storeFileValue = keystoreProperties["storeFile"] as? String
+        val storePasswordValue = keystoreProperties["storePassword"] as? String
+        
+        hasValidKeystore = keyAliasValue != null && keyPasswordValue != null && 
+                          storeFileValue != null && storePasswordValue != null
     }
 
     defaultConfig {
@@ -44,8 +54,8 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            if (keystorePropertiesFile.exists()) {
+        if (hasValidKeystore) {
+            create("release") {
                 keyAlias = keystoreProperties["keyAlias"] as String
                 keyPassword = keystoreProperties["keyPassword"] as String
                 storeFile = file(keystoreProperties["storeFile"] as String)
@@ -56,17 +66,18 @@ android {
 
     buildTypes {
         release {
-            // Use production signing if key.properties exists, otherwise use debug
-            signingConfig = if (keystorePropertiesFile.exists()) {
+            // Use production signing if key.properties is valid, otherwise use debug
+            signingConfig = if (hasValidKeystore) {
                 signingConfigs.getByName("release")
             } else {
                 // Fallback to debug keys for development
-                println("⚠️ WARNING: Using debug keys. Run create_keystore.ps1 to setup production signing.")
+                println("⚠️ WARNING: Using debug keys for release build. Run create_keystore.ps1 to setup production signing.")
                 signingConfigs.getByName("debug")
             }
         }
     }
 }
+
 
 dependencies {
     constraints {
