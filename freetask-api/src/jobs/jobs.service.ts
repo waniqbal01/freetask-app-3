@@ -17,6 +17,7 @@ import { JOB_MIN_DISPUTE_REASON_LEN } from './constants';
 import { EscrowService } from '../escrow/escrow.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PaymentsService } from '../payments/payments.service';
 import { ChatsService } from '../chats/chats.service';
 
 @Injectable()
@@ -28,6 +29,10 @@ export class JobsService {
     private readonly escrowService: EscrowService,
     private readonly notificationsService: NotificationsService,
     private readonly chatsService: ChatsService,
+    // Inject PaymentsService (Optional to avoid circular if needed, but safe here per check)
+    // Actually, creating a circular ref: JobsModule imports PaymentsModule?
+    // Let's use ModuleRef or forwardRef if needed. If PaymentsService uses JobsService? No, PaymentsService uses Prisma directly. Safe.
+    private readonly paymentsService: PaymentsService,
   ) { }
 
   async create(userId: number, role: UserRole, dto: CreateJobDto) {
@@ -64,13 +69,14 @@ export class JobsService {
       include: this.jobInclude,
     });
 
-    await this.createEscrowRecord(job.id, amount);
+    // NOTE: Escrow is NOT created here anymore
+    // It will be created when payment is completed (AWAITING_PAYMENT → IN_PROGRESS)
 
     // Notify Freelancer
     await this.notificationsService.sendNotification({
       userId: service.freelancerId,
       title: 'New Order Received',
-      body: `You have received a new order: ${trimmedTitle}`,
+      body: `You have received a new order: ${trimmedTitle}. Please review and accept/reject.`,
       data: { type: 'job_order', jobId: job.id.toString() },
     });
 
@@ -142,17 +148,17 @@ export class JobsService {
   async acceptJob(id: number, userId: number, role: UserRole) {
     this.ensureRole(role, [UserRole.FREELANCER]);
     const job = await this.ensureJobForFreelancer(id, userId);
-    this.ensureValidTransition(job.status, JobStatus.IN_PROGRESS);
+    this.ensureValidTransition(job.status, JobStatus.AWAITING_PAYMENT);
 
-    // Notify Client
+    // Notify Client - Payment Required
     await this.notificationsService.sendNotification({
       userId: job.clientId,
-      title: 'Order Accepted & Started',
-      body: `Freelancer has accepted and started your order #${job.id}`,
-      data: { type: 'job_started', jobId: job.id.toString() },
+      title: 'Order Accepted - Payment Required',
+      body: `Freelancer has accepted your order #${job.id}. Please complete payment to proceed.`,
+      data: { type: 'payment_required', jobId: job.id.toString() },
     });
 
-    return this.applyStatusUpdate(id, JobStatus.IN_PROGRESS);
+    return this.applyStatusUpdate(id, JobStatus.AWAITING_PAYMENT);
   }
 
   async startJob(id: number, userId: number, role: UserRole) {
@@ -169,6 +175,14 @@ export class JobsService {
     });
 
     return this.applyStatusUpdate(id, JobStatus.IN_PROGRESS);
+  }
+
+  // Helper to touch startedAt
+  private async setJobStarted(id: number) {
+    await this.prisma.job.update({
+      where: { id },
+      data: { startedAt: new Date() }
+    });
   }
 
   async submitJob(id: number, userId: number, role: UserRole, dto: SubmitJobDto) {
@@ -216,7 +230,27 @@ export class JobsService {
     const job = await this.ensureJobForClient(id, userId);
     this.ensureValidTransition(job.status, JobStatus.COMPLETED);
 
-    const updatedJob = await this.applyStatusUpdate(id, JobStatus.COMPLETED);
+    // Check Minimum Duration Rule (e.g. 30 minutes)
+    const MIN_DURATION_MS = 30 * 60 * 1000; // 30 mins
+    let statusToSet: JobStatus = JobStatus.COMPLETED;
+    let holdReason: string | null = null;
+
+    if (job.startedAt) {
+      const duration = Date.now() - job.startedAt.getTime();
+      this.logger.log(`Job #${id} duration: ${duration}ms (Min: ${MIN_DURATION_MS}ms)`);
+
+      if (duration < MIN_DURATION_MS) {
+        statusToSet = JobStatus.PAYOUT_HOLD;
+        holdReason = `Job completed too fast (${Math.floor(duration / 60000)} mins). Manual review required.`;
+        this.logger.warn(`Job #${id} flagged for PAYOUT_HOLD: ${holdReason}`);
+      }
+    } else {
+      // If startedAt is missing (legacy?), maybe fallback to createdAt or just allow?
+      // Let's being strict? Or safe. Safe = Allow but log.
+      this.logger.warn(`Job #${id} has no startedAt. Skipping duration check.`);
+    }
+
+    const updatedJob = await this.applyStatusUpdate(id, statusToSet, undefined, holdReason ?? undefined);
 
     // Notify Freelancer
     await this.notificationsService.sendNotification({
@@ -383,27 +417,35 @@ export class JobsService {
   private ensureValidTransition(current: JobStatus, next: JobStatus) {
     const transitions: Record<JobStatus, JobStatus[]> = {
       [JobStatus.PENDING]: [
-        JobStatus.ACCEPTED,
-        JobStatus.IN_PROGRESS, // Direct start
-        JobStatus.REJECTED,
-        JobStatus.CANCELLED,
+        JobStatus.AWAITING_PAYMENT, // Freelancer accept
+        JobStatus.REJECTED,          // Freelancer reject
+        JobStatus.CANCELLED,         // Client cancel
       ],
-      [JobStatus.ACCEPTED]: [JobStatus.IN_PROGRESS, JobStatus.CANCELLED],
+      [JobStatus.AWAITING_PAYMENT]: [
+        JobStatus.IN_PROGRESS,       // Payment completed
+        JobStatus.CANCELLED,         // Client cancel before payment
+      ],
+      [JobStatus.ACCEPTED]: [JobStatus.IN_PROGRESS, JobStatus.CANCELLED], // Legacy compatibility
       [JobStatus.IN_PROGRESS]: [
-        JobStatus.IN_REVIEW,
-        JobStatus.COMPLETED, // Legacy/Manual fallback
+        JobStatus.IN_REVIEW,         // Freelancer submit work
+        JobStatus.COMPLETED,         // Legacy/Manual fallback
         JobStatus.CANCELLED,
         JobStatus.DISPUTED,
       ],
       [JobStatus.IN_REVIEW]: [
-        JobStatus.COMPLETED,
-        JobStatus.IN_PROGRESS, // Revision
+        JobStatus.COMPLETED,         // Client accept
+        JobStatus.IN_PROGRESS,       // Revision
         JobStatus.DISPUTED,
       ],
-      [JobStatus.COMPLETED]: [JobStatus.DISPUTED],
+      [JobStatus.COMPLETED]: [JobStatus.DISPUTED, JobStatus.PAYOUT_PROCESSING, JobStatus.PAYOUT_HOLD],
       [JobStatus.CANCELLED]: [],
       [JobStatus.REJECTED]: [JobStatus.CANCELLED],
-      [JobStatus.DISPUTED]: [],
+      [JobStatus.DISPUTED]: [JobStatus.COMPLETED, JobStatus.CANCELLED],
+      [JobStatus.PAYOUT_PROCESSING]: [JobStatus.PAID_OUT, JobStatus.PAYOUT_FAILED],
+      [JobStatus.PAID_OUT]: [],
+      [JobStatus.PAYOUT_FAILED]: [JobStatus.PAYOUT_PROCESSING, JobStatus.PAYOUT_FAILED_MANUAL],
+      [JobStatus.PAYOUT_HOLD]: [JobStatus.COMPLETED, JobStatus.PAYOUT_FAILED_MANUAL],
+      [JobStatus.PAYOUT_FAILED_MANUAL]: [JobStatus.PAYOUT_PROCESSING], // Allow retry?
     };
 
     const allowedNextStates = transitions[current] ?? [];
@@ -418,8 +460,8 @@ export class JobsService {
     }
   }
 
-  private applyStatusUpdate(id: number, status: JobStatus, disputeReason?: string) {
-    return this.prisma.$transaction(async (tx) => {
+  private async applyStatusUpdate(id: number, status: JobStatus, disputeReason?: string, holdReason?: string) {
+    const result = await this.prisma.$transaction(async (tx) => {
       // Fetch job and escrow BEFORE making any changes
       const existingJob = await tx.job.findUnique({ where: { id } });
       if (!existingJob) {
@@ -445,10 +487,51 @@ export class JobsService {
         data: {
           status,
           disputeReason: disputeReason ?? null,
+          payoutHoldReason: holdReason ?? null,
+          startedAt: status === JobStatus.IN_PROGRESS && !existingJob.startedAt ? new Date() : undefined, // Set startedAt if moving to IN_PROGRESS
           autoCompleteAt: status === JobStatus.COMPLETED ? null : undefined, // clear if completed
         },
         include: this.jobInclude,
       });
+
+      // Credit Pending Balance & Calculate Fees on Completion
+      // NOTE: If status is PAYOUT_HOLD, we treat it similarly to COMPLETED for calculation, 
+      // but we do NOT release Escrow yet (Hold Escrow?).
+      // Logic: If PAYOUT_HOLD, Job is "Done" effectively, but payment is stuck.
+      // Escrow should be HELD -> RELEASED? No. Payout Logic will check status.
+      // Ops... ensureValidTransition needs to know about PAYOUT_HOLD.
+
+      if (status === JobStatus.COMPLETED && existingJob.status !== JobStatus.COMPLETED) {
+        const amount = new Prisma.Decimal(existingJob.amount);
+        const freelancerShare = amount.mul(0.9);
+        const platformShare = amount.mul(0.1);
+
+        // Update Job with calculated splits for Audit
+        await tx.job.update({
+          where: { id },
+          data: {
+            freelancerPayoutAmount: freelancerShare,
+            platformFeeAmount: platformShare
+          }
+        });
+
+        // Update User Pending Balance (Always done, as Weekly payout uses this as "Available")
+        // NOTE: For IMMEDIATE mode, we might deduct it immediately after payout success in PaymentsService,
+        // but adding it here keeps the ledger consistent: "Money became available".
+        await tx.user.update({
+          where: { id: existingJob.freelancerId },
+          data: {
+            pendingBalance: { increment: freelancerShare },
+          },
+        });
+
+        // Trigger Immediate Payout if Configured
+        // Check for PAYOUT_HOLD too? No, usually not triggered if held.
+        // Needs to be done AFTER the transaction commits ideally, but inside is also ok if we accept async side effect logic outside tx.
+        // ACTUALLY: We cannot await the payout inside this transaction because the JOB update needs to be committed for the Payout Service to see the 'COMPLETED' status (unless we pass the tx, but PaymentsService uses its own prisma calls).
+        // Strategy: Return a flag or trigger it after this transaction block in the caller?
+        // Or just let it run async without awaiting (fire and forget).
+      }
 
       // Sync escrow status
       if (escrow) {
@@ -457,6 +540,16 @@ export class JobsService {
 
       return this.withFlatFields(job);
     });
+
+    // Post-Transaction Actions
+    if (status === JobStatus.COMPLETED) {
+      // Fire and forget immediate payout logic
+      this.paymentsService.processJobPayout(id).catch(err =>
+        this.logger.error(`Immediate payout trigger failed for Job ${id}`, err)
+      );
+    }
+
+    return result;
   }
 
   private async createEscrowRecord(jobId: number, amount?: Prisma.Decimal | null) {

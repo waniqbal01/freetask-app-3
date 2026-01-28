@@ -44,6 +44,7 @@ export class ChatsController {
     @Body() dto: CreateMessageDto,
   ) {
     this.logger.log(`Message sent by user ${userId} in job ${jobId}`);
+    this.logger.log(`Message payload: ${JSON.stringify(dto)}`);
     return this.chatsService.postMessage(jobId, userId, role, dto);
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/utils/error_utils.dart';
 import '../../models/withdrawal.dart';
 import '../../services/http_client.dart';
+import '../../features/auth/auth_repository.dart';
 import 'withdrawal_repository.dart';
 
 class WithdrawalScreen extends StatefulWidget {
@@ -22,7 +23,22 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
   final _amountController = TextEditingController();
   final _accountNameController = TextEditingController();
   final _accountNumberController = TextEditingController();
-  final _bankNameController = TextEditingController();
+  // final _bankNameController = TextEditingController(); // Replaced by _selectedBankCode
+
+  String? _selectedBankCode;
+
+  final Map<String, String> _banks = {
+    'MBBEMYKL': 'Maybank',
+    'BCBBMYKL': 'CIMB Bank',
+    'PBBEMYKL': 'Public Bank',
+    'RHBBMYKL': 'RHB Bank',
+    'HLBBMYKL': 'Hong Leong Bank',
+    'AMBBMYKL': 'AmBank',
+    'BIMBMYKL': 'Bank Islam',
+    'BKRM': 'Bank Rakyat',
+    'BMMB': 'Bank Muamalat',
+    'BSN': 'BSN',
+  };
 
   @override
   void initState() {
@@ -37,7 +53,7 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
     _amountController.dispose();
     _accountNameController.dispose();
     _accountNumberController.dispose();
-    _bankNameController.dispose();
+    // _bankNameController.dispose();
     super.dispose();
   }
 
@@ -52,6 +68,20 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
         _balance = balanceResponse.data?['balance']?.toDouble() ?? 0.0;
         _withdrawals = withdrawalsResponse.data ?? [];
         _isLoading = false;
+
+        // Pre-fill from verified profile if available
+        final user = authRepository.currentUser;
+        if (user != null) {
+          if (_accountNameController.text.isEmpty) {
+            _accountNameController.text = user.bankHolderName ?? '';
+          }
+          if (_accountNumberController.text.isEmpty) {
+            _accountNumberController.text = user.bankAccount ?? '';
+          }
+          if (_selectedBankCode == null && user.bankCode != null) {
+            _selectedBankCode = user.bankCode;
+          }
+        }
       });
     }
   }
@@ -71,7 +101,7 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
 
     if (_accountNameController.text.isEmpty ||
         _accountNumberController.text.isEmpty ||
-        _bankNameController.text.isEmpty) {
+        _selectedBankCode == null) {
       showErrorSnackBar(context, 'Please fill in all bank details');
       return;
     }
@@ -83,7 +113,8 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
       bankDetails: {
         'accountName': _accountNameController.text,
         'accountNumber': _accountNumberController.text,
-        'bankName': _bankNameController.text,
+        'bankCode': _selectedBankCode,
+        'bankName': _banks[_selectedBankCode] ?? '',
       },
     );
 
@@ -100,9 +131,13 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
 
         // Clear form
         _amountController.clear();
-        _accountNameController.clear();
-        _accountNumberController.clear();
-        _bankNameController.clear();
+        // Don't clear bank details if they are verified
+        final user = authRepository.currentUser;
+        if (user?.bankVerified != true) {
+          _accountNameController.clear();
+          _accountNumberController.clear();
+          _selectedBankCode = null;
+        }
 
         // Refresh data
         _loadData();
@@ -206,13 +241,24 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                             keyboardType: TextInputType.number,
                           ),
                           const SizedBox(height: 12),
-                          TextField(
-                            controller: _bankNameController,
+                          const SizedBox(height: 12),
+                          DropdownButtonFormField<String>(
+                            value: _selectedBankCode,
                             decoration: const InputDecoration(
-                              labelText: 'Bank Name',
+                              labelText: 'Bank',
                               border: OutlineInputBorder(),
-                              hintText: 'e.g. Maybank, CIMB, etc.',
                             ),
+                            items: _banks.entries.map((e) {
+                              return DropdownMenuItem(
+                                value: e.key,
+                                child: Text(e.value),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedBankCode = value;
+                              });
+                            },
                           ),
                           const SizedBox(height: 16),
                           SizedBox(

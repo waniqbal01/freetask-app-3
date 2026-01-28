@@ -66,6 +66,24 @@ class AdminRepository {
     }
   }
 
+  Future<ApiResponse<Map<String, dynamic>>> updateTrustScore({
+    required int userId,
+    required int score,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        '/admin/users/$userId/trust-score',
+        data: {'trustScore': score},
+      );
+      return ApiResponse.success(response.data);
+    } on DioException catch (e) {
+      return ApiResponse.error(
+          e.response?.data['message'] ?? 'Failed to update trust score');
+    } catch (e) {
+      return ApiResponse.error('An unexpected error occurred');
+    }
+  }
+
   // Service Approval
   Future<ApiResponse<Map<String, dynamic>>> getPendingServices(
       {int limit = 50, int offset = 0}) async {
@@ -240,6 +258,31 @@ class AdminRepository {
     } on DioException catch (e) {
       return ApiResponse.error(
           e.response?.data['message'] ?? 'Failed to resolve dispute');
+    } catch (e) {
+      return ApiResponse.error('An unexpected error occurred');
+    }
+  }
+
+  // Bank Verification
+  Future<ApiResponse<List<dynamic>>> getPendingBankVerifications() async {
+    try {
+      final response = await _dio.get('/users/pending-bank-verification');
+      return ApiResponse.success(response.data);
+    } on DioException catch (e) {
+      return ApiResponse.error(e.response?.data['message'] ??
+          'Failed to fetch pending verifications');
+    } catch (e) {
+      return ApiResponse.error('An unexpected error occurred');
+    }
+  }
+
+  Future<ApiResponse<dynamic>> verifyBankDetails(int userId) async {
+    try {
+      final response = await _dio.patch('/users/$userId/verify-bank');
+      return ApiResponse.success(response.data);
+    } on DioException catch (e) {
+      return ApiResponse.error(
+          e.response?.data['message'] ?? 'Failed to verify bank details');
     } catch (e) {
       return ApiResponse.error('An unexpected error occurred');
     }

@@ -16,4 +16,8 @@ export type AppUser = {
   rating?: number | null;
   reviewCount?: number | null;
   isAvailable: boolean;
+  bankCode?: string | null;
+  bankAccount?: string | null;
+  bankHolderName?: string | null;
+  bankVerified?: boolean;
 };

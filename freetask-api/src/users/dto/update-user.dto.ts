@@ -1,5 +1,5 @@
 import { Type, Transform } from 'class-transformer';
-import { IsArray, IsNumber, IsOptional, IsString, IsBoolean } from 'class-validator';
+import { IsArray, IsNumber, IsOptional, IsString, IsBoolean, IsIn } from 'class-validator';
 
 export class UpdateUserDto {
   @IsOptional()
@@ -44,4 +44,20 @@ export class UpdateUserDto {
   @IsOptional()
   @IsBoolean()
   isAvailable?: boolean;
+
+  @IsOptional()
+  @IsIn([
+    'MBBEMYKL', 'BCBBMYKL', 'PBBEMYKL', 'RHBBMYKL', 'HLBBMYKL',
+    'AMBBMYKL', 'BIMBMYKL', 'BKRM', 'BMMB', 'BSN'
+  ], { message: 'Invalid Bank Code. Must be a valid Billplz code.' })
+  @IsString()
+  bankCode?: string;
+
+  @IsOptional()
+  @IsString()
+  bankAccount?: string;
+
+  @IsOptional()
+  @IsString()
+  bankHolderName?: string;
 }

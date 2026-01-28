@@ -32,6 +32,10 @@ export class SendNotificationDto {
     @IsNotEmpty()
     body: string;
 
+    @IsString()
+    @IsOptional()
+    type?: string;
+
     @IsOptional()
     data?: any;
 }

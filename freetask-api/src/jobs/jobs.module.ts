@@ -6,8 +6,10 @@ import { EscrowService } from '../escrow/escrow.service';
 import { ChatsModule } from '../chats/chats.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
+import { PaymentsModule } from '../payments/payments.module';
+
 @Module({
-  imports: [ChatsModule, NotificationsModule],
+  imports: [ChatsModule, NotificationsModule, PaymentsModule],
   controllers: [JobsController],
   providers: [JobsService, RolesGuard, EscrowService],
 })

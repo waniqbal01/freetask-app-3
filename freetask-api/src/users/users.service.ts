@@ -80,9 +80,43 @@ export class UsersService {
         phoneNumber: dto.phoneNumber,
         location: dto.location,
         isAvailable: dto.isAvailable,
+        bankCode: dto.bankCode,
+        bankAccount: dto.bankAccount,
+        bankHolderName: dto.bankHolderName,
       },
     });
 
+    return toAppUser(user);
+  }
+
+  // Admin: Get all users with bank details but NOT verified
+  async findPendingBankVerifications() {
+    const users = await this.prisma.user.findMany({
+      where: {
+        bankCode: { not: null },
+        bankAccount: { not: null },
+        bankVerified: false,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        bankCode: true,
+        bankAccount: true,
+        bankHolderName: true,
+        updatedAt: true,
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+    return users;
+  }
+
+  // Admin: Approve bank details
+  async verifyBankDetails(id: number) {
+    const user = await this.prisma.user.update({
+      where: { id },
+      data: { bankVerified: true },
+    });
     return toAppUser(user);
   }
 }

@@ -87,29 +87,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (isFreelancerRole) {
       final bio = _bioController.text.trim();
-      final skillsRaw = _skillsController.text.trim();
-      final rateText = _rateController.text.trim();
 
       if (bio.isNotEmpty) {
         payload['bio'] = bio;
-      }
-
-      if (skillsRaw.isNotEmpty) {
-        final skills = skillsRaw
-            .split(',')
-            .map((skill) => skill.trim())
-            .where((skill) => skill.isNotEmpty)
-            .toList();
-        if (skills.isNotEmpty) {
-          payload['skills'] = skills;
-        }
-      }
-
-      if (rateText.isNotEmpty) {
-        final parsedRate = double.tryParse(rateText);
-        if (parsedRate != null) {
-          payload['rate'] = parsedRate;
-        }
       }
     }
 
@@ -491,38 +471,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   helperMaxLines: 2,
                                 ),
                                 maxLines: 3,
-                              ),
-                              const SizedBox(height: AppSpacing.s16),
-                              TextFormField(
-                                controller: _skillsController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Kemahiran (dipisah dengan koma)',
-                                  prefixIcon: Icon(Icons.handyman_outlined),
-                                  helperText:
-                                      'Nyatakan kemahiran utama anda (contoh: design logo, sunting video).',
-                                  helperMaxLines: 2,
-                                ),
-                              ),
-                              const SizedBox(height: AppSpacing.s16),
-                              TextFormField(
-                                controller: _rateController,
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  labelText: 'Kadar (contoh: 50.0)',
-                                  prefixIcon: Icon(Icons.payments_outlined),
-                                  helperText:
-                                      'Kadar anggaran membantu client menilai bajet.',
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return null;
-                                  }
-                                  final parsed = double.tryParse(value);
-                                  if (parsed == null) {
-                                    return 'Sila masukkan nombor yang sah';
-                                  }
-                                  return null;
-                                },
                               ),
                             ],
                             if (_errorMessage != null) ...[

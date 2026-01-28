@@ -82,8 +82,8 @@ class AuthRepository {
     }
   }
 
-  Future<AppUser?> getCurrentUser() async {
-    if (_cachedUser != null) {
+  Future<AppUser?> getCurrentUser({bool forceRefresh = false}) async {
+    if (_cachedUser != null && !forceRefresh) {
       return _cachedUser;
     }
 

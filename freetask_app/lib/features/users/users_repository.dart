@@ -25,6 +25,9 @@ class UsersRepository {
     String? phoneNumber,
     String? location,
     bool? isAvailable,
+    String? bankCode,
+    String? bankAccount,
+    String? bankHolderName,
   }) async {
     final payload = <String, dynamic>{};
 
@@ -42,6 +45,9 @@ class UsersRepository {
     addIfPresent('rate', rate);
     addIfPresent('phoneNumber', phoneNumber);
     addIfPresent('location', location);
+    addIfPresent('bankCode', bankCode);
+    addIfPresent('bankAccount', bankAccount);
+    addIfPresent('bankHolderName', bankHolderName);
     if (isAvailable != null) payload['isAvailable'] = isAvailable;
 
     if (payload.isEmpty) {

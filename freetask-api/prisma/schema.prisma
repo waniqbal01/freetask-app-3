@@ -15,6 +15,7 @@ enum UserRole {
 
 enum JobStatus {
   PENDING
+  AWAITING_PAYMENT
   ACCEPTED
   IN_PROGRESS
   IN_REVIEW
@@ -22,6 +23,11 @@ enum JobStatus {
   CANCELLED
   REJECTED
   DISPUTED
+  PAYOUT_PROCESSING
+  PAID_OUT
+  PAYOUT_FAILED
+  PAYOUT_HOLD
+  PAYOUT_FAILED_MANUAL
 }
 
 enum EscrowStatus {
@@ -51,6 +57,8 @@ enum WithdrawalStatus {
   PENDING
   APPROVED
   REJECTED
+  PAYOUT_PROCESSING
+  PAYOUT_FAILED
 }
 
 model User {
@@ -83,6 +91,14 @@ model User {
   location     String?
   portfolioItems PortfolioItem[]
   isAvailable  Boolean       @default(true)
+  trustScore   Int           @default(50)
+
+  // Bank Details for Payouts
+  bankCode       String?       // e.g., "MBBEMYKL"
+  bankAccount    String?       // Account Number
+  bankHolderName String?       // Account Holder Name
+  bankVerified   Boolean       @default(false)
+  pendingBalance Decimal       @default(0) @db.Decimal(10, 2)
 }
 
 model Service {
@@ -129,10 +145,16 @@ model Job {
   status         JobStatus   @default(PENDING)
   disputeReason  String?
   submittedAt    DateTime?
+  startedAt      DateTime?
   autoCompleteAt DateTime?
   submissionMessage String?
   orderAttachments Json?
   submissionAttachments Json?
+  freelancerPayoutAmount Decimal? @db.Decimal(10, 2)
+  platformFeeAmount      Decimal? @db.Decimal(10, 2)
+  billplzPayoutId        String?
+  payoutRetryCount       Int      @default(0)
+  payoutHoldReason       String?
   service        Service     @relation(fields: [serviceId], references: [id])
   serviceId      Int
   client         User        @relation("ClientJobs", fields: [clientId], references: [id])
@@ -254,6 +276,8 @@ model AdminLog {
   @@index([createdAt])
 }
 
+
+
 model Withdrawal {
   id              Int              @id @default(autoincrement())
   createdAt       DateTime         @default(now())
@@ -267,8 +291,12 @@ model Withdrawal {
   processedBy     User?            @relation("ProcessedWithdrawals", fields: [processedById], references: [id])
   processedById   Int?
   rejectionReason String?
+  
+  // Billplz Payout Tracking
+  billplzPayoutId String?
+  payoutError     String?
+  lastAttemptAt   DateTime?
 
   @@index([freelancerId])
   @@index([status])
 }
-

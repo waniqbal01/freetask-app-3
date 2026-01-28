@@ -1,0 +1,37 @@
+{
+  "id": 9,
+  "createdAt": "2026-01-23T14:37:12.408Z",
+  "updatedAt": "2026-01-23T15:38:18.023Z",
+  "title": "cipta logo",
+  "description": "ciptakan logo untuk saya",
+  "amount": "10",
+  "status": "AWAITING_PAYMENT",
+  "disputeReason": null,
+  "submittedAt": null,
+  "startedAt": null,
+  "autoCompleteAt": null,
+  "submissionMessage": null,
+  "orderAttachments": [
+    "/uploads/public/74bd5488-b3d9-4276-abf1-6e190f640e67.png"
+  ],
+  "submissionAttachments": null,
+  "freelancerPayoutAmount": null,
+  "platformFeeAmount": null,
+  "billplzPayoutId": null,
+  "payoutRetryCount": 0,
+  "payoutHoldReason": null,
+  "serviceId": 5,
+  "clientId": 6,
+  "freelancerId": 1,
+  "payment": {
+    "id": 1,
+    "createdAt": "2026-01-25T09:09:49.070Z",
+    "updatedAt": "2026-01-28T08:24:17.983Z",
+    "jobId": 9,
+    "amount": "10",
+    "status": "PENDING",
+    "paymentMethod": "billplz",
+    "transactionId": "13cff4a199e138a3",
+    "paymentGateway": "billplz"
+  }
+}

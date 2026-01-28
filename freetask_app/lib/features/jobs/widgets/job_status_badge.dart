@@ -27,6 +27,13 @@ JobStatusVisual mapJobStatusVisual(JobStatus status) {
         color: Colors.amber.shade700,
         icon: Icons.schedule_outlined,
       );
+    case JobStatus.awaitingPayment:
+      return JobStatusVisual(
+        label: 'Awaiting Payment',
+        badgeText: 'AWAITING PAYMENT',
+        color: Colors.orange.shade700,
+        icon: Icons.payment,
+      );
     case JobStatus.accepted:
       return JobStatusVisual(
         label: 'Accepted',
@@ -75,6 +82,34 @@ JobStatusVisual mapJobStatusVisual(JobStatus status) {
         badgeText: 'DISPUTED',
         color: Colors.deepOrange.shade700,
         icon: Icons.gavel_outlined,
+      );
+    case JobStatus.payoutProcessing:
+      return const JobStatusVisual(
+        label: 'Processing Payout',
+        badgeText: 'PAYOUT...',
+        color: Colors.purple,
+        icon: Icons.hourglass_top,
+      );
+    case JobStatus.paidOut:
+      return JobStatusVisual(
+        label: 'Paid Out',
+        badgeText: 'PAID OUT',
+        color: Colors.teal.shade700,
+        icon: Icons.price_check,
+      );
+    case JobStatus.payoutFailed:
+      return JobStatusVisual(
+        label: 'Payout Failed',
+        badgeText: 'PAYOUT ERROR',
+        color: Colors.red.shade900,
+        icon: Icons.error_outline,
+      );
+    case JobStatus.payoutHold:
+      return JobStatusVisual(
+        label: 'Payout On Hold',
+        badgeText: 'PAYOUT HOLD',
+        color: Colors.orange.shade900,
+        icon: Icons.warning_amber_rounded,
       );
   }
 }

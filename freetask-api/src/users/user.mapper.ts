@@ -24,5 +24,9 @@ export const toAppUser = (user: User): AppUser => {
     phoneNumber: user.phoneNumber,
     location: user.location,
     isAvailable: user.isAvailable,
+    bankCode: user.bankCode,
+    bankAccount: user.bankAccount,
+    bankHolderName: user.bankHolderName,
+    bankVerified: user.bankVerified,
   };
 };

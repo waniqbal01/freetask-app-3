@@ -1,0 +1,4 @@
+{
+  "message": "Billplz authentication failed. Please check BILLPLZ_API_KEY is correct.",
+  "stack": "UnauthorizedException: Billplz authentication failed. Please check BILLPLZ_API_KEY is correct.\n    at BillplzService.createCollection (C:\\Users\\USER\\freetask-app-3\\freetask-api\\src\\payments\\billplz.service.ts:102:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PaymentsService.createPayment (C:\\Users\\USER\\freetask-app-3\\freetask-api\\src\\payments\\payments.service.ts:59:33)\n    at PaymentsController.createPayment (C:\\Users\\USER\\freetask-app-3\\freetask-api\\src\\payments\\payments.controller.ts:31:20)"
+}

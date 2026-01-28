@@ -46,7 +46,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadUser() async {
     try {
-      final user = await authRepository.getCurrentUser();
+      final user = await authRepository.getCurrentUser(forceRefresh: true);
       if (!mounted) return;
       setState(() {
         _user = user;
@@ -256,6 +256,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: const Text(AppStrings.btnLogout),
                     ),
                     const SizedBox(height: 32), // Bottom padding
+
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -396,17 +398,159 @@ class _ProfileScreenState extends State<ProfileScreen> {
           SwitchListTile(
             title: const Text('Status Aktif'),
             subtitle: Text(user.isAvailable
-                ? 'Anda boleh menerima tempahan baru'
-                : 'Anda tidak menerima tempahan baru'),
+                ? 'Profil anda kelihatan kepada pelanggan'
+                : 'Profil anda disembunyikan'),
             value: user.isAvailable,
-            onChanged: _toggleAvailability,
+            onChanged: (val) => _toggleAvailability(val),
             secondary: Icon(
               user.isAvailable ? Icons.check_circle : Icons.remove_circle,
               color: user.isAvailable ? Colors.green : Colors.grey,
             ),
             contentPadding: EdgeInsets.zero,
           ),
+
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 16),
+          Text(
+            'Maklumat Bank (Untuk Bayaran)',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).primaryColor,
+                ),
+          ),
+          const SizedBox(height: 16),
+
+          _buildBankDropdown(user),
+          _buildProfileItem(
+            fieldKey: 'bankAccount',
+            label: 'Nombor Akaun',
+            value: user.bankAccount ?? 'Belum ditetapkan',
+            icon: Icons.account_balance_wallet,
+            inputType: TextInputType.number,
+            onSave: (val) => usersRepository.updateProfile(bankAccount: val),
+          ),
+          _buildProfileItem(
+            fieldKey: 'bankHolderName',
+            label: 'Nama Pemegang Akaun',
+            value: user.bankHolderName ?? 'Belum ditetapkan',
+            icon: Icons.person_outline,
+            onSave: (val) => usersRepository.updateProfile(bankHolderName: val),
+          ),
+          if (user.bankVerified)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                children: [
+                  Icon(Icons.verified, color: Colors.green, size: 20),
+                  SizedBox(width: 8),
+                  Text('Akaun Bank Disahkan',
+                      style: TextStyle(
+                          color: Colors.green, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            )
+          else if (user.bankAccount != null && user.bankAccount!.isNotEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                children: [
+                  Icon(Icons.pending, color: Colors.orange, size: 20),
+                  SizedBox(width: 8),
+                  Text('Menunggu Pengesahan Admin',
+                      style: TextStyle(
+                          color: Colors.orange, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
         ],
+      ],
+    );
+  }
+
+  Widget _buildBankDropdown(AppUser user) {
+    if (!user.role.toUpperCase().contains('FREELANCER')) {
+      return const SizedBox.shrink();
+    }
+
+    final banks = {
+      'MBBEMYKL': 'Maybank',
+      'BCBBMYKL': 'CIMB Bank',
+      'PBBEMYKL': 'Public Bank',
+      'RHBBMYKL': 'RHB Bank',
+      'HLBBMYKL': 'Hong Leong Bank',
+      'AMBBMYKL': 'AmBank',
+      'BIMBMYKL': 'Bank Islam',
+      'BKRM': 'Bank Rakyat',
+      'BMMB': 'Bank Muamalat',
+      'BSN': 'BSN',
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_editingField != 'bankCode')
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.account_balance, color: Colors.grey),
+            title: const Text('Bank',
+                style: TextStyle(fontSize: 12, color: Colors.grey)),
+            subtitle: Text(
+              banks[user.bankCode] ?? user.bankCode ?? 'Belum ditetapkan',
+              style: const TextStyle(fontSize: 16, color: Colors.black87),
+            ),
+            trailing: IconButton(
+              icon: const Icon(Icons.edit, size: 20),
+              color: Theme.of(context).primaryColor,
+              onPressed: () => _startEditing('bankCode', user.bankCode ?? ''),
+            ),
+          )
+        else
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Pilih Bank',
+                  style: TextStyle(fontSize: 12, color: Colors.grey)),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        isExpanded: true,
+                        value: banks.containsKey(_editController.text)
+                            ? _editController.text
+                            : null,
+                        hint: const Text('Sila pilih bank'),
+                        items: banks.entries
+                            .map((e) => DropdownMenuItem(
+                                  value: e.key,
+                                  child: Text(e.value),
+                                ))
+                            .toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => _editController.text = val);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                      icon: const Icon(Icons.check, color: Colors.green),
+                      onPressed: _isSavingField
+                          ? null
+                          : () => _saveField((val) async {
+                                await usersRepository.updateProfile(
+                                    bankCode: val);
+                              })),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.red),
+                    onPressed: _isSavingField ? null : _cancelEditing,
+                  ),
+                ],
+              ),
+            ],
+          ),
       ],
     );
   }

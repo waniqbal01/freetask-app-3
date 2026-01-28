@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../features/admin/admin_dashboard_screen.dart';
 import '../features/admin/admin_unauthorized_screen.dart';
 import '../features/admin/new_admin_dashboard_screen.dart';
+import '../features/admin/bank_verification/admin_bank_verification_screen.dart';
+import '../features/admin/admin_repository.dart';
+import '../services/http_client.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/auth/startup_screen.dart';
@@ -269,6 +272,18 @@ final appRouter = GoRouter(
       builder: (BuildContext context, GoRouterState state) {
         final from = state.uri.queryParameters['from'];
         return AdminUnauthorizedScreen(from: from);
+      },
+    ),
+    GoRoute(
+      path: '/admin/bank-verification',
+      builder: (BuildContext context, GoRouterState state) {
+        // We need an instance of AdminRepository here.
+        // Ideally we use dependency injection or a provider, but for now we create one with the default client.
+        // Or we pass it from the dashboard if we nested the routes.
+        // Given the simplistic DI here:
+        final httpClient = HttpClient();
+        final repo = AdminRepository(dio: httpClient.dio);
+        return AdminBankVerificationScreen(adminRepository: repo);
       },
     ),
     GoRoute(

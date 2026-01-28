@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/router.dart';
 import '../../core/storage/storage.dart';
 import '../../core/utils/error_utils.dart';
@@ -32,6 +33,11 @@ class _NewAdminDashboardScreenState extends State<NewAdminDashboardScreen> {
         appBar: AppBar(
           title: const Text('Admin Dashboard'),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.verified_user),
+              tooltip: 'Bank Verification',
+              onPressed: () => context.push('/admin/bank-verification'),
+            ),
             IconButton(
               icon: const Icon(Icons.logout),
               tooltip: 'Log Keluar',
@@ -314,6 +320,69 @@ class _UsersTabState extends State<_UsersTab>
     }
   }
 
+  Future<void> _updateTrustScore(int userId, int currentScore) async {
+    final controller = TextEditingController(text: currentScore.toString());
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Update Trust Score'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Enter new trust score (0-100):'),
+            const SizedBox(height: 8),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Score',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      final newScore = int.tryParse(controller.text);
+      if (newScore == null || newScore < 0 || newScore > 100) {
+        if (mounted) {
+          showErrorSnackBar(context, 'Please enter a valid score (0-100)');
+        }
+        return;
+      }
+
+      final response = await widget.adminRepo.updateTrustScore(
+        userId: userId,
+        score: newScore,
+      );
+
+      if (response.isSuccess) {
+        if (mounted) {
+          showSuccessSnackBar(context, 'Trust score updated');
+        }
+        _loadUsers();
+      } else {
+        if (mounted) {
+          showErrorSnackBar(
+              context, response.error ?? 'Failed to update trust score');
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -352,13 +421,33 @@ class _UsersTabState extends State<_UsersTab>
                         Text('Role: ${user['role']}'),
                         if (user['balance'] != null)
                           Text('Balance: RM ${user['balance']}'),
+                        Text(
+                          'Trust Score: ${user['trustScore'] ?? 50}',
+                          style: TextStyle(
+                            color: (user['trustScore'] ?? 50) >= 80
+                                ? Colors.green
+                                : Colors.orange,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
-                    trailing: Switch(
-                      value: isActive,
-                      onChanged: (value) =>
-                          _toggleUserStatus(user['id'], isActive),
-                      inactiveThumbColor: Colors.red,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.verified_user_outlined),
+                          tooltip: 'Trust Score: ${user['trustScore'] ?? 50}',
+                          onPressed: () => _updateTrustScore(
+                              user['id'], user['trustScore'] ?? 50),
+                        ),
+                        Switch(
+                          value: isActive,
+                          onChanged: (value) =>
+                              _toggleUserStatus(user['id'], isActive),
+                          inactiveThumbColor: Colors.red,
+                        ),
+                      ],
                     ),
                     isThreeLine: true,
                   ),
@@ -732,18 +821,29 @@ class _WithdrawalsTabState extends State<_WithdrawalsTab>
   Future<void> _loadWithdrawals() async {
     setState(() => _isLoading = true);
 
-    final response = await widget.adminRepo.getWithdrawals(status: 'PENDING');
+    // Fetch both PENDING and PAYOUT_FAILED
+    final pendingResponse =
+        await widget.adminRepo.getWithdrawals(status: 'PENDING');
+    final failedResponse =
+        await widget.adminRepo.getWithdrawals(status: 'PAYOUT_FAILED');
 
-    if (mounted && response.isSuccess) {
+    if (mounted) {
+      final pending = pendingResponse.data?['withdrawals'] ?? [];
+      final failed = failedResponse.data?['withdrawals'] ?? [];
+
       setState(() {
-        _withdrawals = response.data?['withdrawals'] ?? [];
+        _withdrawals = [...pending, ...failed];
+        // Sort by newest first
+        _withdrawals.sort((a, b) {
+          final dateA = DateTime.tryParse(a['createdAt']) ?? DateTime.now();
+          final dateB = DateTime.tryParse(b['createdAt']) ?? DateTime.now();
+          return dateB.compareTo(dateA);
+        });
         _isLoading = false;
       });
-    } else {
-      setState(() => _isLoading = false);
-      if (mounted) {
-        showErrorSnackBar(
-            context, response.error ?? 'Failed to load withdrawals');
+
+      if (!pendingResponse.isSuccess || !failedResponse.isSuccess) {
+        showErrorSnackBar(context, 'Failed to load some withdrawals');
       }
     }
   }
@@ -880,14 +980,46 @@ class _WithdrawalsTabState extends State<_WithdrawalsTab>
                           Text('Bank: ${bankDetails['bankName']}'),
                         ],
                         const SizedBox(height: 12),
+                        if (withdrawal['status'] == 'PAYOUT_FAILED') ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                  color: Colors.red.withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.error_outline,
+                                    color: Colors.red, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Failed: ${withdrawal['payoutError'] ?? 'Unknown error'}',
+                                    style: const TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 12),
                         Row(
                           children: [
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () =>
                                     _approveWithdrawal(withdrawal['id']),
-                                icon: const Icon(Icons.check),
-                                label: const Text('Approve'),
+                                icon: Icon(
+                                    withdrawal['status'] == 'PAYOUT_FAILED'
+                                        ? Icons.refresh
+                                        : Icons.check),
+                                label: Text(
+                                    withdrawal['status'] == 'PAYOUT_FAILED'
+                                        ? 'Retry Payout'
+                                        : 'Approve'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.green,
                                   foregroundColor: Colors.white,

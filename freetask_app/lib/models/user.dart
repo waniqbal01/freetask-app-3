@@ -15,6 +15,10 @@ class AppUser {
     this.phoneNumber,
     this.location,
     this.isAvailable = true,
+    this.bankCode,
+    this.bankAccount,
+    this.bankHolderName,
+    this.bankVerified = false,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
@@ -37,6 +41,10 @@ class AppUser {
       phoneNumber: json['phoneNumber'] as String?,
       location: json['location'] as String?,
       isAvailable: json['isAvailable'] as bool? ?? true,
+      bankCode: json['bankCode']?.toString(),
+      bankAccount: json['bankAccount']?.toString(),
+      bankHolderName: json['bankHolderName']?.toString(),
+      bankVerified: json['bankVerified'] as bool? ?? false,
     );
   }
 
@@ -54,4 +62,10 @@ class AppUser {
   final String? phoneNumber;
   final String? location;
   final bool isAvailable;
+
+  // Bank Details
+  final String? bankCode;
+  final String? bankAccount;
+  final String? bankHolderName;
+  final bool bankVerified;
 }

@@ -103,6 +103,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     switch (status) {
       case JobStatus.pending:
         return AppStrings.jobStatusPending;
+      case JobStatus.awaitingPayment:
+        return 'Awaiting Payment';
       case JobStatus.accepted:
         return AppStrings.jobStatusAccepted;
       case JobStatus.inProgress:
@@ -117,6 +119,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return AppStrings.jobStatusRejected;
       case JobStatus.disputed:
         return AppStrings.jobStatusDisputed;
+      case JobStatus.payoutProcessing:
+        return 'Payout Processing';
+      case JobStatus.paidOut:
+        return 'Paid Out';
+      case JobStatus.payoutFailed:
+        return 'Payout Failed';
+      case JobStatus.payoutHold:
+        return 'Payout On Hold';
     }
   }
 
@@ -125,6 +135,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     switch (status) {
       case JobStatus.pending:
         return scheme.secondary;
+      case JobStatus.awaitingPayment:
+        return Colors.orange;
       case JobStatus.accepted:
         return scheme.primary;
       case JobStatus.inProgress:
@@ -139,6 +151,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return Colors.redAccent;
       case JobStatus.disputed:
         return Colors.orange;
+      case JobStatus.payoutProcessing:
+        return Colors.purple.shade300;
+      case JobStatus.paidOut:
+        return Colors.teal;
+      case JobStatus.payoutFailed:
+        return Colors.red;
+      case JobStatus.payoutHold:
+        return Colors.orange.shade900;
     }
   }
 

@@ -103,13 +103,12 @@ export class ChatsService {
     role: UserRole,
     dto: CreateMessageDto,
   ): Promise<ChatMessageDto> {
-    // Validate that content is provided
-    if (!dto.content || dto.content.trim() === '') {
-      throw new BadRequestException('Message content is required');
+    // Validate: Content is required UNLESS an attachment is provided
+    if ((!dto.content || dto.content.trim() === '') && !dto.attachmentUrl) {
+      throw new BadRequestException('Mesej atau lampiran diperlukan.');
     }
 
-    // TypeScript now knows content is non-null
-    const validatedContent: string = dto.content;
+    const validatedContent: string = dto.content ?? '';
 
     await this.ensureJobParticipant(jobId, userId, role);
     const message = await this.prisma.$transaction(async (tx) => {

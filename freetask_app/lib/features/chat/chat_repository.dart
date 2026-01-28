@@ -15,6 +15,8 @@ import '../../core/utils/query_utils.dart';
 import '../../services/http_client.dart';
 import '../auth/auth_repository.dart';
 import 'chat_models.dart';
+import 'package:mime/mime.dart';
+import 'package:http_parser/http_parser.dart';
 
 final chatRepositoryProvider = Provider<ChatRepository>((Ref ref) {
   final repository = ChatRepository();
@@ -148,18 +150,27 @@ class ChatRepository {
   Future<String> uploadChatImage(PlatformFile file) async {
     try {
       MultipartFile multipartFile;
+      final mimeType = lookupMimeType(file.name);
+      final contentType = mimeType != null ? MediaType.parse(mimeType) : null;
+
       if (kIsWeb) {
         if (file.bytes == null) {
           throw StateError('File bytes are missing for Web upload');
         }
-        multipartFile =
-            MultipartFile.fromBytes(file.bytes!, filename: file.name);
+        multipartFile = MultipartFile.fromBytes(
+          file.bytes!,
+          filename: file.name,
+          contentType: contentType,
+        );
       } else {
         if (file.path == null) {
           throw StateError('File path is missing for Native upload');
         }
-        multipartFile =
-            await MultipartFile.fromFile(file.path!, filename: file.name);
+        multipartFile = await MultipartFile.fromFile(
+          file.path!,
+          filename: file.name,
+          contentType: contentType,
+        );
       }
 
       final formData = FormData.fromMap({

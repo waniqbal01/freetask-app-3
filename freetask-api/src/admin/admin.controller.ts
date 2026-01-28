@@ -75,6 +75,15 @@ export class AdminController {
         return this.adminService.updateUserStatus(userId, isActive, req.user.userId);
     }
 
+    @Patch('users/:id/trust-score')
+    async updateTrustScore(
+        @Request() req,
+        @Param('id', ParseIntPipe) userId: number,
+        @Body('trustScore', ParseIntPipe) trustScore: number,
+    ) {
+        return this.adminService.updateTrustScore(userId, trustScore, req.user.userId);
+    }
+
     // Service Approval
     @Get('services/pending')
     async getPendingServices(
@@ -144,6 +153,23 @@ export class AdminController {
         );
 
         return this.adminService.getOrderDetails(orderId);
+    }
+
+    @Patch('orders/:id/release-payout')
+    async releasePayout(
+        @Request() req,
+        @Param('id', ParseIntPipe) orderId: number,
+    ) {
+        return this.adminService.releasePayoutHold(orderId, req.user.userId);
+    }
+
+    @Patch('orders/:id/mark-paid')
+    async markPaid(
+        @Request() req,
+        @Param('id', ParseIntPipe) orderId: number,
+        @Body('notes') notes: string,
+    ) {
+        return this.adminService.markJobPaidManually(orderId, req.user.userId, notes || 'Manual update');
     }
 
     // Withdrawal Management

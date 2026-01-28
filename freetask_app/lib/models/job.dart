@@ -1,12 +1,17 @@
 enum JobStatus {
   pending,
+  awaitingPayment,
   accepted,
   inProgress,
   inReview,
   completed,
   cancelled,
   rejected,
-  disputed
+  disputed,
+  payoutProcessing,
+  paidOut,
+  payoutFailed,
+  payoutHold,
 }
 
 class Job {
@@ -136,6 +141,10 @@ class Job {
     switch (normalized) {
       case 'PENDING':
         return JobStatus.pending;
+      case 'AWAITING_PAYMENT':
+      case 'AWAITING-PAYMENT':
+      case 'AWAITINGPAYMENT':
+        return JobStatus.awaitingPayment;
       case 'ACCEPTED':
         return JobStatus.accepted;
       case 'IN_PROGRESS':
@@ -152,6 +161,14 @@ class Job {
         return JobStatus.rejected;
       case 'DISPUTED':
         return JobStatus.disputed;
+      case 'PAYOUT_PROCESSING':
+        return JobStatus.payoutProcessing;
+      case 'PAID_OUT':
+        return JobStatus.paidOut;
+      case 'PAYOUT_FAILED':
+        return JobStatus.payoutFailed;
+      case 'PAYOUT_HOLD':
+        return JobStatus.payoutHold;
       default:
         // Unknown status - fallback to pending
         return JobStatus.pending;

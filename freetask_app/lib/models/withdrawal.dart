@@ -11,6 +11,8 @@ class Withdrawal {
   final String? rejectionReason;
   final FreelancerInfo? freelancer;
   final ProcessedByInfo? processedBy;
+  final String? payoutError;
+  final String? billplzPayoutId;
 
   Withdrawal({
     required this.id,
@@ -25,6 +27,8 @@ class Withdrawal {
     this.rejectionReason,
     this.freelancer,
     this.processedBy,
+    this.payoutError,
+    this.billplzPayoutId,
   });
 
   factory Withdrawal.fromJson(Map<String, dynamic> json) {
@@ -48,6 +52,8 @@ class Withdrawal {
           ? ProcessedByInfo.fromJson(
               json['processedBy'] as Map<String, dynamic>)
           : null,
+      payoutError: json['payoutError'] as String?,
+      billplzPayoutId: json['billplzPayoutId'] as String?,
     );
   }
 

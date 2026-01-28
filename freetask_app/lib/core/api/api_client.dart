@@ -2,9 +2,11 @@ import 'package:dio/dio.dart';
 import '../storage/storage.dart';
 import '../../features/auth/auth_repository.dart';
 
+import '../../env.dart';
+
 class ApiClient {
   late final Dio dio;
-  String _baseUrl = 'https://freetask-backend.onrender.com';
+  String _baseUrl = Env.defaultApiBaseUrl;
 
   ApiClient() {
     dio = Dio(BaseOptions(

@@ -2,11 +2,19 @@ import { Injectable, Logger, NotFoundException, BadRequestException } from '@nes
 import { PrismaService } from '../prisma/prisma.service';
 import { ApprovalStatus, JobStatus, WithdrawalStatus } from '@prisma/client';
 
+import { BillplzService } from '../payments/billplz.service';
+import { PaymentsService } from '../payments/payments.service';
+import { isValidBankCode, BILLPLZ_BANK_CODES } from '../payments/billplz.constants';
+
 @Injectable()
 export class AdminService {
     private readonly logger = new Logger(AdminService.name);
 
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private billplzService: BillplzService,
+        private paymentsService: PaymentsService,
+    ) { }
 
     async getAnalytics() {
         const [
@@ -54,6 +62,7 @@ export class AdminService {
                 createdAt: true,
                 avatarUrl: true,
                 isActive: true,
+                trustScore: true,
                 balance: true,
                 _count: {
                     select: {
@@ -81,6 +90,22 @@ export class AdminService {
             isActive ? 'ACTIVATE_USER' : 'BAN_USER',
             'user',
             { userId, isActive },
+        );
+
+        return user;
+    }
+
+    async updateTrustScore(userId: number, score: number, adminId: number) {
+        const user = await this.prisma.user.update({
+            where: { id: userId },
+            data: { trustScore: score },
+        });
+
+        await this.createAuditLog(
+            adminId,
+            'UPDATE_TRUST_SCORE',
+            'user',
+            { userId, score },
         );
 
         return user;
@@ -265,22 +290,84 @@ export class AdminService {
             throw new NotFoundException('Withdrawal not found');
         }
 
-        if (withdrawal.status !== WithdrawalStatus.PENDING) {
-            throw new BadRequestException('Withdrawal already processed');
+        if (withdrawal.status !== WithdrawalStatus.PENDING && withdrawal.status !== WithdrawalStatus.PAYOUT_FAILED) {
+            throw new BadRequestException('Withdrawal already processed or not eligible for retry');
+        }
+
+        // 1. Retry Locking Logic
+        if (withdrawal.lastAttemptAt) {
+            const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+            if (withdrawal.lastAttemptAt > fiveMinutesAgo) {
+                throw new BadRequestException('Please wait 5 minutes before retrying this payout to avoid double processing.');
+            }
+        }
+
+        // 2. Bank Details Validation
+        const bankDetails = withdrawal.bankDetails as any;
+        if (!bankDetails || !bankDetails.bankCode || !bankDetails.accountNumber) {
+            throw new BadRequestException('Invalid bank details structure.');
+        }
+
+        if (!isValidBankCode(bankDetails.bankCode)) {
+            throw new BadRequestException(`Invalid bank code: ${bankDetails.bankCode}. Must be one of: ${BILLPLZ_BANK_CODES.join(', ')}`);
+        }
+
+        if (!/^\d+$/.test(bankDetails.accountNumber)) {
+            throw new BadRequestException('Account number must contain only digits.');
         }
 
         if (withdrawal.freelancer.balance < withdrawal.amount) {
             throw new BadRequestException('Insufficient balance');
         }
 
-        // Update withdrawal status and user balance in a transaction
+        // 3. Initiate Billplz Payout
+        // Update lastAttemptAt first to lock it
+        await this.prisma.withdrawal.update({
+            where: { id: withdrawalId },
+            data: { lastAttemptAt: new Date() },
+        });
+
+        let payoutResult;
+        try {
+            // Amount in cents
+            const amountInCents = Math.round(Number(withdrawal.amount) * 100);
+
+            payoutResult = await this.billplzService.createPayout(
+                bankDetails.bankCode,
+                bankDetails.accountNumber,
+                amountInCents,
+                bankDetails.bankHolderName || withdrawal.freelancer.name,
+                `WD-${withdrawal.id}`, // Reference ID
+            );
+
+            this.logger.log(`Payout initiated: ${payoutResult.id}`);
+
+        } catch (error) {
+            this.logger.error(`Payout Failed for WD-${withdrawal.id}: ${error.message}`);
+
+            // On Failure: Update status to FAILED, Save Error (DO NOT DEDUCT BALANCE)
+            await this.prisma.withdrawal.update({
+                where: { id: withdrawalId },
+                data: {
+                    status: WithdrawalStatus.PAYOUT_FAILED,
+                    payoutError: error.message || 'Unknown Billplz Error',
+                },
+            });
+
+            // Re-throw to inform Admin
+            throw new BadRequestException(`Payout failed: ${error.message}`);
+        }
+
+        // 4. Handle Success -> Deduct Balance & Approve
         const result = await this.prisma.$transaction(async (tx) => {
             const updatedWithdrawal = await tx.withdrawal.update({
                 where: { id: withdrawalId },
                 data: {
-                    status: WithdrawalStatus.APPROVED,
+                    status: WithdrawalStatus.APPROVED, // Or PAYOUT_PROCESSING if we want to wait for webhook
                     processedAt: new Date(),
                     processedById: adminId,
+                    billplzPayoutId: payoutResult.id,
+                    payoutError: null, // Clear previous errors
                 },
             });
 
@@ -300,7 +387,7 @@ export class AdminService {
             adminId,
             'APPROVE_WITHDRAWAL',
             'withdrawal',
-            { withdrawalId, amount: withdrawal.amount },
+            { withdrawalId, amount: withdrawal.amount, payoutId: payoutResult.id },
         );
 
         return result;
@@ -535,5 +622,113 @@ export class AdminService {
             newJobsLast30Days,
             activeUsers,
         };
+    }
+
+    async releasePayoutHold(jobId: number, adminId: number) {
+        const job = await this.prisma.job.findUnique({
+            where: { id: jobId },
+            include: { freelancer: true }
+        });
+
+        if (!job) {
+            throw new NotFoundException('Job not found');
+        }
+
+        // Allow releasing hold or retrying failed payouts
+        const allowedStatuses = ['PAYOUT_HOLD', 'PAYOUT_FAILED', 'PAYOUT_FAILED_MANUAL', 'COMPLETED', 'PAYOUT_PROCESSING'];
+        if (!allowedStatuses.includes(job.status)) {
+            throw new BadRequestException(`Job status ${job.status} is not eligible for payout release`);
+        }
+
+        // 1. Auto-Fix Trust Score if it's low
+        if (job.freelancer.trustScore < 80) {
+            this.logger.log(`Auto-fixing trust score for freelancer ${job.freelancerId} to allow payout`);
+            await this.prisma.user.update({
+                where: { id: job.freelancerId },
+                data: { trustScore: 100 }
+            });
+        }
+
+        // 2. Force status to COMPLETED to allow processJobPayout to pick it up cleanly
+        // processJobPayout expects COMPLETED or PAYOUT_FAILED.
+        // If it's PAYOUT_HOLD, processJobPayout might not look for it specifically unless we change query there, 
+        // OR we just change status here to COMPLETED/PAYOUT_FAILED.
+        // Let's set to PAYOUT_FAILED to be safe (as it's a retry state).
+        await this.prisma.job.update({
+            where: { id: jobId },
+            data: {
+                status: 'PAYOUT_FAILED', // Set to a state that processJobPayout accepts for retry
+                payoutHoldReason: null, // Clear hold reason
+            }
+        });
+
+        // 3. Trigger Payout
+        const result = await this.paymentsService.processJobPayout(jobId);
+
+        await this.createAuditLog(
+            adminId,
+            'RELEASE_PAYOUT_HOLD',
+            'job',
+            { jobId, originalStatus: job.status, result }
+        );
+
+        return result;
+    }
+    async markJobPaidManually(jobId: number, adminId: number, notes: string) {
+        const job = await this.prisma.job.findUnique({
+            where: { id: jobId },
+            include: { freelancer: true }
+        });
+
+        if (!job) {
+            throw new NotFoundException('Job not found');
+        }
+
+        // 1. Update Job Status
+        const updatedJob = await this.prisma.job.update({
+            where: { id: jobId },
+            data: {
+                status: 'PAID_OUT',
+                payoutHoldReason: null,
+                billplzPayoutId: `MANUAL-BY-ADMIN-${adminId}`,
+            }
+        });
+
+        // 2. Adjust Balance (Move from Pending to "Withdrawn" effectively)
+        // If money was in Pending Balance, we decrement it.
+        if (job.freelancerPayoutAmount && job.freelancerPayoutAmount.toNumber() > 0) {
+            await this.prisma.user.update({
+                where: { id: job.freelancerId },
+                data: {
+                    pendingBalance: { decrement: job.freelancerPayoutAmount },
+                }
+            });
+        }
+
+        // 3. Create Withdrawal Record for Audit
+        await this.prisma.withdrawal.create({
+            data: {
+                freelancerId: job.freelancerId,
+                amount: job.freelancerPayoutAmount ?? 0,
+                status: 'APPROVED',
+                bankDetails: {
+                    bankCode: job.freelancer.bankCode,
+                    bankAccount: job.freelancer.bankAccount,
+                    note: 'Marked as Paid Manually by Admin'
+                },
+                processedAt: new Date(),
+                processedById: adminId,
+                billplzPayoutId: 'MANUAL',
+            }
+        });
+
+        await this.createAuditLog(
+            adminId,
+            'MARK_JOB_PAID_MANUAL',
+            'job',
+            { jobId, notes }
+        );
+
+        return updatedJob;
     }
 }

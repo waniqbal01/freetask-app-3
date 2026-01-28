@@ -519,31 +519,18 @@ class _JobListScreenState extends State<JobListScreen> {
 
     if (isClientView && role == 'CLIENT' && isClientOwner) {
       final List<Widget> actions = <Widget>[];
+      /*
+      // Removed Cancel Button as requested
       if ({JobStatus.pending, JobStatus.accepted, JobStatus.inProgress}
           .contains(job.status)) {
         actions.add(
-          FTButton(
+           FTButton(
             label: AppStrings.jobActionCancel,
-            isLoading: _isProcessing,
-            onPressed: () async {
-              final confirmed = await showConfirmationDialog(
-                context: context,
-                title: AppStrings.confirmCancelJobTitle,
-                message: AppStrings.confirmCancelJobMessage,
-                confirmText: AppStrings.jobActionCancel,
-                isDangerous: true,
-              );
-              if (confirmed != true) return;
-              await _handleAction(
-                () => jobsRepository.cancelJob(job.id),
-                AppStrings.successJobCancelled,
-              );
-            },
-            expanded: false,
-            size: FTButtonSize.small,
-          ),
+             // ...
+           ),
         );
       }
+      */
 
       if (actions.isNotEmpty) {
         return Align(

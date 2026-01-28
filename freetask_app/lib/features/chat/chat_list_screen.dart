@@ -45,14 +45,6 @@ class ChatListScreen extends ConsumerWidget {
           final subtitle = isClient
               ? 'Chat akan muncul apabila anda menempah servis atau memulakan job dengan freelancer.'
               : 'Chat akan muncul apabila client menempah servis anda atau memberikan job kepada anda.';
-          final primaryCta = isClient
-              ? 'Pergi ke Home untuk cari servis'
-              : 'Pergi ke Job Board';
-          final primaryAction =
-              isClient ? () => context.go('/home') : () => context.go('/jobs');
-          final secondaryLabel =
-              isClient ? 'Lihat servis' : 'Pergi ke Servis saya';
-          void secondaryAction() => context.go('/home');
 
           return Scaffold(
             appBar: AppBar(
@@ -79,27 +71,6 @@ class ChatListScreen extends ConsumerWidget {
                           ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  ElevatedButton.icon(
-                    onPressed: primaryAction,
-                    icon: const Icon(Icons.search),
-                    label: Text(primaryCta),
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: secondaryAction,
-                    icon:
-                        Icon(isClient ? Icons.store_mall_directory : Icons.add),
-                    label: Text(secondaryLabel),
-                  ),
-                  TextButton(
-                    onPressed: () => ref.refresh(
-                      chatThreadsProviderWithQuery(
-                        (limit: limitQuery, offset: offsetQuery),
-                      ),
-                    ),
-                    child: const Text('Muat Semula'),
-                  )
                 ],
               ),
             ),

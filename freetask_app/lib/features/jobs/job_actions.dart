@@ -19,6 +19,15 @@ class JobActions {
         }
         break;
 
+      case JobStatus.awaitingPayment:
+        // Client can pay or cancel before payment
+        if (role == 'CLIENT') {
+          actions.add(JobAction.pay); // NEW action for payment
+          actions.add(JobAction.cancel);
+        }
+        // Freelancer can't do anything - waiting for payment
+        break;
+
       case JobStatus.accepted:
         if (role == 'FREELANCER') {
           actions.add(JobAction.start);
@@ -65,7 +74,11 @@ class JobActions {
 
       case JobStatus.cancelled:
       case JobStatus.disputed:
-        // No actions available for cancelled or disputed jobs
+      case JobStatus.payoutProcessing:
+      case JobStatus.paidOut:
+      case JobStatus.payoutFailed:
+      case JobStatus.payoutHold:
+        // No actions available for these states
         break;
     }
 
@@ -94,6 +107,7 @@ enum JobAction {
   submit,
   confirm,
   requestRevision,
+  pay, // NEW: for AWAITING_PAYMENT status
 }
 
 /// Extension to get human-readable labels for job actions
@@ -118,6 +132,8 @@ extension JobActionLabel on JobAction {
         return 'Confirm Completion';
       case JobAction.requestRevision:
         return 'Request Revision';
+      case JobAction.pay:
+        return 'Pay Now';
     }
   }
 
@@ -140,7 +156,9 @@ extension JobActionLabel on JobAction {
       case JobAction.confirm:
         return 'Sahkan Siap';
       case JobAction.requestRevision:
-        return 'Minta Semakan';
+        return 'Mint Semakan';
+      case JobAction.pay:
+        return 'Bayar Sekarang';
     }
   }
 }

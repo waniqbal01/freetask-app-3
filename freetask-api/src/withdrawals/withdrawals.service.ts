@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserRole, WithdrawalStatus } from '@prisma/client';
 import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
+import { isValidBankCode, BILLPLZ_BANK_CODES } from '../payments/billplz.constants';
 
 @Injectable()
 export class WithdrawalsService {
@@ -28,6 +29,16 @@ export class WithdrawalsService {
             throw new BadRequestException(
                 `Insufficient balance. Available: ${user.balance}, Requested: ${dto.amount}`
             );
+        }
+
+        // Validate Bank Details
+        const { bankDetails } = dto;
+        if (!bankDetails.bankCode || !bankDetails.accountNumber) {
+            throw new BadRequestException('Incomplete bank details');
+        }
+
+        if (!isValidBankCode(bankDetails.bankCode)) {
+            throw new BadRequestException(`Invalid bank code. Must be one of: ${BILLPLZ_BANK_CODES.join(', ')}`);
         }
 
         // Create withdrawal request

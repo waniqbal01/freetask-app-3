@@ -17,6 +17,10 @@ import 'widgets/job_status_badge.dart';
 import 'widgets/submit_work_dialog.dart';
 import 'widgets/attachment_viewer.dart';
 import '../reviews/reviews_repository.dart';
+import '../../services/payment_service.dart';
+import '../../models/payment.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../services/http_client.dart';
 
 bool resolveClientViewMode({bool? navigationFlag, String? role}) {
   if (navigationFlag != null) {
@@ -49,6 +53,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   bool _isLoading = false;
   bool _isProcessing = false;
   bool _isEscrowLoading = false;
+  bool _isPaymentProcessing = false;
   String? _errorMessage;
   String? _escrowError;
   EscrowRecord? _escrow;
@@ -56,10 +61,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   String? _userId;
   bool _isUserLoading = true;
   late bool _isClientView;
+  late PaymentService _paymentService;
+  Payment? _payment;
+  bool _isPaymentLoading = false;
 
   @override
   void initState() {
     super.initState();
+    final httpClient = HttpClient();
+    _paymentService = PaymentService(httpClient.dio);
     _isClientView = resolveClientViewMode(
       navigationFlag: widget.isClientView,
       role: null,
@@ -138,6 +148,31 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
   }
 
+  Future<void> _fetchPayment() async {
+    setState(() {
+      _isPaymentLoading = true;
+    });
+
+    try {
+      final jobIdInt = int.tryParse(widget.jobId);
+      if (jobIdInt != null) {
+        final payment = await _paymentService.getPaymentInfo(jobIdInt);
+        if (!mounted) return;
+        setState(() {
+          _payment = payment;
+        });
+      }
+    } catch (error) {
+      // Payment might not exist, which is okay
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPaymentLoading = false;
+        });
+      }
+    }
+  }
+
   Future<void> _fetchJob() async {
     setState(() {
       _isLoading = true;
@@ -156,6 +191,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         _job = job;
       });
       await _fetchEscrow();
+      await _fetchPayment();
     } on DioException catch (error) {
       if (!mounted) return;
       final status = error.response?.statusCode;
@@ -475,6 +511,93 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
   }
 
+  Future<void> _handlePayNow(Job job) async {
+    setState(() {
+      _isPaymentProcessing = true;
+    });
+
+    try {
+      final jobIdInt = int.tryParse(job.id);
+      if (jobIdInt == null) {
+        throw Exception('Invalid job ID');
+      }
+
+      final paymentUrl =
+          await _paymentService.createPayment(jobIdInt, 'billplz');
+
+      if (!mounted) return;
+
+      // Launch Billplz payment page
+      final uri = Uri.parse(paymentUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Diarahkan ke halaman pembayaran...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        throw Exception('Could not launch payment URL');
+      }
+    } catch (error) {
+      if (!mounted) return;
+      showErrorSnackBar(context, 'Gagal memproses bayaran: $error');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPaymentProcessing = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleRetryPayment(Job job) async {
+    setState(() {
+      _isPaymentProcessing = true;
+    });
+
+    try {
+      final jobIdInt = int.tryParse(job.id);
+      if (jobIdInt == null) {
+        throw Exception('Invalid job ID');
+      }
+
+      final paymentUrl = await _paymentService.retryPayment(jobIdInt);
+
+      if (!mounted) return;
+
+      // Launch Billplz payment page
+      final uri = Uri.parse(paymentUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Redirecting to payment page...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        throw Exception('Could not launch payment URL');
+      }
+    } catch (error) {
+      if (!mounted) return;
+      showErrorSnackBar(context, 'Failed to retry payment: $error');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPaymentProcessing = false;
+        });
+        // Refresh payment info
+        await _fetchPayment();
+      }
+    }
+  }
+
   String _formatDate(DateTime? date) {
     if (date == null) {
       return 'Tarikh tidak tersedia';
@@ -596,6 +719,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
 
     if (role == 'CLIENT' && isJobClient) {
+      // Add "Pay Now" button for AWAITING_PAYMENT jobs
+      if (job.status == JobStatus.awaitingPayment) {
+        return _ActionBarButton(
+          label: 'Bayar Sekarang',
+          isLoading: _isPaymentProcessing,
+          onPressed: () => _handlePayNow(job),
+          variant: FTButtonVariant.filled,
+        );
+      }
+      /*
       if (canClientCancel(job.status)) {
         return _ActionBarButton(
           label: 'Batalkan Job',
@@ -608,6 +741,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           variant: FTButtonVariant.outline,
         );
       }
+      */
       if (job.status == JobStatus.inReview) {
         return _ActionBarDualButton(
           primaryLabel: 'Terima & Selesai',
@@ -869,6 +1003,71 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 (job.submissionAttachments?.isNotEmpty ?? false))
               const SizedBox(height: 12),
 
+            // Payment Information Section
+            if (_payment != null || _isPaymentLoading)
+              _buildInfoCard(
+                title: 'Payment Information',
+                child: _isPaymentLoading
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDetailRow(
+                            Icons.payment,
+                            'Status',
+                            _payment!.status,
+                          ),
+                          if (_payment!.paymentMethod != null)
+                            _buildDetailRow(
+                              Icons.credit_card,
+                              'Payment Method',
+                              _payment!.paymentMethod!,
+                            ),
+                          if (_payment!.transactionId != null)
+                            _buildDetailRow(
+                              Icons.receipt_long,
+                              'Transaction ID',
+                              _payment!.transactionId!,
+                            ),
+                          if (_payment!.isFailed) ...[
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: _isPaymentProcessing
+                                    ? null
+                                    : () => _handleRetryPayment(job),
+                                icon: _isPaymentProcessing
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Icon(Icons.refresh),
+                                label: Text(_isPaymentProcessing
+                                    ? 'Processing...'
+                                    : 'Retry Payment'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange,
+                                  foregroundColor: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+              ),
+            if (_payment != null || _isPaymentLoading)
+              const SizedBox(height: 12),
+
             // Escrow Section
             _buildInfoCard(
               title: 'Escrow / Pembayaran',
@@ -1017,7 +1216,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       ),
       bottomNavigationBar: () {
         final bar = _buildBottomActionBar(job);
-        print('JobDetailScreen: Bottom bar widget: $bar');
+        debugPrint('JobDetailScreen: Bottom bar widget: $bar');
         return bar;
       }(),
     );

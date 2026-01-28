@@ -270,6 +270,10 @@ fly deploy
 | `NODE_ENV` | Environment mode | No | `development` / `production` |
 | `ALLOWED_ORIGINS` | CORS allowed origins (comma-separated) | Yes (prod) | `https://app.freetask.com` |
 | `TRUST_PROXY` | Enable proxy headers | No | `true` |
+| `BILLPLZ_API_KEY` | Billplz Secret Key | Yes | `(get from dashboard)` |
+| `BILLPLZ_COLLECTION_ID` | Billplz Collection ID | Yes | `(get from dashboard)` |
+| `BILLPLZ_X_SIGNATURE_KEY`| Billplz X-Signature Key | Yes | `(get from dashboard)` |
+| `BILLPLZ_SANDBOX` | Sandbox Mode | No | `true` / `false` |
 
 ---
 
