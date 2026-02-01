@@ -5,6 +5,8 @@ import '../../core/utils/url_utils.dart';
 import '../reviews/reviews_repository.dart';
 import 'users_repository.dart';
 
+import 'package:flutter/services.dart';
+
 class PublicProfileScreen extends StatefulWidget {
   const PublicProfileScreen({super.key, required this.userId});
 
@@ -35,11 +37,39 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     return (user: user, reviews: reviews);
   }
 
+  void _copyProfileLink() {
+    // Construct the deep link
+    // Scheme: freetask://app/users/{userId}
+    final deepLink = 'freetask://app/users/${widget.userId}';
+
+    // We can also add a message
+    // Note: Since we don't have a dynamic link service, we provide raw links.
+    final message = 'Lihat profil saya di FreeTask!\n\n'
+        'Buka di aplikasi: $deepLink\n\n'
+        'Jika belum ada aplikasi, muat turun di sini: https://play.google.com/store/apps/details?id=com.freetask.apps';
+
+    Clipboard.setData(ClipboardData(text: message));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Pautan profil disalin! Boleh dikongsi dengan rakan.'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profil Pengguna'),
+        actions: [
+          IconButton(
+            onPressed: _copyProfileLink,
+            icon: const Icon(Icons.share),
+            tooltip: 'Kongsi Profil',
+          ),
+        ],
       ),
       body: FutureBuilder<({Map<String, dynamic> user, List<Review> reviews})>(
         future: _dataFuture,

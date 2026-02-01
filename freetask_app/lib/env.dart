@@ -4,10 +4,10 @@ class Env {
     const envOverride = String.fromEnvironment('API_BASE_URL');
     if (envOverride.isNotEmpty) return envOverride;
 
-    // Live Render Backend
-    // return 'https://freetask-backend.onrender.com';
+    // Live Render Backend (Updated to match actual Render service URL)
+    return 'https://freetask-api.onrender.com';
 
     // Local Dev
-    return 'http://localhost:4000';
+    // return 'http://localhost:4000';
   }
 }

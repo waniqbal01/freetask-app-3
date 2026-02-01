@@ -7,6 +7,8 @@ import '../../core/utils/error_utils.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/section_card.dart';
 import 'auth_redirect.dart';
+import '../../services/http_client.dart';
+import '../../env.dart';
 import 'auth_repository.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -47,53 +49,57 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordController.text;
 
     try {
-      final success = await authRepository.login(
-        email,
-        password,
-      );
+      // Attempt initial login
+      await _performLogin(email, password);
+    } catch (error) {
+      bool isConnectionError = false;
+      if (error is DioException) {
+        final type = error.type;
+        isConnectionError = type == DioExceptionType.connectionTimeout ||
+            type == DioExceptionType.sendTimeout ||
+            type == DioExceptionType.receiveTimeout ||
+            type == DioExceptionType.connectionError ||
+            type == DioExceptionType.unknown;
+      }
 
-      if (success && mounted) {
-        final user = authRepository.currentUser;
-        if (user != null) {
-          if (widget.returnTo != null && widget.returnTo!.isNotEmpty) {
-            context.go(widget.returnTo!);
+      if (isConnectionError && mounted) {
+        // SMART WAKE-UP LOGIC
+        setState(() {
+          _errorMessage =
+              'Server sedang "tidur". Sedang membangunkan server (ambil masa ~1 minit)...';
+        });
+
+        // Retry loop (Max 20 attempts * 5s = 100s)
+        bool wokeUp = false;
+        for (int i = 0; i < 20; i++) {
+          if (!mounted) return;
+
+          await Future.delayed(const Duration(seconds: 5));
+
+          // Check if server is up
+          final isUp = await HttpClient().wakeUpServer();
+          if (isUp) {
+            wokeUp = true;
+            break;
+          }
+        }
+
+        if (wokeUp && mounted) {
+          setState(() {
+            _errorMessage = 'Server online! Sedang log masuk...';
+          });
+          try {
+            await _performLogin(email, password);
+            return; // Success handled inside _performLogin
+          } catch (retryError) {
+            if (mounted) _handleLoginError(retryError);
             return;
           }
-          // UX-A-08: Admin redirect after login
-          if (user.role.toUpperCase() == 'ADMIN') {
-            context.go('/admin');
-          } else {
-            goToRoleHome(context, user.role);
-          }
-        } else {
-          context.go('/home');
         }
-      } else if (mounted) {
-        setState(() {
-          _errorMessage = 'Email atau kata laluan tidak sah. Sila cuba lagi.';
-        });
-        showErrorSnackBar(
-            context, 'Email atau kata laluan tidak sah. Sila cuba lagi.');
       }
-    } catch (error) {
-      if (error is DioException) {
-        final message = resolveDioErrorMessage(error);
-        if (mounted) {
-          setState(() {
-            _errorMessage = error.response?.statusCode == 401 ||
-                    message.toLowerCase().contains('unauthorized')
-                ? 'Email atau kata laluan tidak sah. Sila cuba lagi.'
-                : message;
-          });
-          showErrorSnackBar(context, message);
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _errorMessage = 'Ralat: $error';
-          });
-          showErrorSnackBar(context, 'Ralat: $error');
-        }
+
+      if (mounted) {
+        _handleLoginError(error);
       }
     } finally {
       if (mounted) {
@@ -101,6 +107,50 @@ class _LoginScreenState extends State<LoginScreen> {
           _isSubmitting = false;
         });
       }
+    }
+  }
+
+  Future<void> _performLogin(String email, String password) async {
+    final success = await authRepository.login(email, password);
+
+    if (success && mounted) {
+      final user = authRepository.currentUser;
+      if (user != null) {
+        if (widget.returnTo != null && widget.returnTo!.isNotEmpty) {
+          context.go(widget.returnTo!);
+          return;
+        }
+        if (user.role.toUpperCase() == 'ADMIN') {
+          context.go('/admin');
+        } else {
+          goToRoleHome(context, user.role);
+        }
+      } else {
+        context.go('/home');
+      }
+    } else if (mounted) {
+      throw DioException(
+          requestOptions: RequestOptions(path: '/login'),
+          response: Response(
+              requestOptions: RequestOptions(path: '/login'), statusCode: 401));
+    }
+  }
+
+  void _handleLoginError(Object error) {
+    if (error is DioException) {
+      final message = resolveDioErrorMessage(error);
+      setState(() {
+        _errorMessage = error.response?.statusCode == 401 ||
+                message.toLowerCase().contains('unauthorized')
+            ? 'Email atau kata laluan tidak sah. Sila cuba lagi.'
+            : message;
+      });
+      if (_errorMessage != null) showErrorSnackBar(context, _errorMessage!);
+    } else {
+      setState(() {
+        _errorMessage = 'Ralat: $error';
+      });
+      showErrorSnackBar(context, 'Ralat: $error');
     }
   }
 
@@ -125,13 +175,35 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: AppSpacing.s8),
-                    Text(
-                      'Selamat kembali 👋',
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.neutral900,
-                              ),
+                    GestureDetector(
+                      onLongPress: () async {
+                        if (!mounted) return;
+                        // Backup/Debug feature: Reset to default URL
+                        final messenger = ScaffoldMessenger.of(context);
+                        messenger.showSnackBar(const SnackBar(
+                            content: Text('Menetapkan semula server...'),
+                            duration: Duration(seconds: 1)));
+
+                        await HttpClient().updateBaseUrl(Env.defaultApiBaseUrl);
+
+                        if (mounted) {
+                          messenger.hideCurrentSnackBar();
+                          messenger.showSnackBar(const SnackBar(
+                              content:
+                                  Text('Server telah ditetapkan ke URL rasmi.'),
+                              backgroundColor: Colors.green));
+                        }
+                      },
+                      child: Text(
+                        'Selamat kembali 👋',
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.neutral900,
+                            ),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(

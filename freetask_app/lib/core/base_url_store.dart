@@ -1,16 +1,22 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import 'env.dart';
 import 'storage/storage.dart';
 
 class BaseUrlStore {
-  BaseUrlStore({AppStorage? storage})
-      : _storage = storage ?? appStorage;
+  BaseUrlStore({AppStorage? storage}) : _storage = storage ?? appStorage;
 
   static const _key = 'api_base_url_override';
   final AppStorage _storage;
 
   Future<String> readBaseUrl() async {
+    // strict-enforcement: Always use production Env URL in release mode
+    if (kReleaseMode) {
+      return Env.defaultApiBaseUrl;
+    }
+
     final stored = (await _storage.read(_key))?.trim();
     if (stored != null && stored.isNotEmpty) {
       return stored;
@@ -29,7 +35,8 @@ class BaseUrlStore {
 }
 
 class BaseUrlManager {
-  BaseUrlManager({AppStorage? storage}) : _store = BaseUrlStore(storage: storage);
+  BaseUrlManager({AppStorage? storage})
+      : _store = BaseUrlStore(storage: storage);
 
   final BaseUrlStore _store;
   String? _cached;

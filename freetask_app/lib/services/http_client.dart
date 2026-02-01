@@ -54,7 +54,11 @@ class HttpClient {
 
     completer.complete();
     _switchingBaseFuture = null;
-    banner?.close();
+    try {
+      banner?.close();
+    } catch (_) {
+      // Ignore if snackbar is already closed or replaced
+    }
   }
 
   Future<String> currentBaseUrl() async {
@@ -372,4 +376,24 @@ class HttpClient {
   bool _sessionHandled = false;
   Future<void>? _switchingBaseFuture;
   final List<CancelToken> _inflightTokens = <CancelToken>[];
+
+  Future<bool> wakeUpServer() async {
+    try {
+      final baseUrl = await _baseUrlManager.getBaseUrl();
+      // Use a short timeout for the ping
+      final options = BaseOptions(
+        baseUrl: baseUrl,
+        connectTimeout: const Duration(seconds: 5),
+        receiveTimeout: const Duration(seconds: 5),
+        sendTimeout: const Duration(seconds: 5),
+      );
+      final pingDio = Dio(options);
+
+      // Ping the health check endpoint or root
+      await pingDio.get('/');
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 }
