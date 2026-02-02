@@ -148,8 +148,15 @@ async function bootstrap() {
     console.log(`🚀 Application running at: ${await app.getUrl()}`);
     console.log('Allowed Origins:', configuredOrigins);
 
+
   } catch (error) {
-    console.error('❌ Failed to bootstrap application.', error);
+    logger.error('❌ Failed to bootstrap application.');
+    logger.error('Error details:', error);
+    if (error instanceof Error) {
+      logger.error('Error message:', error.message);
+      logger.error('Error stack:', error.stack);
+    }
+    console.error('FATAL ERROR during bootstrap:', error);
     process.exit(1);
   }
 }
