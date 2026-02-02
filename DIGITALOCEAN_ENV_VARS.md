@@ -30,15 +30,17 @@ JWT_REFRESH_EXPIRES_IN=7d
 ```
 
 ## Billplz Configuration
-**⚠️ Mark BILLPLZ_API_KEY and BILLPLZ_X_SIGNATURE as ENCRYPTED**
+**⚠️ Mark BILLPLZ_API_KEY and BILLPLZ_X_SIGNATURE_KEY as ENCRYPTED**
 
 You need to get these from your current Render deployment or Billplz dashboard:
 
 ```
 BILLPLZ_API_KEY=[YOUR_BILLPLZ_API_KEY]
 BILLPLZ_COLLECTION_ID=[YOUR_COLLECTION_ID]
-BILLPLZ_X_SIGNATURE=[YOUR_X_SIGNATURE]
+BILLPLZ_X_SIGNATURE_KEY=[YOUR_X_SIGNATURE]
 ```
+
+**NOTE**: Variable name is `BILLPLZ_X_SIGNATURE_KEY` (includes `_KEY` suffix)
 
 ### How to Get Billplz Credentials:
 

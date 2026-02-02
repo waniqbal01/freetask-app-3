@@ -93,12 +93,14 @@ You need to get these from Render:
    JWT_REFRESH_EXPIRES_IN=7d
    ```
 
-   **Billplz (from Render - ENCRYPT API_KEY and X_SIGNATURE ✅):**
+   **Billplz (from Render - ENCRYPT API_KEY and X_SIGNATURE_KEY ✅):**
    ```
    BILLPLZ_API_KEY=[paste from Render]
    BILLPLZ_COLLECTION_ID=[paste from Render]
-   BILLPLZ_X_SIGNATURE=[paste from Render]
+   BILLPLZ_X_SIGNATURE_KEY=[paste from Render]
    ```
+   
+   **IMPORTANT**: Variable name is `BILLPLZ_X_SIGNATURE_KEY` (with `_KEY` suffix!)
 
 6. **Select Region**: Singapore 🇸🇬
 

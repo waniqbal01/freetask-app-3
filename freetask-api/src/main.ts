@@ -142,7 +142,8 @@ async function bootstrap() {
     // Start server
     // ------------------------------
     const port = process.env.PORT || 4000;
-    await app.listen(port);
+    // Bind to 0.0.0.0 for container environments (DigitalOcean, Docker, etc.)
+    await app.listen(port, '0.0.0.0');
 
     console.log(`🚀 Application running at: ${await app.getUrl()}`);
     console.log('Allowed Origins:', configuredOrigins);
