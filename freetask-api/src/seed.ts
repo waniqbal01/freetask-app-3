@@ -169,7 +169,7 @@ async function main() {
     upsertJob(
       'Landing Page Build',
       'Simple responsive landing page.',
-      JobStatus.ACCEPTED,
+      JobStatus.AWAITING_PAYMENT, // Changed from ACCEPTED which doesn't exist
       750,
       services[1].id,
       clients[1].id,
@@ -187,7 +187,7 @@ async function main() {
     upsertJob(
       'Social Campaign',
       'Two-week campaign management.',
-      JobStatus.CANCELLED,
+      JobStatus.CANCELED, // Fixed typo: CANCELLED -> CANCELED
       280,
       services[3].id,
       clients[0].id,
@@ -205,7 +205,7 @@ async function main() {
     upsertJob(
       'Logo tweaks round',
       'Rejected after initial consultation.',
-      JobStatus.REJECTED,
+      JobStatus.CANCELED, // Changed from REJECTED which doesn't exist
       150,
       services[0].id,
       clients[1].id,
@@ -224,7 +224,7 @@ async function main() {
     upsertJob(
       'Brand identity package',
       'Admin review needed - payment held.',
-      JobStatus.ACCEPTED,
+      JobStatus.AWAITING_PAYMENT, // Changed from ACCEPTED which doesn't exist
       850,
       services[0].id,
       clients[1].id,

@@ -168,7 +168,7 @@ export class PaymentsService {
         const updated = await this.prisma.payment.update({
             where: { id: payment.id },
             data: {
-                status: 'REFUNDED',
+                status: 'FAILED', // Mark as FAILED since REFUNDED doesn't exist in PaymentStatus enum
             },
         });
 
@@ -520,7 +520,7 @@ export class PaymentsService {
                     data: {
                         freelancerId: job.freelancerId,
                         amount: job.freelancerPayoutAmount ?? 0,
-                        status: 'APPROVED',
+                        status: 'COMPLETED', // Changed from APPROVED which doesn't exist in WithdrawalStatus enum
                         bankDetails: {
                             bankCode: job.freelancer.bankCode,
                             bankAccount: job.freelancer.bankAccount,

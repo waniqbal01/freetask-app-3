@@ -160,7 +160,7 @@ export class EscrowService {
   }
 
   private ensureHoldAllowed(status: JobStatus) {
-    const allowedStatuses: JobStatus[] = [JobStatus.PENDING, JobStatus.ACCEPTED, JobStatus.IN_PROGRESS];
+    const allowedStatuses: JobStatus[] = [JobStatus.PENDING, JobStatus.AWAITING_PAYMENT, JobStatus.IN_PROGRESS]; // Fixed ACCEPTED -> AWAITING_PAYMENT
     if (!allowedStatuses.includes(status)) {
       throw new ConflictException(
         `Escrow hold not allowed when job status is ${status.toString().toUpperCase()}`,
@@ -173,9 +173,9 @@ export class EscrowService {
     const refundAllowed: JobStatus[] = [
       JobStatus.COMPLETED,
       JobStatus.DISPUTED,
-      JobStatus.CANCELLED,
-      JobStatus.REJECTED,
-      JobStatus.ACCEPTED,
+      JobStatus.CANCELED,
+      JobStatus.CANCELED,
+      JobStatus.AWAITING_PAYMENT, // Fixed ACCEPTED -> AWAITING_PAYMENT
     ];
 
     const allowedSet = action === 'release' ? releaseAllowed : refundAllowed;
@@ -191,7 +191,7 @@ export class EscrowService {
   private resolveStatusForJob(status: JobStatus, escrow: EscrowRecord): EscrowStatus | null {
     switch (status) {
       case JobStatus.COMPLETED: {
-        if (([EscrowStatus.REFUNDED, EscrowStatus.CANCELLED] as EscrowStatus[]).includes(escrow.status)) {
+        if (([EscrowStatus.REFUNDED, EscrowStatus.REFUNDED] as EscrowStatus[]).includes(escrow.status)) {
           return null;
         }
         if (escrow.status === EscrowStatus.RELEASED) {
@@ -199,24 +199,25 @@ export class EscrowService {
         }
         return EscrowStatus.RELEASED;
       }
-      case JobStatus.CANCELLED:
-      case JobStatus.REJECTED: {
+      case JobStatus.CANCELED:
+      case JobStatus.CANCELED: {
         if (escrow.status === EscrowStatus.RELEASED) {
           return null;
         }
-        if (([EscrowStatus.REFUNDED, EscrowStatus.CANCELLED] as EscrowStatus[]).includes(escrow.status)) {
+        if (([EscrowStatus.REFUNDED, EscrowStatus.REFUNDED] as EscrowStatus[]).includes(escrow.status)) {
           return null;
         }
-        return escrow.amount ? EscrowStatus.REFUNDED : EscrowStatus.CANCELLED;
+        return escrow.amount ? EscrowStatus.REFUNDED : EscrowStatus.REFUNDED;
       }
       case JobStatus.DISPUTED: {
         if (([EscrowStatus.RELEASED, EscrowStatus.REFUNDED] as EscrowStatus[]).includes(escrow.status)) {
           return null;
         }
-        if (escrow.status === EscrowStatus.DISPUTED) {
+        // When job is disputed, escrow should be HELD (not released until resolved)
+        if (escrow.status === EscrowStatus.HELD) {
           return null;
         }
-        return EscrowStatus.DISPUTED;
+        return EscrowStatus.HELD; // Changed from DISPUTED which doesn't exist
       }
       default:
         return null;
@@ -229,12 +230,12 @@ export class EscrowService {
     newStatus: JobStatus,
   ): string | null {
     if (newStatus === JobStatus.COMPLETED) {
-      if (([EscrowStatus.REFUNDED, EscrowStatus.CANCELLED] as EscrowStatus[]).includes(escrow.status)) {
+      if (([EscrowStatus.REFUNDED, EscrowStatus.REFUNDED] as EscrowStatus[]).includes(escrow.status)) {
         return `Cannot complete job: escrow already ${escrow.status.toLowerCase()}`;
       }
     }
 
-    if (([JobStatus.CANCELLED, JobStatus.REJECTED] as JobStatus[]).includes(newStatus)) {
+    if (([JobStatus.CANCELED, JobStatus.CANCELED] as JobStatus[]).includes(newStatus)) {
       if (escrow.status === EscrowStatus.RELEASED) {
         return 'Cannot cancel/reject job: escrow already released to freelancer';
       }

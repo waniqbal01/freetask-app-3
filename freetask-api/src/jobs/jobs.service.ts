@@ -304,7 +304,7 @@ export class JobsService {
   async rejectJob(id: number, userId: number, role: UserRole) {
     this.ensureRole(role, [UserRole.FREELANCER]);
     const job = await this.ensureJobForFreelancer(id, userId);
-    this.ensureValidTransition(job.status, JobStatus.REJECTED);
+    this.ensureValidTransition(job.status, JobStatus.CANCELED);
 
     // Notify Client
     await this.notificationsService.sendNotification({
@@ -314,14 +314,14 @@ export class JobsService {
       data: { type: 'job_rejected', jobId: job.id.toString() },
     });
 
-    return this.applyStatusUpdate(id, JobStatus.REJECTED);
+    return this.applyStatusUpdate(id, JobStatus.CANCELED);
   }
 
   async cancelJob(id: number, userId: number, role: UserRole) {
     this.ensureRole(role, [UserRole.CLIENT]);
     const job = await this.ensureJobForClient(id, userId);
-    this.ensureValidTransition(job.status, JobStatus.CANCELLED);
-    return this.applyStatusUpdate(id, JobStatus.CANCELLED);
+    this.ensureValidTransition(job.status, JobStatus.CANCELED);
+    return this.applyStatusUpdate(id, JobStatus.CANCELED);
   }
 
   // Deprecated direct complete by Freelancer (now goes through Submit -> Review)
@@ -367,7 +367,7 @@ export class JobsService {
   ) {
     this.ensureRole(role, [UserRole.FREELANCER]);
 
-    if (dto.status === JobStatus.CANCELLED) {
+    if (dto.status === JobStatus.CANCELED) {
       throw new ForbiddenException('Freelancers cannot cancel jobs');
     }
 
@@ -418,18 +418,17 @@ export class JobsService {
     const transitions: Record<JobStatus, JobStatus[]> = {
       [JobStatus.PENDING]: [
         JobStatus.AWAITING_PAYMENT, // Freelancer accept
-        JobStatus.REJECTED,          // Freelancer reject
-        JobStatus.CANCELLED,         // Client cancel
+        JobStatus.CANCELED,          // Freelancer reject
+        JobStatus.CANCELED,         // Client cancel
       ],
       [JobStatus.AWAITING_PAYMENT]: [
         JobStatus.IN_PROGRESS,       // Payment completed
-        JobStatus.CANCELLED,         // Client cancel before payment
+        JobStatus.CANCELED,         // Client cancel before payment
       ],
-      [JobStatus.ACCEPTED]: [JobStatus.IN_PROGRESS, JobStatus.CANCELLED], // Legacy compatibility
       [JobStatus.IN_PROGRESS]: [
         JobStatus.IN_REVIEW,         // Freelancer submit work
         JobStatus.COMPLETED,         // Legacy/Manual fallback
-        JobStatus.CANCELLED,
+        JobStatus.CANCELED,
         JobStatus.DISPUTED,
       ],
       [JobStatus.IN_REVIEW]: [
@@ -438,9 +437,9 @@ export class JobsService {
         JobStatus.DISPUTED,
       ],
       [JobStatus.COMPLETED]: [JobStatus.DISPUTED, JobStatus.PAYOUT_PROCESSING, JobStatus.PAYOUT_HOLD],
-      [JobStatus.CANCELLED]: [],
-      [JobStatus.REJECTED]: [JobStatus.CANCELLED],
-      [JobStatus.DISPUTED]: [JobStatus.COMPLETED, JobStatus.CANCELLED],
+      [JobStatus.CANCELED]: [],
+      [JobStatus.DISPUTED]: [JobStatus.COMPLETED, JobStatus.CANCELED],
+      [JobStatus.SUBMITTED]: [JobStatus.COMPLETED, JobStatus.IN_PROGRESS, JobStatus.DISPUTED], // Added missing SUBMITTED status
       [JobStatus.PAYOUT_PROCESSING]: [JobStatus.PAID_OUT, JobStatus.PAYOUT_FAILED],
       [JobStatus.PAID_OUT]: [],
       [JobStatus.PAYOUT_FAILED]: [JobStatus.PAYOUT_PROCESSING, JobStatus.PAYOUT_FAILED_MANUAL],

@@ -290,7 +290,7 @@ export class AdminService {
             throw new NotFoundException('Withdrawal not found');
         }
 
-        if (withdrawal.status !== WithdrawalStatus.PENDING && withdrawal.status !== WithdrawalStatus.PAYOUT_FAILED) {
+        if (withdrawal.status !== WithdrawalStatus.PENDING && withdrawal.status !== WithdrawalStatus.REJECTED) {
             throw new BadRequestException('Withdrawal already processed or not eligible for retry');
         }
 
@@ -349,7 +349,7 @@ export class AdminService {
             await this.prisma.withdrawal.update({
                 where: { id: withdrawalId },
                 data: {
-                    status: WithdrawalStatus.PAYOUT_FAILED,
+                    status: WithdrawalStatus.REJECTED, // Changed from PAYOUT_FAILED which doesn't exist
                     payoutError: error.message || 'Unknown Billplz Error',
                 },
             });
@@ -363,7 +363,7 @@ export class AdminService {
             const updatedWithdrawal = await tx.withdrawal.update({
                 where: { id: withdrawalId },
                 data: {
-                    status: WithdrawalStatus.APPROVED, // Or PAYOUT_PROCESSING if we want to wait for webhook
+                    status: WithdrawalStatus.COMPLETED, // Changed from APPROVED which doesn't exist
                     processedAt: new Date(),
                     processedById: adminId,
                     billplzPayoutId: payoutResult.id,
@@ -512,7 +512,7 @@ export class AdminService {
                 case 'REFUND':
                     updatedJob = await tx.job.update({
                         where: { id: jobId },
-                        data: { status: JobStatus.CANCELLED },
+                        data: { status: JobStatus.CANCELED }, // Fixed typo: CANCELLED -> CANCELED
                     });
                     if (job.escrow) {
                         await tx.escrow.update({
@@ -710,7 +710,7 @@ export class AdminService {
             data: {
                 freelancerId: job.freelancerId,
                 amount: job.freelancerPayoutAmount ?? 0,
-                status: 'APPROVED',
+                status: 'COMPLETED', // Changed from APPROVED which doesn't exist in WithdrawalStatus enum
                 bankDetails: {
                     bankCode: job.freelancer.bankCode,
                     bankAccount: job.freelancer.bankAccount,

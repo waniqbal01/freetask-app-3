@@ -61,7 +61,7 @@ describe('JobsService', () => {
 
     await expect(
       service.updateStatus(baseJob.id, baseJob.freelancerId, UserRole.FREELANCER, {
-        status: JobStatus.CANCELLED,
+        status: JobStatus.CANCELED,
       }),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(txJobUpdate).not.toHaveBeenCalled();
@@ -94,7 +94,7 @@ describe('JobsService', () => {
     (prisma.job.findUnique as jest.Mock).mockResolvedValue(baseJob);
     txJobUpdate.mockResolvedValue({
       ...jobIncludeResult,
-      status: JobStatus.CANCELLED,
+      status: JobStatus.CANCELED,
     });
 
     const result = await service.cancelJob(baseJob.id, baseJob.clientId, UserRole.CLIENT);
@@ -102,10 +102,10 @@ describe('JobsService', () => {
     expect(txJobUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: baseJob.id },
-        data: { status: JobStatus.CANCELLED, disputeReason: null },
+        data: { status: JobStatus.CANCELED, disputeReason: null },
       }),
     );
-    expect(result.status).toBe(JobStatus.CANCELLED);
+    expect(result.status).toBe(JobStatus.CANCELED);
   });
 
   it('rejects invalid transitions regardless of role', async () => {
@@ -162,14 +162,14 @@ describe('JobsService', () => {
 
   it('syncs escrow when cancelling a job', async () => {
     (prisma.job.findUnique as jest.Mock).mockResolvedValue(baseJob);
-    txJobUpdate.mockResolvedValue({ ...jobIncludeResult, status: JobStatus.CANCELLED });
+    txJobUpdate.mockResolvedValue({ ...jobIncludeResult, status: JobStatus.CANCELED });
     prisma.escrow.findUnique.mockResolvedValue({ id: 3, jobId: baseJob.id, status: 'PENDING' });
 
     await service.cancelJob(baseJob.id, baseJob.clientId, UserRole.CLIENT);
 
     expect(escrowService.syncOnJobStatus).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ id: baseJob.id, status: JobStatus.CANCELLED }),
+      expect.objectContaining({ id: baseJob.id, status: JobStatus.CANCELED }),
       expect.objectContaining({ id: 3, status: 'PENDING' }),
     );
   });

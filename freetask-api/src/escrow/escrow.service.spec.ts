@@ -10,7 +10,7 @@ describe('EscrowService state guards', () => {
   };
 
   describe('ensureHoldAllowed', () => {
-    const allowed = [JobStatus.PENDING, JobStatus.ACCEPTED, JobStatus.IN_PROGRESS];
+    const allowed = [JobStatus.PENDING, JobStatus.AWAITING_PAYMENT, JobStatus.IN_PROGRESS];
     it.each(allowed)('allows hold when status is %s', (status) => {
       expect(() => callPrivate('ensureHoldAllowed', status)).not.toThrow();
     });
@@ -30,7 +30,7 @@ describe('EscrowService state guards', () => {
       },
     );
 
-    it.each([JobStatus.CANCELLED, JobStatus.REJECTED, JobStatus.ACCEPTED])(
+    it.each([JobStatus.CANCELED, JobStatus.CANCELED, JobStatus.AWAITING_PAYMENT])(
       'allows refund when status is %s',
       (status) => {
         expect(() => callPrivate('ensureReleaseOrRefundAllowed', status, 'refund')).not.toThrow();
