@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/router.dart';
 import '../../core/storage/storage.dart';
+import '../../core/utils/url_utils.dart'; // Added for UrlUtils.resolveImageUrl()
 import '../../core/utils/error_utils.dart';
 import '../../features/auth/auth_repository.dart';
 import '../../services/http_client.dart';
@@ -407,7 +408,8 @@ class _UsersTabState extends State<_UsersTab>
                   child: ListTile(
                     leading: CircleAvatar(
                       backgroundImage: user['avatarUrl'] != null
-                          ? NetworkImage(user['avatarUrl'])
+                          ? NetworkImage(
+                              UrlUtils.resolveImageUrl(user['avatarUrl']))
                           : null,
                       child: user['avatarUrl'] == null
                           ? Text(user['name'][0].toUpperCase())
@@ -594,7 +596,7 @@ class _ServicesTabState extends State<_ServicesTab>
                           ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: Image.network(
-                              service['thumbnailUrl'],
+                              UrlUtils.resolveImageUrl(service['thumbnailUrl']),
                               height: 150,
                               width: double.infinity,
                               fit: BoxFit.cover,

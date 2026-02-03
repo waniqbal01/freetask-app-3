@@ -14,6 +14,11 @@ export class UsersController {
     return this.usersService.getProfile(userId);
   }
 
+  @Patch('me')
+  updateMe(@GetUser('userId') userId: number, @Body() dto: UpdateUserDto) {
+    return this.usersService.updateProfile(userId, dto);
+  }
+
   @Get('pending-bank-verification')
   // @Roles('ADMIN') // TODO: Uncomment when RolesGuard is ready/imported
   // @UseGuards(JwtAuthGuard, RolesGuard)
