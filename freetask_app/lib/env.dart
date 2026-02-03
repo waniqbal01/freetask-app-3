@@ -4,8 +4,8 @@ class Env {
     const envOverride = String.fromEnvironment('API_BASE_URL');
     if (envOverride.isNotEmpty) return envOverride;
 
-    // Live Render Backend (Updated to match actual Render service URL)
-    return 'https://freetask-api.onrender.com';
+    // Production DigitalOcean Backend
+    return 'https://freetask-app-cuyrz.ondigitalocean.app';
 
     // Local Dev
     // return 'http://localhost:4000';

@@ -105,9 +105,11 @@ class AuthRepository {
       _cachedUser = user;
       return user;
     } on DioException catch (error) {
+      // Don't auto-logout on 401 from /auth/me - let caller handle it
+      // This prevents logout loop after successful login
       if (error.response?.statusCode == 401) {
-        await logout();
-        return null;
+        _cachedUser = null; // Clear cache only
+        return null; // Return null, don't force logout
       }
       rethrow;
     }

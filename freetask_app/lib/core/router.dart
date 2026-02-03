@@ -80,9 +80,10 @@ final appRouter = GoRouter(
       if (returnTo != null && returnTo.isNotEmpty) {
         return returnTo;
       }
-      return '/home';
+      return '/home'; // Trust token existence, don't validate via API
     }
 
+    // Only validate admin role when accessing admin routes
     if (location.startsWith('/admin') && !isAdminUnauthorized) {
       try {
         final user = await authRepository.getCurrentUser();
@@ -98,17 +99,22 @@ final appRouter = GoRouter(
       }
     }
 
+    // Admin filter validation for all jobs
     if (location.startsWith('/jobs')) {
       final filter = state.uri.queryParameters['filter'];
       if (filter == 'all') {
-        final user = await authRepository.getCurrentUser();
-        if (user == null) {
-          return '/login';
-        }
-        if (user.role.toUpperCase() != 'ADMIN') {
-          notificationService.messengerKey.currentState?.showSnackBar(
-            const SnackBar(content: Text('Access denied')),
-          );
+        try {
+          final user = await authRepository.getCurrentUser();
+          if (user == null) {
+            return '/login';
+          }
+          if (user.role.toUpperCase() != 'ADMIN') {
+            notificationService.messengerKey.currentState?.showSnackBar(
+              const SnackBar(content: Text('Access denied')),
+            );
+            return '/jobs';
+          }
+        } catch (_) {
           return '/jobs';
         }
       }

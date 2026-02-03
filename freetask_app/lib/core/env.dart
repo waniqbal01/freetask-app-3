@@ -7,11 +7,8 @@ class Env {
     // Local development - backend running with npm run start:dev
     // return 'http://localhost:4000';
 
-    // Production Render Backend (WILL BE MIGRATED TO DIGITALOCEAN)
-    return 'https://freetask-api.onrender.com';
-
-    // TODO: After DigitalOcean deployment, update to:
-    // return 'https://your-app-name.ondigitalocean.app';
+    // Production DigitalOcean Backend
+    return 'https://freetask-app-cuyrz.ondigitalocean.app';
 
     // CUSTOM BUILD: Local Computer IP (for local testing)
     // return 'http://192.168.68.104:4000';

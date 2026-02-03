@@ -1,0 +1,92 @@
+﻿Testing database connections...
+
+Connecting to Render...
+Γ£à Render connection successful
+   Tables found: 16
+
+Connecting to Supabase...
+node : Γ¥î Supabase 
+connection failed: 
+Tenant or user not 
+found
+At line:1 char:1
++ node 
+test-connections.js 
+2>&1 | Out-File 
+-FilePath 
+test-output.txt -E ...
++ ~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~
+    + CategoryInfo    
+          : NotSpeci  
+  fied: (Γ¥î Supaba   
+ se co... user not    
+ found:String) []    
+, RemoteException
+    + FullyQualifiedE 
+   rrorId : NativeCo  
+  mmandError
+ 
+Full error: error: 
+Tenant or user not 
+found
+    at 
+parseErrorMessage (C:\
+Users\USER\freetask-ap
+p-3\node_modules\pg-pr
+otocol\dist\parser.js:
+305:11)
+    at 
+Parser.handlePacket (C
+:\Users\USER\freetask-
+app-3\node_modules\pg-
+protocol\dist\parser.j
+s:143:27)
+    at Parser.parse (C
+:\Users\USER\freetask-
+app-3\node_modules\pg-
+protocol\dist\parser.j
+s:37:38)
+    at 
+TLSSocket.<anonymous> 
+(C:\Users\USER\freetas
+k-app-3\node_modules\p
+g-protocol\dist\index.
+js:11:42)
+    at TLSSocket.emit 
+(node:events:518:28)
+    at addChunk (node:
+internal/streams/reada
+ble:561:12)
+    at readableAddChun
+kPushByteMode (node:in
+ternal/streams/readabl
+e:512:3)
+    at Readable.push (
+node:internal/streams/
+readable:392:5)
+    at 
+TLSWrap.onStreamRead (
+node:internal/stream_b
+ase_commons:189:23) {
+  length: 52,
+  severity: 'FATAL',
+  code: 'XX000',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: 
+undefined,
+  internalQuery: 
+undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: 
+undefined,
+  file: undefined,
+  line: undefined,
+  routine: undefined
+}

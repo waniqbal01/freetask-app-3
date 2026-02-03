@@ -4,7 +4,7 @@ import '../../features/auth/auth_repository.dart';
 
 class ApiClient {
   late final Dio dio;
-  String _baseUrl = 'https://freetask-api.onrender.com';
+  String _baseUrl = 'https://freetask-app-cuyrz.ondigitalocean.app';
 
   ApiClient() {
     dio = Dio(BaseOptions(
