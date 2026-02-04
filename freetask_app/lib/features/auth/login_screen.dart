@@ -69,12 +69,12 @@ class _LoginScreenState extends State<LoginScreen> {
               'Server sedang "tidur". Sedang membangunkan server (ambil masa ~1 minit)...';
         });
 
-        // Retry loop (Max 20 attempts * 5s = 100s)
+        // Retry loop (Max 10 attempts * (5s delay + 15s timeout) = ~200s max)
         bool wokeUp = false;
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 10; i++) {
           if (!mounted) return;
 
-          await Future.delayed(const Duration(seconds: 5));
+          await Future.delayed(const Duration(seconds: 2));
 
           // Check if server is up
           final isUp = await HttpClient().wakeUpServer();
@@ -95,6 +95,13 @@ class _LoginScreenState extends State<LoginScreen> {
             if (mounted) _handleLoginError(retryError);
             return;
           }
+        } else if (mounted) {
+          setState(() {
+            _errorMessage =
+                'Gagal menghubungi server selepas beberapa percubaan. Sila pastikan internet anda laju dan cuba lagi.';
+          });
+          showErrorSnackBar(context, _errorMessage!);
+          return;
         }
       }
 

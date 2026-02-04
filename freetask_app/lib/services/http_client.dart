@@ -383,14 +383,14 @@ class HttpClient {
       // Use a short timeout for the ping
       final options = BaseOptions(
         baseUrl: baseUrl,
-        connectTimeout: const Duration(seconds: 5),
-        receiveTimeout: const Duration(seconds: 5),
-        sendTimeout: const Duration(seconds: 5),
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 15),
+        sendTimeout: const Duration(seconds: 15),
       );
       final pingDio = Dio(options);
 
-      // Ping the health check endpoint or root
-      await pingDio.get('/');
+      // Ping the health check endpoint
+      await pingDio.get('/health');
       return true;
     } catch (_) {
       return false;
