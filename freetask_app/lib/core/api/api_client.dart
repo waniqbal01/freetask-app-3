@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../storage/storage.dart';
 import '../../features/auth/auth_repository.dart';
@@ -23,11 +24,13 @@ class ApiClient {
           options.headers['Authorization'] = 'Bearer $token';
         }
 
-        // Update base URL from storage if available
-        final apiUrl = await appStorage.read('api_url');
-        if (apiUrl != null && apiUrl.isNotEmpty) {
-          _baseUrl = apiUrl;
-          options.baseUrl = apiUrl;
+        // Update base URL from storage if available (ONLY IN DEBUG MODE)
+        if (!kReleaseMode) {
+          final apiUrl = await appStorage.read('api_url');
+          if (apiUrl != null && apiUrl.isNotEmpty) {
+            _baseUrl = apiUrl;
+            options.baseUrl = apiUrl;
+          }
         }
 
         return handler.next(options);
