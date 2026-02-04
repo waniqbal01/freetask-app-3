@@ -40,9 +40,12 @@ export class UsersService {
     // We might want to include services later
     const publicData = toAppUser(user);
 
-    // Fetch user's services to show on profile
+    // Fetch user's services to show on profile (only approved)
     const services = await this.prisma.service.findMany({
-      where: { freelancerId: id },
+      where: { 
+        freelancerId: id,
+        approvalStatus: 'APPROVED', // Only show approved services
+      },
       select: {
         id: true,
         title: true,
