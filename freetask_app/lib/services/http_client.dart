@@ -381,19 +381,31 @@ class HttpClient {
   Future<bool> wakeUpServer() async {
     try {
       final baseUrl = await _baseUrlManager.getBaseUrl();
-      // Use a short timeout for the ping
+      if (kDebugMode) {
+        debugPrint('[WakeUp] Pinging $baseUrl/health...');
+      }
+
+      // Use longer timeout for wake-up (30s to accommodate cold starts)
       final options = BaseOptions(
         baseUrl: baseUrl,
-        connectTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 15),
-        sendTimeout: const Duration(seconds: 15),
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 30),
+        sendTimeout: const Duration(seconds: 30),
       );
       final pingDio = Dio(options);
 
       // Ping the health check endpoint
-      await pingDio.get('/health');
+      final response = await pingDio.get('/health');
+
+      if (kDebugMode) {
+        debugPrint('[WakeUp] ✓ Server responded successfully');
+        debugPrint('[WakeUp] Response: ${response.data}');
+      }
       return true;
-    } catch (_) {
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[WakeUp] ✗ Server did not respond: ${e.toString()}');
+      }
       return false;
     }
   }

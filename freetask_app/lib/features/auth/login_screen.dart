@@ -69,25 +69,39 @@ class _LoginScreenState extends State<LoginScreen> {
               'Server sedang diaktifkan. Sila tunggu sebentar (30-60 saat)...';
         });
 
-        // Retry loop (Max 20 attempts * (5s delay + 15s timeout) = ~400s max persistence)
+        // Retry loop (Max 12 attempts * (6s delay + 30s timeout) = ~72s max wait)
         bool wokeUp = false;
-        for (int i = 0; i < 20; i++) {
+        debugPrint('[LoginWakeUp] Starting retry loop (max 12 attempts)...');
+
+        for (int i = 0; i < 12; i++) {
           if (!mounted) return;
 
-          // Wait 5 seconds before retrying (Sabarsikit flow)
-          await Future.delayed(const Duration(seconds: 5));
+          // Wait 6 seconds before retrying
+          await Future.delayed(const Duration(seconds: 6));
 
-          // Update progress in UI occasionally
-          if (i % 4 == 0 && mounted) {
+          // Update progress messages based on attempt number
+          if (mounted) {
+            String progressMsg;
+            if (i < 4) {
+              progressMsg = 'Server sedang bangun (${i + 1}/12)...';
+            } else if (i < 8) {
+              progressMsg = 'Masih dalam proses (${i + 1}/12)...';
+            } else {
+              progressMsg = 'Hampir siap (${i + 1}/12)...';
+            }
             setState(() {
-              _errorMessage =
-                  'Server sedang diaktifkan (Percubaan ${i + 1}/20)...';
+              _errorMessage = progressMsg;
             });
           }
+
+          // Log attempt
+          debugPrint('[LoginWakeUp] Attempt ${i + 1}/12 - checking server...');
 
           // Check if server is up
           final isUp = await HttpClient().wakeUpServer();
           if (isUp) {
+            debugPrint(
+                '[LoginWakeUp] ✓ Server is online after ${i + 1} attempts');
             wokeUp = true;
             break;
           }
