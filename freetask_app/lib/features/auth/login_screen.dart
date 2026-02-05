@@ -63,18 +63,27 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (isConnectionError && mounted) {
-        // SMART WAKE-UP LOGIC
+        // SMART WAKE-UP LOGIC (Optimized for Cold Start)
         setState(() {
           _errorMessage =
-              'Server sedang "tidur". Sedang membangunkan server (ambil masa ~1 minit)...';
+              'Server sedang diaktifkan. Sila tunggu sebentar (30-60 saat)...';
         });
 
-        // Retry loop (Max 10 attempts * (5s delay + 15s timeout) = ~200s max)
+        // Retry loop (Max 20 attempts * (5s delay + 15s timeout) = ~400s max persistence)
         bool wokeUp = false;
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 20; i++) {
           if (!mounted) return;
 
-          await Future.delayed(const Duration(seconds: 2));
+          // Wait 5 seconds before retrying (Sabarsikit flow)
+          await Future.delayed(const Duration(seconds: 5));
+
+          // Update progress in UI occasionally
+          if (i % 4 == 0 && mounted) {
+            setState(() {
+              _errorMessage =
+                  'Server sedang diaktifkan (Percubaan ${i + 1}/20)...';
+            });
+          }
 
           // Check if server is up
           final isUp = await HttpClient().wakeUpServer();
@@ -98,7 +107,7 @@ class _LoginScreenState extends State<LoginScreen> {
         } else if (mounted) {
           setState(() {
             _errorMessage =
-                'Gagal menghubungi server selepas beberapa percubaan. Sila pastikan internet anda laju dan cuba lagi.';
+                'Gagal menghubungi server. Sila pastikan internet anda stabil dan cuba lagi.';
           });
           showErrorSnackBar(context, _errorMessage!);
           return;

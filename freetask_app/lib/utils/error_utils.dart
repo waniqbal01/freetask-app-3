@@ -19,8 +19,9 @@ String resolveDioErrorMessage(
 
   // Timeout errors - UX-G-03: Enhanced message
   if (error.type == DioExceptionType.connectionTimeout ||
-      error.type == DioExceptionType.receiveTimeout) {
-    return 'Sambungan internet bermasalah. Sila periksa rangkaian anda.';
+      error.type == DioExceptionType.receiveTimeout ||
+      error.type == DioExceptionType.sendTimeout) {
+    return 'Server lambat respon (mungkin sedang diaktifkan). Sila tunggu sebentar dan cuba lagi.';
   }
 
   // HTTP error responses (server responded with error)
