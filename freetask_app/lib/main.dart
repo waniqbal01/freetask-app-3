@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 
 import 'app.dart';
 import 'core/notifications/fcm_service.dart';
+import 'services/http_client.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +24,10 @@ void main() async {
     debugPrint('Firebase initialization error: $e');
     // Continue without Firebase if initialization fails
   }
+
+  // PROACTIVE WAKE-UP: Ping server in background during app startup
+  // This ensures server is awake BEFORE user tries to login
+  _wakeUpServerInBackground();
 
   // Global error boundary for unhandled errors
   ErrorWidget.builder = (FlutterErrorDetails details) {
@@ -57,4 +62,25 @@ void main() async {
   };
 
   runApp(const ProviderScope(child: App()));
+}
+
+/// Proactively wake up the backend server in background
+/// This runs asynchronously without blocking app startup
+void _wakeUpServerInBackground() {
+  // Fire and forget - don't await
+  Future.microtask(() async {
+    try {
+      debugPrint('[ProactiveWakeUp] Starting background server wake-up...');
+      final success = await HttpClient().wakeUpServer();
+      if (success) {
+        debugPrint('[ProactiveWakeUp] ✓ Server is online and ready');
+      } else {
+        debugPrint(
+            '[ProactiveWakeUp] ⚠ Server did not respond (may still be cold)');
+      }
+    } catch (e) {
+      debugPrint('[ProactiveWakeUp] ✗ Error during wake-up: $e');
+      // Silent failure - user will see retry logic on login if needed
+    }
+  });
 }
