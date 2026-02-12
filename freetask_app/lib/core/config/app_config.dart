@@ -8,13 +8,10 @@ class AppConfig {
     return apiUrl.replaceAll('/api', '');
   }
 
-  // Feature flags - Set to true when backend WebSocket is ready
-  static const bool useWebSocket =
-      false; // TODO: Set to true when backend ready
+  // Feature flags - ENABLED FOR PRODUCTION!
+  static const bool useWebSocket = true;
 
-  static const bool enableTypingIndicators =
-      false; // TODO: Set to true when backend ready
+  static const bool enableTypingIndicators = true;
 
-  static const bool showOnlineStatus =
-      false; // TODO: Set to true when backend ready
+  static const bool showOnlineStatus = true;
 }
