@@ -12,6 +12,7 @@ import '../../theme/app_theme.dart';
 import 'services_repository.dart';
 import '../../core/utils/error_utils.dart';
 import '../auth/auth_repository.dart';
+import '../jobs/jobs_repository.dart';
 
 class ServiceDetailScreen extends StatefulWidget {
   const ServiceDetailScreen({required this.serviceId, super.key});
@@ -104,6 +105,55 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
         setState(() {
           _isHireLoading = false;
         });
+      }
+    }
+  }
+
+  Future<void> _handleMessage() async {
+    final controller = TextEditingController();
+    final message = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Mesej Penyedia'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Apa yang anda ingin tanya?',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Hantar'),
+          ),
+        ],
+      ),
+    );
+
+    if (message == null || message.trim().isEmpty || !mounted) return;
+
+    setState(() => _isHireLoading = true);
+    try {
+      final job = await jobsRepository.createInquiry(
+        widget.serviceId,
+        message,
+      );
+      if (mounted) {
+        context.push('/chats/${job.id}/messages');
+      }
+    } catch (e) {
+      if (mounted) {
+        showErrorSnackBar(context, 'Gagal menghantar mesej: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isHireLoading = false);
       }
     }
   }
@@ -357,9 +407,9 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                     ),
                     const SizedBox(height: AppSpacing.s8),
                     OutlinedButton.icon(
-                      onPressed: () => GoRouter.of(context).go('/chats'),
+                      onPressed: _handleMessage,
                       icon: const Icon(Icons.chat_bubble_outline),
-                      label: const Text('Chat sokongan / penyedia'),
+                      label: const Text('Mesej Penyedia'),
                     ),
                   ] else
                     FTButton(

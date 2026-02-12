@@ -22,6 +22,7 @@ import { Throttle } from '@nestjs/throttler';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { JobsQueryDto } from './dto/jobs-query.dto';
+import { CreateInquiryDto } from './dto/create-inquiry.dto';
 
 @Controller('jobs')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -36,6 +37,16 @@ export class JobsController {
     @Body() dto: CreateJobDto,
   ) {
     return this.jobsService.create(userId, role, dto);
+  }
+
+  @Post('inquiry')
+  @Roles(UserRole.CLIENT)
+  createInquiry(
+    @GetUser('userId') userId: number,
+    @GetUser('role') role: UserRole,
+    @Body() dto: CreateInquiryDto,
+  ) {
+    return this.jobsService.createInquiry(userId, role, dto);
   }
 
   @Get()

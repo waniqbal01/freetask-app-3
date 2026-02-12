@@ -14,6 +14,7 @@ enum UserRole {
 }
 
 enum JobStatus {
+  INQUIRY
   PENDING
   AWAITING_PAYMENT
   IN_PROGRESS

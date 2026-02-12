@@ -10,6 +10,7 @@ import '../../core/utils/url_utils.dart';
 import '../../core/websocket/socket_service.dart';
 import '../../models/chat_enums.dart';
 import '../../widgets/chat_widgets.dart';
+import '../../widgets/scroll_to_bottom_fab.dart';
 import '../auth/auth_providers.dart';
 import 'chat_models.dart';
 import 'chat_repository.dart';
@@ -242,6 +243,9 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
           ),
         ],
       ),
+      floatingActionButton: ScrollToBottomFAB(
+        scrollController: _scrollController,
+      ),
     );
   }
 
@@ -414,7 +418,7 @@ class _MessageBubble extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isMe
-              ? const Color(0xFFE3F2FD) // Light blue for sent
+              ? const Color(0xFFDCF8C6) // WhatsApp-style light green for sent
               : Colors.white, // White for received
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(12),
@@ -710,7 +714,7 @@ class _LoadMoreBanner extends StatelessWidget {
                     width: 16,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Load more'),
+                : const Text('Muat Lebih'),
           ),
         ],
       ),

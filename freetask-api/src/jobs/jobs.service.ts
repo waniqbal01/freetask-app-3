@@ -9,6 +9,7 @@ import {
 import { JobStatus, Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateJobDto } from './dto/create-job.dto';
+import { CreateInquiryDto } from './dto/create-inquiry.dto';
 import { DisputeJobDto } from './dto/dispute-job.dto';
 import { UpdateJobStatusDto } from './dto/update-job-status.dto';
 import { SubmitJobDto } from './dto/submit-job.dto';
@@ -78,6 +79,41 @@ export class JobsService {
       title: 'New Order Received',
       body: `You have received a new order: ${trimmedTitle}. Please review and accept/reject.`,
       data: { type: 'job_order', jobId: job.id.toString() },
+    });
+
+    return this.withFlatFields(job);
+  }
+
+  async createInquiry(userId: number, role: UserRole, dto: CreateInquiryDto) {
+    if (role !== UserRole.CLIENT) {
+      throw new ForbiddenException('Only clients can create inquiries');
+    }
+
+    const service = await this.prisma.service.findUnique({
+      where: { id: dto.serviceId },
+    });
+    if (!service) {
+      throw new NotFoundException('Service not found');
+    }
+
+    const job = await this.prisma.job.create({
+      data: {
+        title: service.title,
+        description: dto.message,
+        amount: new Prisma.Decimal(0),
+        status: JobStatus.INQUIRY,
+        serviceId: service.id,
+        clientId: userId,
+        freelancerId: service.freelancerId,
+      },
+      include: this.jobInclude,
+    });
+
+    await this.notificationsService.sendNotification({
+      userId: service.freelancerId,
+      title: 'New Inquiry',
+      body: `New inquiry: ${dto.message.substring(0, 50)}...`,
+      data: { type: 'job_inquiry', jobId: job.id.toString() },
     });
 
     return this.withFlatFields(job);

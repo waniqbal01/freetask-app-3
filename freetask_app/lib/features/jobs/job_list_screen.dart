@@ -59,6 +59,14 @@ class _JobListScreenState extends State<JobListScreen> {
     super.dispose();
   }
 
+  void _setFreelancerSubTab(int index) {
+    if (_freelancerSubTabIndex != index) {
+      setState(() {
+        _freelancerSubTabIndex = index;
+      });
+    }
+  }
+
   Future<void> _loadCurrentUser() async {
     try {
       final user = await authRepository.getCurrentUser();
@@ -742,183 +750,324 @@ class _JobListScreenState extends State<JobListScreen> {
     final role = _currentUser?.role.toUpperCase();
     final isFreelancer = role == 'FREELANCER';
 
-    // Show create button ONLY if Freelancer Tab is active AND SubTab is 0 (Services)
-    final showCreateServiceButton = isFreelancer && _freelancerSubTabIndex == 0;
-
     return Scaffold(
+      backgroundColor: Colors.white,
       bottomNavigationBar: const AppBottomNav(currentTab: AppTab.jobs),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFEEF3FC), Colors.white],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: _JobsHeader(
+              isFreelancer: isFreelancer,
+              currentSubTab: _freelancerSubTabIndex,
+              onSubTabChanged: _setFreelancerSubTab,
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () {
-                        if (context.canPop()) {
-                          context.pop();
-                        } else {
-                          context.go('/home');
-                        }
-                      },
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Jobs & Orders',
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.w700),
-                    ),
-                    const Spacer(),
-                    const NotificationBellButton(),
-                    if (showCreateServiceButton) ...[
-                      const SizedBox(width: 4),
-                      Container(
-                        decoration: const BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          onPressed: () async {
-                            await context.push('/services/create');
-                            setState(() {});
-                          },
-                          icon: const Icon(Icons.add, color: Colors.white),
-                          tooltip: 'Create Service',
-                          padding: const EdgeInsets.all(8),
-                          constraints: const BoxConstraints(
-                            minWidth: 40,
-                            minHeight: 40,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
+          SliverFillRemaining(
+            hasScrollBody: true,
+            child: Container(
+              margin: const EdgeInsets.only(top: 0),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(20),
                 ),
               ),
-              if (_userLoadError != null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Container(
-                    padding: const EdgeInsets.all(AppSpacing.s12),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
-                      borderRadius: AppRadius.mediumRadius,
-                      border: Border.all(color: Colors.orange.shade200),
+              child: Column(
+                children: [
+                  if (_userLoadError != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Container(
+                        padding: const EdgeInsets.all(AppSpacing.s12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: AppRadius.mediumRadius,
+                          border: Border.all(color: Colors.orange.shade200),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.warning_amber_rounded,
+                                color: Colors.orange.shade700),
+                            const SizedBox(width: AppSpacing.s8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _userLoadError!,
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: Colors.orange.shade900,
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: _loadCurrentUser,
+                                    style: TextButton.styleFrom(
+                                      padding: EdgeInsets.zero,
+                                    ),
+                                    child:
+                                        const Text('Cuba muat semula profil'),
+                                  ),
+                                  TextButton.icon(
+                                    onPressed: authRepository.logout,
+                                    icon: const Icon(Icons.logout, size: 16),
+                                    label: const Text('Log keluar'),
+                                    style: TextButton.styleFrom(
+                                      padding: EdgeInsets.zero,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  if (!isFreelancer)
+                    Expanded(
+                      child: _buildJobsTab(
+                        jobs: _clientJobs,
+                        isClientView: true,
+                        isLoading: _isLoadingClient,
+                        errorMessage: _clientErrorMessage,
+                        onRefresh: _refreshClientJobs,
+                      ),
+                    )
+                  else
+                    Expanded(
+                      child: IndexedStack(
+                        index: _freelancerSubTabIndex,
+                        children: [
+                          const UserServicesView(),
+                          _buildJobsTab(
+                            jobs: _freelancerJobs,
+                            isClientView: false,
+                            isLoading: _isLoadingFreelancer,
+                            errorMessage: _freelancerErrorMessage,
+                            onRefresh: _refreshFreelancerJobs,
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (_isProcessing)
+                    const LoadingOverlay(
+                      message: 'Memproses tindakan...',
+                      backgroundOpacity: 0.4,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _JobsHeader extends StatelessWidget {
+  const _JobsHeader({
+    required this.isFreelancer,
+    required this.currentSubTab,
+    required this.onSubTabChanged,
+  });
+
+  final bool isFreelancer;
+  final int currentSubTab;
+  final ValueChanged<int> onSubTabChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        // Gradient background
+        Container(
+          width: double.infinity,
+          height: 180,
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF2196F3), Color(0xFF1565C0)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: const BorderRadius.vertical(
+              bottom: Radius.circular(32),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF2196F3).withValues(alpha: 0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Bar: Badge & Actions
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.work_outline_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Jobs',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelLarge
+                                ?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Row(
                       children: [
-                        Icon(Icons.warning_amber_rounded,
-                            color: Colors.orange.shade700),
-                        const SizedBox(width: AppSpacing.s8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _userLoadError!,
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: Colors.orange.shade900,
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: _loadCurrentUser,
-                                style: TextButton.styleFrom(
-                                  padding: EdgeInsets.zero,
-                                ),
-                                child: const Text('Cuba muat semula profil'),
-                              ),
-                              TextButton.icon(
-                                onPressed: authRepository.logout,
-                                icon: const Icon(Icons.logout, size: 16),
-                                label: const Text('Log keluar'),
-                                style: TextButton.styleFrom(
-                                  padding: EdgeInsets.zero,
-                                ),
-                              ),
-                            ],
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child:
+                              const NotificationBellButton(color: Colors.white),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.add, color: Colors.white),
+                            onPressed: () => context.push('/services/create'),
+                            tooltip: 'Create Service',
                           ),
                         ),
                       ],
                     ),
-                  ),
+                  ],
                 ),
-              if (!isFreelancer)
-                Expanded(
-                  child: _buildJobsTab(
-                    jobs: _clientJobs,
-                    isClientView: true,
-                    isLoading: _isLoadingClient,
-                    errorMessage: _clientErrorMessage,
-                    onRefresh: _refreshClientJobs,
-                  ),
-                )
-              else
-                Expanded(
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: SegmentedButton<int>(
-                          segments: const [
-                            ButtonSegment(
-                              value: 0,
-                              label: Text('Servis Saya'),
-                              icon: Icon(Icons.design_services),
-                            ),
-                            ButtonSegment(
-                              value: 1,
-                              label: Text('Urus Pesanan'),
-                              icon: Icon(Icons.list_alt),
-                            ),
-                          ],
-                          selected: {_freelancerSubTabIndex},
-                          onSelectionChanged: (Set<int> newSelection) {
-                            setState(() {
-                              _freelancerSubTabIndex = newSelection.first;
-                            });
-                          },
-                          showSelectedIcon: false,
-                        ),
-                      ),
-                      Expanded(
-                        child: IndexedStack(
-                          index: _freelancerSubTabIndex,
-                          children: [
-                            const UserServicesView(), // Sub-tab 0: My Services
-                            _buildJobsTab(
-                              // Sub-tab 1: Jobs
-                              jobs: _freelancerJobs,
-                              isClientView: false,
-                              isLoading: _isLoadingFreelancer,
-                              errorMessage: _freelancerErrorMessage,
-                              onRefresh: _refreshFreelancerJobs,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              if (_isProcessing)
-                const LoadingOverlay(
-                  message: 'Memproses tindakan...',
-                  backgroundOpacity: 0.4,
-                ),
-            ],
+                // Removed spacing here to pull things up if needed, but 24 is fine
+              ],
+            ),
           ),
+        ),
+        // Overlapping Filter Card
+        if (isFreelancer)
+          Container(
+            margin:
+                const EdgeInsets.only(top: 100, left: 16, right: 16, bottom: 0),
+            constraints: const BoxConstraints(minHeight: 100),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _FilterChip(
+                        label: 'Servis Saya',
+                        icon: Icons.design_services,
+                        isSelected: currentSubTab == 0,
+                        onTap: () => onSubTabChanged(0),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _FilterChip(
+                        label: 'Urus Pesanan',
+                        icon: Icons.list_alt,
+                        isSelected: currentSubTab == 1,
+                        onTap: () => onSubTabChanged(1),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF2196F3) : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF2196F3) : Colors.grey.shade200,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : Colors.grey.shade600,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.grey.shade700,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  fontSize: 14,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
       ),
     );

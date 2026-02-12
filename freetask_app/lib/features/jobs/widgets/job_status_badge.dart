@@ -20,6 +20,13 @@ class JobStatusVisual {
 
 JobStatusVisual mapJobStatusVisual(JobStatus status) {
   switch (status) {
+    case JobStatus.inquiry:
+      return const JobStatusVisual(
+        label: 'Inquiry',
+        badgeText: 'INQUIRY',
+        color: Colors.blueAccent,
+        icon: Icons.chat_bubble_outline,
+      );
     case JobStatus.pending:
       return JobStatusVisual(
         label: 'Pending',

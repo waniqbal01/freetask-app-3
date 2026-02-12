@@ -1,4 +1,5 @@
 enum JobStatus {
+  inquiry,
   pending,
   awaitingPayment,
   accepted,
@@ -139,6 +140,8 @@ class Job {
     }
     final normalized = value?.toString().toUpperCase();
     switch (normalized) {
+      case 'INQUIRY':
+        return JobStatus.inquiry;
       case 'PENDING':
         return JobStatus.pending;
       case 'AWAITING_PAYMENT':

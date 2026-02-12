@@ -83,6 +83,33 @@ class JobsRepository {
     }
   }
 
+  Future<Job> createInquiry(String serviceId, String message) async {
+    try {
+      final parsedServiceId = int.tryParse(serviceId.toString());
+      if (parsedServiceId == null) {
+        throw StateError('ID servis tidak sah.');
+      }
+      final trimmedMessage = message.trim();
+      if (trimmedMessage.isEmpty) {
+        throw StateError('Mesej tidak boleh kosong.');
+      }
+
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/jobs/inquiry',
+        data: <String, dynamic>{
+          'serviceId': parsedServiceId,
+          'message': trimmedMessage,
+        },
+        options: await _authorizedOptions(),
+      );
+      final data = response.data ?? <String, dynamic>{};
+      return Job.fromJson(data);
+    } on DioException catch (error) {
+      await _handleDioError(error, suppressClientErrorSnackbar: true);
+      rethrow;
+    }
+  }
+
   Future<Job?> acceptJob(String jobId) async {
     try {
       final response = await _dio.patch<Map<String, dynamic>>(

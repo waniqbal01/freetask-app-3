@@ -770,6 +770,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return null;
   }
 
+  void _openChat() {
+    context.push('/chats/${widget.jobId}/messages');
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -838,6 +842,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         title: Text(job.serviceTitle),
         backgroundColor: statusVisual.color,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.chat),
+            onPressed: _openChat,
+            tooltip: 'Chat',
+          ),
+        ],
       ),
       body: Container(
         decoration: BoxDecoration(

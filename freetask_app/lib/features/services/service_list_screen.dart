@@ -138,13 +138,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
     return Scaffold(
       bottomNavigationBar: const AppBottomNav(currentTab: AppTab.home),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFEEF3FC), Colors.white],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        color: Colors.white,
         child: SafeArea(
           child: LayoutBuilder(
             builder: (BuildContext context, BoxConstraints _) {
@@ -159,13 +153,13 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                             // 1. Background Gradient Container
                             Container(
                               width: double.infinity,
-                              height: 260,
+                              height: 180,
                               padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
                               decoration: BoxDecoration(
-                                gradient: LinearGradient(
+                                gradient: const LinearGradient(
                                   colors: [
-                                    AppColors.primary,
-                                    const Color(0xFF1565C0), // Darker blue
+                                    Color(0xFF2196F3),
+                                    Color(0xFF1565C0),
                                   ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
@@ -242,49 +236,6 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                                           ),
                                       ],
                                     ),
-                                    const SizedBox(height: 24),
-                                    RichText(
-                                      text: TextSpan(
-                                        children: [
-                                          TextSpan(
-                                            text: 'Hello, ',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .headlineSmall
-                                                ?.copyWith(
-                                                  color: Colors.white
-                                                      .withValues(alpha: 0.9),
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                          ),
-                                          TextSpan(
-                                            text: _currentUser?.name
-                                                    .split(' ')
-                                                    .first ??
-                                                'Tetamu',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .headlineSmall
-                                                ?.copyWith(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Cari pakar untuk bantu\nprojek anda hari ini.',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyLarge
-                                          ?.copyWith(
-                                            color: Colors.white
-                                                .withValues(alpha: 0.85),
-                                            height: 1.4,
-                                          ),
-                                    ),
                                   ],
                                 ),
                               ),
@@ -292,7 +243,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                             // 2. Overlapping Search Card
                             Container(
                               margin: const EdgeInsets.only(
-                                  top: 200, left: 20, right: 20, bottom: 20),
+                                  top: 100, left: 20, right: 20, bottom: 20),
                               child: _SearchAndFilterCard(
                                 searchController: _searchController,
                                 onSearchChanged: _onSearchChanged,
