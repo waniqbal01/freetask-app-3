@@ -101,6 +101,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   String _jobStatusLabel(JobStatus status) {
     switch (status) {
+      case JobStatus.inquiry:
+        return 'Inquiry';
       case JobStatus.pending:
         return AppStrings.jobStatusPending;
       case JobStatus.awaitingPayment:
@@ -133,6 +135,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Color _jobStatusColor(JobStatus status, BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     switch (status) {
+      case JobStatus.inquiry:
+        return Colors.blueAccent;
       case JobStatus.pending:
         return scheme.secondary;
       case JobStatus.awaitingPayment:

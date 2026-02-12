@@ -10,6 +10,10 @@ class JobActions {
     final actions = <JobAction>[];
 
     switch (status) {
+      case JobStatus.inquiry:
+        // No job actions for inquiry, just chat
+        break;
+
       case JobStatus.pending:
         if (role == 'FREELANCER') {
           actions.add(JobAction.accept);

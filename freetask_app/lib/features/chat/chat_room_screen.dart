@@ -115,7 +115,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                       // Online status placeholder (will update via WebSocket)
                       const SizedBox(width: 8),
                       Text(
-                        'online', // TODO: Update with real presence status
+                        'online',
                         style: TextStyle(
                           fontSize: 10,
                           color: Colors.white.withOpacity(0.9),
