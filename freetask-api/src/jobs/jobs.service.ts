@@ -452,6 +452,10 @@ export class JobsService {
 
   private ensureValidTransition(current: JobStatus, next: JobStatus) {
     const transitions: Record<JobStatus, JobStatus[]> = {
+      [JobStatus.INQUIRY]: [
+        JobStatus.PENDING,          // Converted to Job
+        JobStatus.CANCELED,         // Abandoned
+      ],
       [JobStatus.PENDING]: [
         JobStatus.AWAITING_PAYMENT, // Freelancer accept
         JobStatus.CANCELED,          // Freelancer reject
