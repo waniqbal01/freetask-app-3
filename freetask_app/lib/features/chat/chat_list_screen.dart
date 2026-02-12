@@ -26,6 +26,26 @@ class ChatListScreen extends ConsumerWidget {
   final String? limitQuery;
   final String? offsetQuery;
 
+  String _formatTimestamp(DateTime? timestamp) {
+    if (timestamp == null) return '—';
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final messageDate =
+        DateTime(timestamp.year, timestamp.month, timestamp.day);
+
+    if (messageDate == today) {
+      return DateFormat('h:mm a').format(timestamp.toLocal());
+    } else if (messageDate == yesterday) {
+      return 'Yesterday';
+    } else if (now.difference(timestamp).inDays < 7) {
+      return DateFormat('EEE').format(timestamp); // Mon, Tue, etc.
+    } else {
+      return DateFormat('dd/MM/yy').format(timestamp);
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(_currentUserProvider);
@@ -48,105 +68,222 @@ class ChatListScreen extends ConsumerWidget {
 
           return Scaffold(
             appBar: AppBar(
-              title: const Text('Chat'),
-              actions: const [NotificationBellButton()],
-            ),
-            bottomNavigationBar: const AppBottomNav(currentTab: AppTab.chats),
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+              flexibleSpace: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+              ),
+              title: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.chat_bubble_outline,
-                      size: 48, color: Colors.grey),
-                  const SizedBox(height: 12),
-                  Text(title),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Text(
-                      subtitle,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey.shade600,
-                          ),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.flash_on,
+                      color: Color(0xFF2196F3),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'FreeTask',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 24,
+                      letterSpacing: 1.0,
+                      fontFamily: 'SF Pro Display',
                     ),
                   ),
                 ],
+              ),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              actions: [
+                const NotificationBellButton(),
+                IconButton(
+                  icon: const Icon(Icons.account_circle),
+                  onPressed: () => context.push('/profile'),
+                ),
+              ],
+            ),
+            bottomNavigationBar: const AppBottomNav(currentTab: AppTab.chats),
+            body: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    const Color(0xFF2196F3).withOpacity(0.05),
+                    Colors.white,
+                  ],
+                ),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2196F3).withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.chat_bubble_outline,
+                          size: 64, color: Color(0xFF2196F3)),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(title,
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Text(
+                        subtitle,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.grey.shade600,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
         }
 
         return Scaffold(
-          backgroundColor: const Color(0xFFF5F7FB), // Light Blue-Grey
+          backgroundColor: Colors.white,
           appBar: AppBar(
-            title: const Text('Chat',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            backgroundColor: const Color(0xFF1976D2), // Primary Blue
+            flexibleSpace: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF128C7E), Color(0xFF075E54)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
+            title: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.flash_on,
+                    color: Color(0xFF2196F3),
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  'FreeTask',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 24,
+                    letterSpacing: 1.0,
+                    fontFamily: 'SF Pro Display',
+                  ),
+                ),
+              ],
+            ),
             foregroundColor: Colors.white,
             elevation: 0,
-            actions: const [NotificationBellButton()],
+            actions: [
+              const NotificationBellButton(),
+              IconButton(
+                icon: const Icon(Icons.account_circle),
+                onPressed: () => context.push('/profile'),
+              ),
+            ],
           ),
           bottomNavigationBar: const AppBottomNav(currentTab: AppTab.chats),
           body: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.zero,
             itemCount: threads.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            separatorBuilder: (_, __) => Divider(
+              height: 1,
+              indent: 80,
+              color: Colors.grey.shade200,
+            ),
             itemBuilder: (BuildContext context, int index) {
               final thread = threads[index];
               final snippet = thread.lastMessage?.isNotEmpty == true
                   ? thread.lastMessage!
                   : 'Tiada mesej lagi.';
-              final lastAtLabel = thread.lastAt != null
-                  ? DateFormat('dd MMM, h:mm a')
-                      .format(thread.lastAt!.toLocal())
-                  : '—';
+              final lastAtLabel = _formatTimestamp(thread.lastAt);
 
               Color statusColor;
               switch (thread.jobStatus.toUpperCase()) {
                 case 'PENDING':
-                  statusColor = Colors.orangeAccent;
+                  statusColor = Colors.orange;
                   break;
                 case 'IN_PROGRESS':
-                  statusColor = Colors.lightBlueAccent;
+                  statusColor = const Color(0xFF2196F3);
                   break;
                 case 'COMPLETED':
                   statusColor = Colors.green;
                   break;
                 case 'CANCELLED':
                 case 'REJECTED':
-                  statusColor = Colors.redAccent;
+                  statusColor = Colors.red;
                   break;
                 default:
                   statusColor = Colors.grey;
               }
 
-              return Card(
-                elevation: 2,
-                shadowColor: Colors.black12,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+              return Material(
+                color: Colors.white,
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: () {
-                    context.push('/chats/${thread.id}/messages');
-                  },
+                  onTap: () => context.push('/chats/${thread.id}/messages'),
                   child: Padding(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        CircleAvatar(
-                          radius: 24,
-                          backgroundColor:
-                              const Color(0xFF1976D2).withValues(alpha: 0.1),
-                          child: Text(
-                            thread.participantName.isNotEmpty
-                                ? thread.participantName[0].toUpperCase()
-                                : '?',
-                            style: const TextStyle(
-                                color: Color(0xFF1976D2),
-                                fontWeight: FontWeight.bold),
+                        // Avatar with gradient border (WhatsApp style)
+                        Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [
+                                statusColor.withOpacity(0.6),
+                                statusColor,
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                          padding: const EdgeInsets.all(2),
+                          child: CircleAvatar(
+                            radius: 26,
+                            backgroundColor: Colors.grey.shade200,
+                            child: Text(
+                              thread.participantName.isNotEmpty
+                                  ? thread.participantName[0].toUpperCase()
+                                  : '?',
+                              style: TextStyle(
+                                color: statusColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -162,56 +299,104 @@ class ChatListScreen extends ConsumerWidget {
                                     child: Text(
                                       thread.participantName,
                                       style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16),
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 16,
+                                        color: Colors.black87,
+                                      ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
+                                  const SizedBox(width: 8),
                                   Text(
                                     lastAtLabel,
                                     style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey.shade600),
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                    ),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 thread.jobTitle,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 13,
-                                    color: Colors.black87),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade700,
+                                  fontWeight: FontWeight.w500,
+                                ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 4),
-                              Text(
-                                snippet,
-                                style: TextStyle(
-                                    color: Colors.grey.shade600, fontSize: 13),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: statusColor.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                      color:
-                                          statusColor.withValues(alpha: 0.3)),
-                                ),
-                                child: Text(
-                                  thread.jobStatus.replaceAll('_', ' '),
-                                  style: TextStyle(
-                                      fontSize: 10,
-                                      color: statusColor,
-                                      fontWeight: FontWeight.w600),
-                                ),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      snippet,
+                                      style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                        fontSize: 14,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  // Status badge
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: statusColor.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: statusColor.withOpacity(0.3),
+                                        width: 0.5,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      thread.jobStatus
+                                          .replaceAll('_', ' ')
+                                          .toLowerCase(),
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        color: statusColor.withOpacity(0.9),
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.3,
+                                      ),
+                                    ),
+                                  ),
+                                  // Unread badge
+                                  if (thread.unreadCount > 0) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 2),
+                                      decoration: const BoxDecoration(
+                                        color:
+                                            Color(0xFF25D366), // WhatsApp green
+                                        shape: BoxShape.circle,
+                                      ),
+                                      constraints: const BoxConstraints(
+                                        minWidth: 20,
+                                        minHeight: 20,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          thread.unreadCount > 99
+                                              ? '99+'
+                                              : '${thread.unreadCount}',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ],
                           ),
@@ -227,11 +412,30 @@ class ChatListScreen extends ConsumerWidget {
       },
       loading: () => Scaffold(
         appBar: AppBar(
-          title: const Text('Chat'),
-          actions: const [NotificationBellButton()],
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          title: const Text('FreeTask'),
+          foregroundColor: Colors.white,
+          actions: [
+            const NotificationBellButton(),
+            IconButton(
+              icon: const Icon(Icons.account_circle),
+              onPressed: () => context.push('/profile'),
+            ),
+          ],
         ),
         bottomNavigationBar: const AppBottomNav(currentTab: AppTab.chats),
-        body: const Center(child: CircularProgressIndicator()),
+        body: const Center(
+            child: CircularProgressIndicator(
+          color: Color(0xFF128C7E),
+        )),
       ),
       error: (Object error, StackTrace stackTrace) {
         final message = error is DioException
@@ -249,8 +453,24 @@ class ChatListScreen extends ConsumerWidget {
         }
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Chat'),
-            actions: const [NotificationBellButton()],
+            flexibleSpace: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
+            title: const Text('FreeTask'),
+            foregroundColor: Colors.white,
+            actions: [
+              const NotificationBellButton(),
+              IconButton(
+                icon: const Icon(Icons.account_circle),
+                onPressed: () => context.push('/profile'),
+              ),
+            ],
           ),
           bottomNavigationBar: const AppBottomNav(currentTab: AppTab.chats),
           body: Center(
@@ -260,7 +480,7 @@ class ChatListScreen extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(Icons.error_outline,
-                      size: 42, color: Colors.redAccent),
+                      size: 42, color: Color(0xFFDC4E41)),
                   const SizedBox(height: 12),
                   Text(
                     message,
@@ -272,6 +492,10 @@ class ChatListScreen extends ConsumerWidget {
                       chatThreadsProviderWithQuery(
                         (limit: limitQuery, offset: offsetQuery),
                       ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2196F3),
+                      foregroundColor: Colors.white,
                     ),
                     child: const Text('Cuba Lagi'),
                   ),

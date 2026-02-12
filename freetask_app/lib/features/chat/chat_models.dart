@@ -1,11 +1,15 @@
+import '../../models/chat_enums.dart';
+
 class ChatThread {
   const ChatThread({
     required this.id,
     required this.jobTitle,
     required this.participantName,
+    this.participantId,
     this.lastMessage,
     this.lastAt,
     this.jobStatus = 'PENDING',
+    this.unreadCount = 0,
   });
 
   factory ChatThread.fromJson(Map<String, dynamic> json) {
@@ -16,6 +20,8 @@ class ChatThread {
       participantName: json['participant_name']?.toString() ??
           json['participantName']?.toString() ??
           '',
+      participantId: json['participant_id']?.toString() ??
+          json['participantId']?.toString(),
       lastMessage:
           json['last_message']?.toString() ?? json['lastMessage']?.toString(),
       lastAt: DateTime.tryParse(
@@ -24,15 +30,45 @@ class ChatThread {
       jobStatus: json['jobStatus']?.toString() ??
           json['job_status']?.toString() ??
           'PENDING',
+      unreadCount: int.tryParse(
+            json['unreadCount']?.toString() ??
+                json['unread_count']?.toString() ??
+                '0',
+          ) ??
+          0,
     );
   }
 
   final String id;
   final String jobTitle;
   final String participantName;
+  final String? participantId;
   final String? lastMessage;
   final DateTime? lastAt;
   final String jobStatus;
+  final int unreadCount;
+
+  ChatThread copyWith({
+    String? id,
+    String? jobTitle,
+    String? participantName,
+    String? participantId,
+    String? lastMessage,
+    DateTime? lastAt,
+    String? jobStatus,
+    int? unreadCount,
+  }) {
+    return ChatThread(
+      id: id ?? this.id,
+      jobTitle: jobTitle ?? this.jobTitle,
+      participantName: participantName ?? this.participantName,
+      participantId: participantId ?? this.participantId,
+      lastMessage: lastMessage ?? this.lastMessage,
+      lastAt: lastAt ?? this.lastAt,
+      jobStatus: jobStatus ?? this.jobStatus,
+      unreadCount: unreadCount ?? this.unreadCount,
+    );
+  }
 }
 
 class ChatMessage {
@@ -45,6 +81,10 @@ class ChatMessage {
     required this.timestamp,
     this.type = 'text',
     this.attachmentUrl,
+    this.status = MessageStatus.sent,
+    this.deliveredAt,
+    this.readAt,
+    this.replyToId,
   });
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
@@ -65,7 +105,33 @@ class ChatMessage {
           DateTime.now(),
       type: json['type'] as String? ?? 'text',
       attachmentUrl: json['attachmentUrl'] as String?,
+      status: _parseMessageStatus(json['status']?.toString()),
+      deliveredAt: json['deliveredAt'] != null
+          ? DateTime.tryParse(json['deliveredAt'].toString())
+          : null,
+      readAt: json['readAt'] != null
+          ? DateTime.tryParse(json['readAt'].toString())
+          : null,
+      replyToId: json['replyToId']?.toString(),
     );
+  }
+
+  static MessageStatus _parseMessageStatus(String? status) {
+    if (status == null) return MessageStatus.sent;
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return MessageStatus.pending;
+      case 'sent':
+        return MessageStatus.sent;
+      case 'delivered':
+        return MessageStatus.delivered;
+      case 'read':
+        return MessageStatus.read;
+      case 'failed':
+        return MessageStatus.failed;
+      default:
+        return MessageStatus.sent;
+    }
   }
 
   final String id;
@@ -76,4 +142,55 @@ class ChatMessage {
   final DateTime timestamp;
   final String type;
   final String? attachmentUrl;
+  final MessageStatus status;
+  final DateTime? deliveredAt;
+  final DateTime? readAt;
+  final String? replyToId;
+
+  ChatMessage copyWith({
+    String? id,
+    String? jobId,
+    String? senderId,
+    String? senderName,
+    String? text,
+    DateTime? timestamp,
+    String? type,
+    String? attachmentUrl,
+    MessageStatus? status,
+    DateTime? deliveredAt,
+    DateTime? readAt,
+    String? replyToId,
+  }) {
+    return ChatMessage(
+      id: id ?? this.id,
+      jobId: jobId ?? this.jobId,
+      senderId: senderId ?? this.senderId,
+      senderName: senderName ?? this.senderName,
+      text: text ?? this.text,
+      timestamp: timestamp ?? this.timestamp,
+      type: type ?? this.type,
+      attachmentUrl: attachmentUrl ?? this.attachmentUrl,
+      status: status ?? this.status,
+      deliveredAt: deliveredAt ?? this.deliveredAt,
+      readAt: readAt ?? this.readAt,
+      replyToId: replyToId ?? this.replyToId,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'jobId': jobId,
+      'senderId': senderId,
+      'senderName': senderName,
+      'content': text,
+      'timestamp': timestamp.toIso8601String(),
+      'type': type,
+      'attachmentUrl': attachmentUrl,
+      'status': status.name,
+      'deliveredAt': deliveredAt?.toIso8601String(),
+      'readAt': readAt?.toIso8601String(),
+      'replyToId': replyToId,
+    };
+  }
 }

@@ -5,13 +5,13 @@ String resolveHomeRouteForRole(String? role) {
   final normalizedRole = role?.toUpperCase();
   switch (normalizedRole) {
     case 'FREELANCER':
-      return '/jobs';
+      return '/chats'; // Chat is now the default/main screen for all users
     case 'ADMIN':
       return '/admin';
     case 'CLIENT':
-      return '/home';
+      return '/chats'; // Chat is now the default/main screen
     default:
-      return '/home';
+      return '/chats'; // Chat is now the default/main screen
   }
 }
 

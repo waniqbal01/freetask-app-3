@@ -80,7 +80,7 @@ final appRouter = GoRouter(
       if (returnTo != null && returnTo.isNotEmpty) {
         return returnTo;
       }
-      return '/home'; // Trust token existence, don't validate via API
+      return '/chats'; // Chat is now the default/main screen
     }
 
     // Only validate admin role when accessing admin routes

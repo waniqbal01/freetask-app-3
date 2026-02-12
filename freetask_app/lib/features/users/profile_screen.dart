@@ -6,7 +6,6 @@ import '../../core/widgets/confirmation_dialog.dart';
 
 import '../../models/user.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/notification_bell_button.dart';
 import '../auth/auth_repository.dart';
 
@@ -208,9 +207,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final role = _user?.role.toUpperCase();
-    final isFreelancer = role == 'FREELANCER';
-    final isAdmin = role == 'ADMIN';
+    final isFreelancer = _user?.roleEnum.isFreelancer ?? false;
+    final isAdmin = _user?.roleEnum.isAdmin ?? false;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Profil Saya'), actions: [
@@ -220,7 +218,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           onPressed: () {}, // Settings placeholder
         ),
       ]),
-      bottomNavigationBar: const AppBottomNav(currentTab: AppTab.profile),
       body: _isLoadingUser
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(

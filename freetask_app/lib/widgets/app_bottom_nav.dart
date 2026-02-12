@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../theme/app_theme.dart';
 
-enum AppTab { home, jobs, chats, profile }
+enum AppTab { chats, jobs, home }
 
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({super.key, required this.currentTab});
@@ -13,17 +13,14 @@ class AppBottomNav extends StatelessWidget {
   void _onDestinationSelected(BuildContext context, int index) {
     final tab = AppTab.values[index];
     switch (tab) {
-      case AppTab.home:
-        context.go('/home');
+      case AppTab.chats:
+        context.go('/chats');
         break;
       case AppTab.jobs:
         context.go('/jobs');
         break;
-      case AppTab.chats:
-        context.go('/chats');
-        break;
-      case AppTab.profile:
-        context.go('/profile');
+      case AppTab.home:
+        context.go('/home');
         break;
     }
   }
@@ -43,9 +40,9 @@ class AppBottomNav extends StatelessWidget {
             _onDestinationSelected(context, index),
         destinations: const <NavigationDestination>[
           NavigationDestination(
-            icon: Icon(Icons.storefront_outlined),
-            selectedIcon: Icon(Icons.storefront_rounded),
-            label: 'Home',
+            icon: Icon(Icons.chat_bubble_outline),
+            selectedIcon: Icon(Icons.chat_bubble_rounded),
+            label: 'Chat',
           ),
           NavigationDestination(
             icon: Icon(Icons.work_outline),
@@ -53,14 +50,9 @@ class AppBottomNav extends StatelessWidget {
             label: 'Jobs',
           ),
           NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline),
-            selectedIcon: Icon(Icons.chat_bubble_rounded),
-            label: 'Chat',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person_rounded),
-            label: 'Profile',
+            icon: Icon(Icons.storefront_outlined),
+            selectedIcon: Icon(Icons.storefront_rounded),
+            label: 'Services',
           ),
         ],
       ),

@@ -3,13 +3,16 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/utils/error_utils.dart';
 import '../../core/utils/url_utils.dart';
+import '../../core/websocket/socket_service.dart';
+import '../../models/chat_enums.dart';
+import '../../widgets/chat_widgets.dart';
 import '../auth/auth_providers.dart';
 import 'chat_models.dart';
 import 'chat_repository.dart';
-import 'package:intl/intl.dart';
 
 class ChatRoomScreen extends ConsumerStatefulWidget {
   const ChatRoomScreen({super.key, required this.chatId});
@@ -56,44 +59,69 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
         );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB), // Light Blue-Grey background
+      backgroundColor: const Color(0xFFF5F7FB), // Light blue-grey background
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1976D2), // Primary Blue
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         foregroundColor: Colors.white,
         titleSpacing: 0,
         title: Row(
           children: [
             CircleAvatar(
-              backgroundColor: Colors.grey.shade300,
+              backgroundColor: Colors.white,
+              radius: 18,
               child: Text(
                   thread.participantName.isNotEmpty
                       ? thread.participantName[0].toUpperCase()
                       : '?',
-                  style: const TextStyle(color: Colors.black)),
+                  style: const TextStyle(
+                      color: Color(0xFF2196F3), fontWeight: FontWeight.bold)),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(thread.participantName,
                       style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold)),
+                          fontSize: 16, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 2),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(thread.jobStatus),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      thread.jobStatus.replaceAll('_', ' '),
-                      style: const TextStyle(
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: _getStatusColor(thread.jobStatus),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          thread.jobStatus.replaceAll('_', ' ').toLowerCase(),
+                          style: const TextStyle(
+                              fontSize: 9,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.3),
+                        ),
+                      ),
+                      // Online status placeholder (will update via WebSocket)
+                      const SizedBox(width: 8),
+                      Text(
+                        'online', // TODO: Update with real presence status
+                        style: TextStyle(
                           fontSize: 10,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600),
-                    ),
+                          color: Colors.white.withOpacity(0.9),
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -103,6 +131,15 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
       ),
       body: Column(
         children: <Widget>[
+          // Connection status banner
+          StreamBuilder<ConnectionStatus>(
+            stream: SocketService.instance.connectionStream,
+            initialData: SocketService.instance.currentStatus,
+            builder: (context, snapshot) {
+              return ConnectionStatusBanner(
+                  status: snapshot.data ?? ConnectionStatus.disconnected);
+            },
+          ),
           Expanded(
             child: asyncMessages.when(
               data: (List<ChatMessage> messages) {
@@ -373,12 +410,12 @@ class _MessageBubble extends StatelessWidget {
       child: Container(
         constraints:
             BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.all(8),
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isMe
-              ? const Color(0xFFE3F2FD) // Light Blue for me
-              : Colors.white, // White for others
+              ? const Color(0xFFE3F2FD) // Light blue for sent
+              : Colors.white, // White for received
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(12),
             topRight: const Radius.circular(12),
@@ -387,8 +424,8 @@ class _MessageBubble extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 2,
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 4,
               offset: const Offset(0, 1),
             )
           ],
@@ -428,7 +465,7 @@ class _MessageBubble extends StatelessWidget {
                 padding: const EdgeInsets.all(8),
                 margin: const EdgeInsets.only(bottom: 4),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
+                  color: isMe ? const Color(0xFFC8E6C9) : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -447,7 +484,7 @@ class _MessageBubble extends StatelessWidget {
             if (message.type == 'text' ||
                 (message.text.isNotEmpty && message.type != 'file'))
               Padding(
-                padding: const EdgeInsets.only(bottom: 2),
+                padding: const EdgeInsets.only(bottom: 4),
                 child: Text(
                   message.text,
                   style: const TextStyle(fontSize: 15, color: Colors.black87),
@@ -459,12 +496,13 @@ class _MessageBubble extends StatelessWidget {
               children: [
                 Text(
                   DateFormat('hh:mm a').format(message.timestamp),
-                  style: const TextStyle(fontSize: 11, color: Colors.black54),
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: isMe ? Colors.blue.shade800 : Colors.black54),
                 ),
                 if (isMe) ...[
                   const SizedBox(width: 4),
-                  const Icon(Icons.done_all,
-                      size: 16, color: Colors.blue), // Blue ticks
+                  MessageStatusIcon(status: message.status),
                 ],
               ],
             ),
@@ -507,7 +545,7 @@ class _MessageComposerState extends State<_MessageComposer> {
           children: <Widget>[
             IconButton(
               icon: const Icon(Icons.add_circle,
-                  color: Color(0xFF1976D2)), // Primary Blue
+                  color: Color(0xFF2196F3)), // FreeTask blue
               onPressed: widget.enabled ? _showAttachmentMenu : null,
             ),
             Expanded(
@@ -534,7 +572,7 @@ class _MessageComposerState extends State<_MessageComposer> {
             ),
             const SizedBox(width: 8),
             CircleAvatar(
-              backgroundColor: const Color(0xFF1976D2),
+              backgroundColor: const Color(0xFF2196F3), // FreeTask blue
               radius: 22,
               child: IconButton(
                 icon: const Icon(Icons.send, color: Colors.white, size: 20),

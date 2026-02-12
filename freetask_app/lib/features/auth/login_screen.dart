@@ -156,7 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
           goToRoleHome(context, user.role);
         }
       } else {
-        context.go('/home');
+        context.go('/chats');
       }
     } else if (mounted) {
       throw DioException(
