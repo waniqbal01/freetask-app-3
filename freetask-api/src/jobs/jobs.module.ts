@@ -3,13 +3,14 @@ import { JobsService } from './jobs.service';
 import { JobsController } from './jobs.controller';
 import { RolesGuard } from '../auth/roles.guard';
 import { EscrowService } from '../escrow/escrow.service';
+import { forwardRef } from '@nestjs/common';
 import { ChatsModule } from '../chats/chats.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 import { PaymentsModule } from '../payments/payments.module';
 
 @Module({
-  imports: [ChatsModule, NotificationsModule, PaymentsModule],
+  imports: [forwardRef(() => ChatsModule), NotificationsModule, PaymentsModule],
   controllers: [JobsController],
   providers: [JobsService, RolesGuard, EscrowService],
 })
