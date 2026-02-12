@@ -1,8 +1,12 @@
-export class ChatThreadDto {
+import { JobStatus } from '@prisma/client';
+
+export interface ChatThreadDto {
   id: number;
   jobTitle: string;
   participantName: string;
-  lastMessage?: string | null;
-  lastAt?: Date | null;
-  jobStatus: string;
+  participantId: number;
+  lastMessage: string | null;
+  lastAt: Date;
+  jobStatus: JobStatus;
+  unreadCount: number;
 }

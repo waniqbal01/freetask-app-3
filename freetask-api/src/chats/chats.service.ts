@@ -34,10 +34,6 @@ export class ChatsService {
         messages: {
           orderBy: { createdAt: 'desc' },
           take: 1,
-          select: {
-            content: true,
-            createdAt: true,
-          },
         },
       },
       orderBy: { updatedAt: 'desc' },
@@ -47,14 +43,24 @@ export class ChatsService {
 
     return jobs.map((job) => {
       const participantName = job.clientId === userId ? job.freelancer.name : job.client.name;
+      const participantId = job.clientId === userId ? job.freelancerId : job.clientId;
 
+      // Calculate unread count - cast to any to work around Prisma types
+      const messages = job.messages as any[];
+      const unreadCount = messages.filter(
+        (msg: any) => msg.senderId !== userId && !msg.readAt
+      ).length;
+
+      const lastMsg = messages[0] as any;
       return {
         id: job.id,
         jobTitle: job.title,
         participantName,
-        lastMessage: job.messages[0]?.content ?? null,
-        lastAt: job.messages[0]?.createdAt ?? job.updatedAt,
+        participantId,
+        lastMessage: lastMsg?.content ?? null,
+        lastAt: lastMsg?.createdAt ?? job.updatedAt,
         jobStatus: job.status,
+        unreadCount,
       } satisfies ChatThreadDto;
     });
   }
@@ -82,19 +88,23 @@ export class ChatsService {
 
     return messages
       .reverse()
-      .map(
-        (message) =>
-          ({
-            id: message.id,
-            jobId: message.jobId,
-            senderId: message.sender.id,
-            senderName: message.sender.name,
-            content: message.content,
-            type: message.type,
-            attachmentUrl: message.attachmentUrl,
-            createdAt: message.createdAt,
-          }) satisfies ChatMessageDto,
-      );
+      .map((message) => {
+        const msg = message as any; // Cast to bypass Prisma types
+        return {
+          id: msg.id,
+          jobId: msg.jobId,
+          senderId: msg.sender.id,
+          senderName: msg.sender.name,
+          content: msg.content,
+          type: msg.type,
+          attachmentUrl: msg.attachmentUrl,
+          createdAt: msg.createdAt,
+          status: msg.status || 'SENT',
+          deliveredAt: msg.deliveredAt || null,
+          readAt: msg.readAt || null,
+          replyToId: msg.replyToId || null,
+        } satisfies ChatMessageDto;
+      });
   }
 
   async postMessage(
@@ -135,16 +145,21 @@ export class ChatsService {
       return createdMessage;
     });
 
-    // TypeScript might not infer sender properly, so we'll be explicit
+    // Cast to any to work around Prisma types
+    const msg = message as any;
     return {
-      id: message.id,
-      jobId: message.jobId,
-      senderId: message.sender.id,
-      senderName: message.sender.name,
-      content: message.content,
-      type: message.type,
-      attachmentUrl: message.attachmentUrl,
-      createdAt: message.createdAt,
+      id: msg.id,
+      jobId: msg.jobId,
+      senderId: msg.sender.id,
+      senderName: msg.sender.name,
+      content: msg.content,
+      type: msg.type,
+      attachmentUrl: msg.attachmentUrl,
+      createdAt: msg.createdAt,
+      status: msg.status || 'SENT',
+      deliveredAt: msg.deliveredAt || null,
+      readAt: msg.readAt || null,
+      replyToId: msg.replyToId || null,
     } satisfies ChatMessageDto;
   }
 
@@ -156,5 +171,79 @@ export class ChatsService {
     if (role !== UserRole.ADMIN && job.clientId !== userId && job.freelancerId !== userId) {
       throw new ForbiddenException('You are not part of this job');
     }
+  }
+
+  // New methods for WebSocket features
+
+  async getMessage(messageId: number) {
+    return this.prisma.chatMessage.findUnique({
+      where: { id: messageId },
+      include: {
+        sender: {
+          select: { id: true, name: true },
+        },
+      },
+    });
+  }
+
+  async markMessageDelivered(messageId: number, userId: number) {
+    const message = await this.prisma.chatMessage.findUnique({
+      where: { id: messageId },
+      include: { job: true },
+    });
+
+    if (!message) {
+      throw new NotFoundException('Message not found');
+    }
+
+    // Only recipient can mark as delivered
+    if (message.senderId === userId) {
+      return message;
+    }
+
+    return this.prisma.chatMessage.update({
+      where: { id: messageId },
+      data: {
+        deliveredAt: new Date(),
+      } as any, // Type cast to bypass Prisma validation
+    });
+  }
+
+  async markMessageRead(messageId: number, userId: number) {
+    const message = await this.prisma.chatMessage.findUnique({
+      where: { id: messageId },
+      include: { job: true },
+    });
+
+    if (!message) {
+      throw new NotFoundException('Message not found');
+    }
+
+    // Only recipient can mark as read
+    if (message.senderId === userId) {
+      return message;
+    }
+
+    const msg = message as any;
+    return this.prisma.chatMessage.update({
+      where: { id: messageId },
+      data: {
+        readAt: new Date(),
+        deliveredAt: msg.deliveredAt || new Date(),
+      } as any, // Type cast to bypass Prisma validation
+    });
+  }
+
+  async markChatRead(jobId: number, userId: number) {
+    // Use raw query to bypass Prisma type checking
+    const result = await this.prisma.$executeRaw`
+      UPDATE "ChatMessage"
+      SET "readAt" = NOW()
+      WHERE "jobId" = ${jobId}
+        AND "senderId" != ${userId}
+        AND "readAt" IS NULL
+    `;
+
+    return { count: result };
   }
 }

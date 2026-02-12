@@ -6,13 +6,17 @@ import { CreateMessageDto } from './dto/create-message.dto';
 import { UserRole } from '@prisma/client';
 import { Throttle } from '@nestjs/throttler';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { ChatGateway } from '../websocket/chat.gateway';
 
 @Controller('chats')
 @UseGuards(JwtAuthGuard)
 export class ChatsController {
   private readonly logger = new Logger(ChatsController.name);
 
-  constructor(private readonly chatsService: ChatsService) { }
+  constructor(
+    private readonly chatsService: ChatsService,
+    private readonly chatGateway: ChatGateway,
+  ) { }
 
   @Get()
   @Throttle({ default: { limit: 15, ttl: 60000 } })
@@ -37,7 +41,7 @@ export class ChatsController {
 
   @Post(':jobId/messages')
   @Throttle({ default: { limit: 20, ttl: 60000 } })
-  sendMessage(
+  async sendMessage(
     @Param('jobId', ParseIntPipe) jobId: number,
     @GetUser('userId') userId: number,
     @GetUser('role') role: UserRole,
@@ -45,6 +49,21 @@ export class ChatsController {
   ) {
     this.logger.log(`Message sent by user ${userId} in job ${jobId}`);
     this.logger.log(`Message payload: ${JSON.stringify(dto)}`);
-    return this.chatsService.postMessage(jobId, userId, role, dto);
+
+    const message = await this.chatsService.postMessage(jobId, userId, role, dto);
+
+    // Broadcast via WebSocket
+    this.chatGateway.emitNewMessage(jobId, message);
+
+    return message;
+  }
+
+  @Post(':jobId/mark-read')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  markChatRead(
+    @Param('jobId', ParseIntPipe) jobId: number,
+    @GetUser('userId') userId: number,
+  ) {
+    return this.chatsService.markChatRead(jobId, userId);
   }
 }

@@ -19,6 +19,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { AdminModule } from './admin/admin.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
 import { WithdrawalsModule } from './withdrawals/withdrawals.module';
+import { WebsocketModule } from './websocket/websocket.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { WithdrawalsModule } from './withdrawals/withdrawals.module';
     AdminModule,
     PortfolioModule,
     WithdrawalsModule,
+    WebsocketModule,
   ],
   controllers: [HealthController],
   providers: [
