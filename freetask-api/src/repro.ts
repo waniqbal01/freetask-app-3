@@ -3,6 +3,10 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
+const dbUrl = process.env.DATABASE_URL;
+console.log('DATABASE_URL:', dbUrl?.replace(/:([^:@]+)@/, ':****@')); // Mask password
+
+
 const prisma = new PrismaClient({
     log: ['query', 'info', 'warn', 'error'],
 });
@@ -18,6 +22,7 @@ async function main() {
     console.log(`Running findMany query for userId ${userId}...`);
 
     try {
+        // 1. Fetch Jobs
         const jobs = await prisma.job.findMany({
             where:
                 (role as any) === UserRole.ADMIN
@@ -27,21 +32,29 @@ async function main() {
                     },
             include: {
                 client: {
-                    select: { id: true, name: true },
+                    select: { id: true },
                 },
-                freelancer: {
-                    select: { id: true, name: true },
-                },
-                messages: {
-                    orderBy: { createdAt: 'desc' },
-                    take: 1,
-                },
+                // freelancer: {
+                //     select: { id: true, name: true },
+                // },
             },
             orderBy: { updatedAt: 'desc' },
             take: 20,
             skip: 0,
         });
-        console.log(`Found ${jobs.length} jobs.`);
+
+        console.log(`Found ${jobs.length} jobs. Fetching last messages...`);
+
+        // 2. Fetch Last Message for each job
+        const results = await Promise.all(jobs.map(async (job) => {
+            const lastMsg = await prisma.chatMessage.findFirst({
+                where: { jobId: job.id },
+                orderBy: { createdAt: 'desc' },
+            });
+            return { job: job.id, lastMsg: lastMsg?.content };
+        }));
+
+        console.log('Results:', results);
     } catch (error) {
         console.error('Error running query:', error);
     } finally {
