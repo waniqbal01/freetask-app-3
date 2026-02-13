@@ -956,6 +956,62 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             ),
             const SizedBox(height: 12),
 
+            // Message Card - Quick access to chat
+            _buildInfoCard(
+              title: 'Mesej',
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: theme.primaryColor.withValues(alpha: 0.1),
+                    ),
+                    child: Icon(
+                      Icons.chat_bubble_outline,
+                      color: theme.primaryColor,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Bincang job ini dengan ${_isClientView ? 'freelancer' : 'client'}',
+                          style: textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Klik untuk buka chat',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    onPressed: _openChat,
+                    icon: const Icon(Icons.send, size: 18),
+                    label: const Text('Chat'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
             // Description
             if (job.description?.isNotEmpty ?? false)
               _buildInfoCard(

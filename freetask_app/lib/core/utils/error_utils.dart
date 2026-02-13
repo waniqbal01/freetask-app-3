@@ -55,7 +55,22 @@ String resolveDioErrorMessage(
   }
 
   if (statusCode != null && statusCode >= 500) {
-    return 'Ralat pelayan. Sila cuba sebentar lagi.';
+    final endpoint = path.isNotEmpty ? ' ($path)' : '';
+    // Log detailed error for debugging
+    debugPrint('🔴 SERVER ERROR $statusCode$endpoint');
+    debugPrint('Response: ${error.response?.data}');
+    debugPrint('Message: ${error.message}');
+
+    // Try to extract backend error message
+    final responseData = error.response?.data;
+    if (responseData is Map<String, dynamic>) {
+      final backendMsg = responseData['message'];
+      if (backendMsg is String && backendMsg.trim().isNotEmpty) {
+        return 'Ralat pelayan: ${backendMsg.trim()}';
+      }
+    }
+
+    return 'Ralat pelayan$endpoint. Sila cuba sebentar lagi atau hubungi sokongan.';
   }
 
   // Extract message from response

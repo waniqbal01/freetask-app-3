@@ -208,7 +208,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final isFreelancer = _user?.roleEnum.isFreelancer ?? false;
-    final isAdmin = _user?.roleEnum.isAdmin ?? false;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Profil Saya'), actions: [
@@ -230,20 +229,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     if (_user != null) _buildUserInfo(_user!, isFreelancer),
                     const SizedBox(height: 24),
 
-                    if (isAdmin) ...[
-                      const SizedBox(height: 24),
-                      Card(
-                        color: Colors.red.shade50,
-                        child: ListTile(
-                          leading: const Icon(Icons.admin_panel_settings,
-                              color: Colors.red),
-                          title: const Text('Admin Dashboard'),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () => context.push('/admin'),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
                     OutlinedButton(
                       onPressed: _logout,
                       style: OutlinedButton.styleFrom(

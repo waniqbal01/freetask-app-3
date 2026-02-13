@@ -953,18 +953,20 @@ class _JobsHeader extends StatelessWidget {
                           child:
                               const NotificationBellButton(color: Colors.white),
                         ),
-                        const SizedBox(width: 8),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
+                        if (isFreelancer) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.add, color: Colors.white),
+                              onPressed: () => context.push('/services/create'),
+                              tooltip: 'Create Service',
+                            ),
                           ),
-                          child: IconButton(
-                            icon: const Icon(Icons.add, color: Colors.white),
-                            onPressed: () => context.push('/services/create'),
-                            tooltip: 'Create Service',
-                          ),
-                        ),
+                        ],
                       ],
                     ),
                   ],

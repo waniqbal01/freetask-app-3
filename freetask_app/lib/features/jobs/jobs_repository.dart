@@ -76,8 +76,16 @@ class JobsRepository {
       );
       final data = response.data ?? <String, dynamic>{};
       final job = Job.fromJson(data);
+
+      debugPrint('✅ Job created successfully: ${job.id}');
       return job;
     } on DioException catch (error) {
+      debugPrint('🔴 FAILED TO CREATE JOB');
+      debugPrint('Service ID: $serviceId');
+      debugPrint('Amount: $amount');
+      debugPrint('Status: ${error.response?.statusCode}');
+      debugPrint('Response: ${error.response?.data}');
+
       await _handleDioError(error, suppressClientErrorSnackbar: true);
       rethrow;
     }
@@ -103,8 +111,15 @@ class JobsRepository {
         options: await _authorizedOptions(),
       );
       final data = response.data ?? <String, dynamic>{};
+
+      debugPrint('✅ Inquiry created successfully');
       return Job.fromJson(data);
     } on DioException catch (error) {
+      debugPrint('🔴 FAILED TO CREATE INQUIRY');
+      debugPrint('Service ID: $serviceId');
+      debugPrint('Status: ${error.response?.statusCode}');
+      debugPrint('Response: ${error.response?.data}');
+
       await _handleDioError(error, suppressClientErrorSnackbar: true);
       rethrow;
     }
@@ -322,6 +337,14 @@ class JobsRepository {
           .map(Job.fromJson)
           .toList(growable: false);
     } on DioException catch (error) {
+      // Log detailed error information for debugging
+      debugPrint('🔴 FAILED TO FETCH JOBS');
+      debugPrint('Query: $queryParameters');
+      debugPrint('Status: ${error.response?.statusCode}');
+      debugPrint('Path: ${error.requestOptions.path}');
+      debugPrint('Response: ${error.response?.data}');
+      debugPrint('Error Type: ${error.type}');
+
       await _handleDioError(error);
       rethrow;
     }

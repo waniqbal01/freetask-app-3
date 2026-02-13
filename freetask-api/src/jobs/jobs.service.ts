@@ -41,47 +41,55 @@ export class JobsService {
       throw new ForbiddenException('Only clients can create jobs');
     }
 
-    const service = await this.prisma.service.findUnique({
-      where: { id: dto.serviceId },
-    });
-    if (!service) {
-      throw new NotFoundException('Service not found');
+    try {
+      const service = await this.prisma.service.findUnique({
+        where: { id: dto.serviceId },
+      });
+      if (!service) {
+        throw new NotFoundException('Service not found');
+      }
+
+      const parsedAmount = Number(dto.amount);
+      if (!Number.isFinite(parsedAmount)) {
+        throw new BadRequestException('amount must be a valid number');
+      }
+      const amount = new Prisma.Decimal(parsedAmount.toFixed(2));
+
+      // Trim title to prevent whitespace inconsistencies
+      const trimmedTitle = (dto.title ?? service.title).trim();
+
+      this.logger.log(`Creating job for service ${dto.serviceId} by client ${userId}`);
+
+      const job = await this.prisma.job.create({
+        data: {
+          title: trimmedTitle,
+          description: dto.description,
+          amount,
+          serviceId: service.id,
+          clientId: userId,
+          freelancerId: service.freelancerId,
+          orderAttachments: dto.attachments ? (dto.attachments as any) : undefined,
+        },
+        include: this.jobInclude,
+      });
+
+      // NOTE: Escrow is NOT created here anymore
+      // It will be created when payment is completed (AWAITING_PAYMENT → IN_PROGRESS)
+
+      // Notify Freelancer
+      await this.notificationsService.sendNotification({
+        userId: service.freelancerId,
+        title: 'New Order Received',
+        body: `You have received a new order: ${trimmedTitle}. Please review and accept/reject.`,
+        data: { type: 'job_order', jobId: job.id.toString() },
+      });
+
+      this.logger.log(`Job ${job.id} created successfully`);
+      return this.withFlatFields(job);
+    } catch (error) {
+      this.logger.error(`Failed to create job for service ${dto.serviceId}`, error);
+      throw error;
     }
-
-    const parsedAmount = Number(dto.amount);
-    if (!Number.isFinite(parsedAmount)) {
-      throw new BadRequestException('amount must be a valid number');
-    }
-    const amount = new Prisma.Decimal(parsedAmount.toFixed(2));
-
-    // Trim title to prevent whitespace inconsistencies
-    const trimmedTitle = (dto.title ?? service.title).trim();
-
-    const job = await this.prisma.job.create({
-      data: {
-        title: trimmedTitle,
-        description: dto.description,
-        amount,
-        serviceId: service.id,
-        clientId: userId,
-        freelancerId: service.freelancerId,
-        orderAttachments: dto.attachments ? (dto.attachments as any) : undefined,
-      },
-      include: this.jobInclude,
-    });
-
-    // NOTE: Escrow is NOT created here anymore
-    // It will be created when payment is completed (AWAITING_PAYMENT → IN_PROGRESS)
-
-    // Notify Freelancer
-    await this.notificationsService.sendNotification({
-      userId: service.freelancerId,
-      title: 'New Order Received',
-      body: `You have received a new order: ${trimmedTitle}. Please review and accept/reject.`,
-      data: { type: 'job_order', jobId: job.id.toString() },
-    });
-
-    return this.withFlatFields(job);
   }
 
   async createInquiry(userId: number, role: UserRole, dto: CreateInquiryDto) {
@@ -153,15 +161,24 @@ export class JobsService {
     const take = Math.min(Math.max(pagination?.limit ?? 20, 1), 50);
     const skip = Math.max(pagination?.offset ?? 0, 0);
 
-    const jobs = await this.prisma.job.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      include: this.jobInclude,
-      take,
-      skip,
-    });
+    try {
+      this.logger.debug(`Finding jobs for user ${userId} with filter ${normalizedFilter}`);
 
-    return jobs.map((job) => this.withFlatFields(job));
+      const jobs = await this.prisma.job.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        include: this.jobInclude,
+        take,
+        skip,
+      });
+
+      this.logger.debug(`Found ${jobs.length} jobs for user ${userId}`);
+      return jobs.map((job) => this.withFlatFields(job));
+    } catch (error) {
+      this.logger.error(`Failed to fetch jobs for user ${userId}`, error);
+      this.logger.error(`Query params: filter=${normalizedFilter}, status=${status}, limit=${take}, offset=${skip}`);
+      throw error;
+    }
   }
 
   async findOneForUser(id: number, userId: number, role: UserRole) {

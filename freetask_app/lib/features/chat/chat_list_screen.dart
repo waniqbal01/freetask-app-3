@@ -598,7 +598,7 @@ class _ChatHeader extends StatelessWidget {
         // Overlapping Search Card
         Container(
           margin:
-              const EdgeInsets.only(top: 200, left: 20, right: 20, bottom: 20),
+              const EdgeInsets.only(top: 220, left: 20, right: 20, bottom: 20),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
