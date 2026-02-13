@@ -289,8 +289,6 @@ model AdminLog {
   @@index([createdAt])
 }
 
-
-
 model Withdrawal {
   id              Int              @id @default(autoincrement())
   createdAt       DateTime         @default(now())
