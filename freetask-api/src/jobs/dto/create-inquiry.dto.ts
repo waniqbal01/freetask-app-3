@@ -8,6 +8,7 @@ import {
     MinLength,
 } from 'class-validator';
 
+export class CreateInquiryDto {
     @IsOptional()
     @Type(() => Number)
     @IsInt()
