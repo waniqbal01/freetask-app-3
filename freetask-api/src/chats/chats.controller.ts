@@ -28,42 +28,50 @@ export class ChatsController {
     return this.chatsService.listThreads(userId, role, { limit: query?.limit, offset: query?.offset });
   }
 
-  @Get(':jobId/messages')
+  @Post('conversation')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  createConversation(
+    @GetUser('userId') userId: number,
+    @Body('otherUserId', ParseIntPipe) otherUserId: number,
+  ) {
+    return this.chatsService.getOrCreateConversation(userId, otherUserId);
+  }
+
+  @Get(':conversationId/messages')
   @Throttle({ default: { limit: 25, ttl: 60000 } })
   listMessages(
-    @Param('jobId', ParseIntPipe) jobId: number,
+    @Param('conversationId', ParseIntPipe) conversationId: number,
     @GetUser('userId') userId: number,
     @GetUser('role') role: UserRole,
     @Query() query?: PaginationQueryDto,
   ) {
-    return this.chatsService.listMessages(jobId, userId, role, { limit: query?.limit, offset: query?.offset });
+    return this.chatsService.listMessages(conversationId, userId, role, { limit: query?.limit, offset: query?.offset });
   }
 
-  @Post(':jobId/messages')
+  @Post(':conversationId/messages')
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   async sendMessage(
-    @Param('jobId', ParseIntPipe) jobId: number,
+    @Param('conversationId', ParseIntPipe) conversationId: number,
     @GetUser('userId') userId: number,
     @GetUser('role') role: UserRole,
     @Body() dto: CreateMessageDto,
   ) {
-    this.logger.log(`Message sent by user ${userId} in job ${jobId}`);
-    this.logger.log(`Message payload: ${JSON.stringify(dto)}`);
+    this.logger.log(`Message sent by user ${userId} in conversation ${conversationId}`);
 
-    const message = await this.chatsService.postMessage(jobId, userId, role, dto);
+    const message = await this.chatsService.postMessage(conversationId, userId, role, dto);
 
     // Broadcast via WebSocket
-    this.chatGateway.emitNewMessage(jobId, message);
+    this.chatGateway.emitNewMessage(conversationId, message);
 
     return message;
   }
 
-  @Post(':jobId/mark-read')
+  @Post(':conversationId/mark-read')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   markChatRead(
-    @Param('jobId', ParseIntPipe) jobId: number,
+    @Param('conversationId', ParseIntPipe) conversationId: number,
     @GetUser('userId') userId: number,
   ) {
-    return this.chatsService.markChatRead(jobId, userId);
+    return this.chatsService.markChatRead(conversationId, userId);
   }
 }

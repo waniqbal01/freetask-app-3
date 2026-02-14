@@ -3,33 +3,34 @@ import '../../models/chat_enums.dart';
 class ChatThread {
   const ChatThread({
     required this.id,
-    required this.jobTitle,
+    required this.title,
     required this.participantName,
     this.participantId,
     this.lastMessage,
     this.lastAt,
-    this.jobStatus = 'PENDING',
+    this.status = 'ACTIVE',
     this.unreadCount = 0,
   });
 
   factory ChatThread.fromJson(Map<String, dynamic> json) {
     return ChatThread(
       id: json['id']?.toString() ?? '',
-      jobTitle:
-          json['job_title']?.toString() ?? json['jobTitle']?.toString() ?? '',
-      participantName: json['participant_name']?.toString() ??
-          json['participantName']?.toString() ??
+      title: json['jobTitle']?.toString() ??
+          json['job_title']?.toString() ??
+          'Conversation',
+      participantName: json['participantName']?.toString() ??
+          json['participant_name']?.toString() ??
           '',
-      participantId: json['participant_id']?.toString() ??
-          json['participantId']?.toString(),
+      participantId: json['participantId']?.toString() ??
+          json['participant_id']?.toString(),
       lastMessage:
-          json['last_message']?.toString() ?? json['lastMessage']?.toString(),
+          json['lastMessage']?.toString() ?? json['last_message']?.toString(),
       lastAt: DateTime.tryParse(
         json['lastAt']?.toString() ?? json['last_at']?.toString() ?? '',
       ),
-      jobStatus: json['jobStatus']?.toString() ??
+      status: json['jobStatus']?.toString() ??
           json['job_status']?.toString() ??
-          'PENDING',
+          'ACTIVE',
       unreadCount: int.tryParse(
             json['unreadCount']?.toString() ??
                 json['unread_count']?.toString() ??
@@ -40,32 +41,32 @@ class ChatThread {
   }
 
   final String id;
-  final String jobTitle;
+  final String title;
   final String participantName;
   final String? participantId;
   final String? lastMessage;
   final DateTime? lastAt;
-  final String jobStatus;
+  final String status;
   final int unreadCount;
 
   ChatThread copyWith({
     String? id,
-    String? jobTitle,
+    String? title,
     String? participantName,
     String? participantId,
     String? lastMessage,
     DateTime? lastAt,
-    String? jobStatus,
+    String? status,
     int? unreadCount,
   }) {
     return ChatThread(
       id: id ?? this.id,
-      jobTitle: jobTitle ?? this.jobTitle,
+      title: title ?? this.title,
       participantName: participantName ?? this.participantName,
       participantId: participantId ?? this.participantId,
       lastMessage: lastMessage ?? this.lastMessage,
       lastAt: lastAt ?? this.lastAt,
-      jobStatus: jobStatus ?? this.jobStatus,
+      status: status ?? this.status,
       unreadCount: unreadCount ?? this.unreadCount,
     );
   }

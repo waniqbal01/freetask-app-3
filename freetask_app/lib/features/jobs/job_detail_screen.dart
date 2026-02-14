@@ -10,6 +10,7 @@ import '../../models/job.dart';
 import '../auth/auth_repository.dart';
 
 import '../escrow/escrow_repository.dart';
+import '../chat/chat_repository.dart';
 
 import 'jobs_repository.dart';
 import 'job_transition_rules.dart';
@@ -770,8 +771,44 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return null;
   }
 
-  void _openChat() {
-    context.push('/chats/${widget.jobId}/messages');
+  Future<void> _openChat() async {
+    final job = _job;
+    if (job == null || _userId == null) return;
+
+    // Determine other user ID
+    final otherUserId =
+        _userId == job.clientId ? job.freelancerId : job.clientId;
+
+    if (otherUserId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ID pengguna tidak sah.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isProcessing = true;
+    });
+
+    try {
+      final chatRepo = ChatRepository();
+      final thread =
+          await chatRepo.createConversation(otherUserId: otherUserId);
+
+      if (!mounted) return;
+      context.push('/chats/${thread.id}/messages');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal membuka chat: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
+    }
   }
 
   @override

@@ -4,7 +4,7 @@ import '../../models/service.dart';
 import '../../core/utils/url_utils.dart';
 import '../reviews/reviews_repository.dart';
 import 'users_repository.dart';
-import '../jobs/jobs_repository.dart';
+import '../chat/chat_repository.dart';
 
 import 'package:flutter/services.dart';
 
@@ -174,48 +174,19 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   Future<void> _handleProfileMessage(Map<String, dynamic> user) async {
     if (!mounted) return;
 
-    final controller = TextEditingController();
-    final message = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Mesej Freelancer'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'Apa yang anda ingin tanya?',
-            border: OutlineInputBorder(),
-          ),
-          maxLines: 3,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Hantar'),
-          ),
-        ],
-      ),
-    );
-
-    if (message == null || message.trim().isEmpty || !mounted) return;
-
     try {
-      final job = await jobsRepository.createInquiry(
-        freelancerId: widget.userId,
-        message: message,
-      );
-      if (mounted) {
-        context.push('/chats/${job.id}/messages');
-      }
+      final chatRepo = ChatRepository();
+      // widget.userId is the freelancerId (otherUserId)
+      final thread =
+          await chatRepo.createConversation(otherUserId: widget.userId);
+
+      if (!mounted) return;
+      context.push('/chats/${thread.id}/messages');
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal menghantar mesej: $e')),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal membuka chat: $e')),
+      );
     }
   }
 

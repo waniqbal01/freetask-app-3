@@ -278,38 +278,39 @@ class SocketService {
   // Convenience methods for chat operations
 
   /// Join a chat room
-  void joinRoom(String jobId) {
-    emit('join_room', {'jobId': jobId});
+  void joinRoom(String conversationId) {
+    emit('join_room', {'conversationId': conversationId});
   }
 
   /// Leave a chat room
-  void leaveRoom(String jobId) {
-    emit('leave_room', {'jobId': jobId});
+  void leaveRoom(String conversationId) {
+    emit('leave_room', {'conversationId': conversationId});
   }
 
   /// Send typing indicator
-  void sendTyping(String jobId, bool isTyping) {
-    emit(isTyping ? 'typing_start' : 'typing_stop', {'jobId': jobId});
+  void sendTyping(String conversationId, bool isTyping) {
+    emit(isTyping ? 'typing_start' : 'typing_stop',
+        {'conversationId': conversationId});
   }
 
   /// Mark message as delivered
-  void markDelivered(String messageId, String jobId) {
+  void markDelivered(String messageId, String conversationId) {
     emit('mark_delivered', {
       'messageId': messageId,
-      'jobId': jobId,
+      'conversationId': conversationId,
     });
   }
 
   /// Mark message as read
-  void markRead(String messageId, String jobId) {
+  void markRead(String messageId, String conversationId) {
     emit('mark_read', {
       'messageId': messageId,
-      'jobId': jobId,
+      'conversationId': conversationId,
     });
   }
 
   /// Mark entire chat as read
-  void markChatRead(String jobId) {
-    emit('mark_chat_read', {'jobId': jobId});
+  void markChatRead(String conversationId) {
+    emit('mark_chat_read', {'conversationId': conversationId});
   }
 }

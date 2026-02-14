@@ -17,19 +17,13 @@ export class ChatsService {
     const take = Math.min(Math.max(pagination?.limit ?? 20, 1), 50);
     const skip = Math.max(pagination?.offset ?? 0, 0);
 
-    const jobs = await this.prisma.job.findMany({
-      where:
-        role === UserRole.ADMIN
-          ? {}
-          : {
-            OR: [{ clientId: userId }, { freelancerId: userId }],
-          },
+    const conversations = await this.prisma.conversation.findMany({
+      where: {
+        participants: { some: { id: userId } }
+      },
       include: {
-        client: {
-          select: { id: true, name: true },
-        },
-        freelancer: {
-          select: { id: true, name: true },
+        participants: {
+          select: { id: true, name: true, avatarUrl: true },
         },
         messages: {
           orderBy: { createdAt: 'desc' },
@@ -41,41 +35,41 @@ export class ChatsService {
       skip,
     });
 
-    return jobs.map((job) => {
-      const participantName = job.clientId === userId ? job.freelancer.name : job.client.name;
-      const participantId = job.clientId === userId ? job.freelancerId : job.clientId;
+    return conversations.map((convo) => {
+      const otherParticipant = convo.participants.find(p => p.id !== userId) || convo.participants[0];
+      const participantName = otherParticipant?.name || 'Unknown User';
+      const participantId = otherParticipant?.id || 0;
 
-      // Calculate unread count - cast to any to work around Prisma types
-      const messages = job.messages as any[];
-      const unreadCount = messages.filter(
-        (msg: any) => msg.senderId !== userId && !msg.readAt
-      ).length;
+      // Unread count: We can implement a more efficient query later
+      // For now, let's keep it 0 or basic check if needed
+      const unreadCount = 0;
 
-      const lastMsg = messages[0] as any;
+      const lastMsg = convo.messages[0];
       return {
-        id: job.id,
-        jobTitle: job.title,
+        id: convo.id,
+        jobTitle: 'Conversation',
         participantName,
         participantId,
-        lastMessage: lastMsg?.content ?? null,
-        lastAt: lastMsg?.createdAt ?? job.updatedAt,
-        jobStatus: job.status,
+        lastMessage: lastMsg?.content ?? (lastMsg?.attachmentUrl ? 'Attachment' : null),
+        lastAt: lastMsg?.createdAt ?? convo.updatedAt,
+        jobStatus: 'ACTIVE' as any,
         unreadCount,
       } satisfies ChatThreadDto;
     });
   }
 
   async listMessages(
-    jobId: number,
+    conversationId: number,
     userId: number,
     role: UserRole,
     pagination?: { limit?: number; offset?: number },
   ): Promise<ChatMessageDto[]> {
-    await this.ensureJobParticipant(jobId, userId, role);
+    await this.ensureConversationParticipant(conversationId, userId);
     const take = Math.min(Math.max(pagination?.limit ?? 50, 1), 200);
     const skip = Math.max(pagination?.offset ?? 0, 0);
+
     const messages = await this.prisma.chatMessage.findMany({
-      where: { jobId },
+      where: { conversationId },
       orderBy: { createdAt: 'desc' },
       include: {
         sender: {
@@ -89,10 +83,10 @@ export class ChatsService {
     return messages
       .reverse()
       .map((message) => {
-        const msg = message as any; // Cast to bypass Prisma types
+        const msg = message as any;
         return {
           id: msg.id,
-          jobId: msg.jobId,
+          jobId: msg.conversationId, // Map to jobId for legacy frontend support if needed, or update frontend to use conversationId
           senderId: msg.sender.id,
           senderName: msg.sender.name,
           content: msg.content,
@@ -108,26 +102,25 @@ export class ChatsService {
   }
 
   async postMessage(
-    jobId: number,
+    conversationId: number,
     userId: number,
     role: UserRole,
     dto: CreateMessageDto,
   ): Promise<ChatMessageDto> {
-    // Validate: Content is required UNLESS an attachment is provided
     if ((!dto.content || dto.content.trim() === '') && !dto.attachmentUrl) {
       throw new BadRequestException('Mesej atau lampiran diperlukan.');
     }
 
     const validatedContent: string = dto.content ?? '';
 
-    await this.ensureJobParticipant(jobId, userId, role);
+    await this.ensureConversationParticipant(conversationId, userId);
     const message = await this.prisma.$transaction(async (tx) => {
       const createdMessage = await tx.chatMessage.create({
         data: {
           content: validatedContent,
           type: dto.type ?? 'text',
           attachmentUrl: dto.attachmentUrl,
-          jobId,
+          conversationId: conversationId,
           senderId: userId,
         },
         include: {
@@ -137,19 +130,18 @@ export class ChatsService {
         },
       });
 
-      await tx.job.update({
-        where: { id: jobId },
+      await tx.conversation.update({
+        where: { id: conversationId },
         data: { updatedAt: new Date() },
       });
 
       return createdMessage;
     });
 
-    // Cast to any to work around Prisma types
     const msg = message as any;
     return {
       id: msg.id,
-      jobId: msg.jobId,
+      jobId: msg.conversationId,
       senderId: msg.sender.id,
       senderName: msg.sender.name,
       content: msg.content,
@@ -163,17 +155,59 @@ export class ChatsService {
     } satisfies ChatMessageDto;
   }
 
-  private async ensureJobParticipant(jobId: number, userId: number, role: UserRole) {
-    const job = await this.prisma.job.findUnique({ where: { id: jobId } });
-    if (!job) {
-      throw new NotFoundException('Job not found');
+  async getOrCreateConversation(userId: number, otherUserId: number): Promise<ChatThreadDto> {
+    if (userId === otherUserId) {
+      throw new BadRequestException('Cannot chat with yourself');
     }
-    if (role !== UserRole.ADMIN && job.clientId !== userId && job.freelancerId !== userId) {
-      throw new ForbiddenException('You are not part of this job');
+
+    // Try to find existing conversation
+    // Optimization: Find conversations of user, simplified
+    const clientConvos = await this.prisma.conversation.findMany({
+      where: { participants: { some: { id: userId } } },
+      include: { participants: true, messages: { take: 1, orderBy: { createdAt: 'desc' } } }
+    });
+
+    let conversation = clientConvos.find(c => c.participants.some(p => p.id === otherUserId));
+
+    if (!conversation) {
+      conversation = await this.prisma.conversation.create({
+        data: {
+          participants: {
+            connect: [{ id: userId }, { id: otherUserId }]
+          }
+        },
+        include: { participants: true, messages: { take: 1 } }
+      });
     }
+
+    const otherParticipant = conversation.participants.find(p => p.id !== userId);
+    return {
+      id: conversation.id,
+      jobTitle: 'Conversation',
+      participantName: otherParticipant?.name || 'Unknown',
+      participantId: otherParticipant?.id || 0,
+      lastMessage: conversation.messages[0]?.content ?? null,
+      lastAt: conversation.updatedAt,
+      jobStatus: 'ACTIVE' as any,
+      unreadCount: 0
+    };
   }
 
-  // New methods for WebSocket features
+  private async ensureConversationParticipant(conversationId: number, userId: number) {
+    const convo = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: { participants: { select: { id: true } } }
+    });
+
+    if (!convo) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    const isParticipant = convo.participants.some(p => p.id === userId);
+    if (!isParticipant) {
+      throw new ForbiddenException('You are not part of this conversation');
+    }
+  }
 
   async getMessage(messageId: number) {
     return this.prisma.chatMessage.findUnique({
@@ -189,14 +223,12 @@ export class ChatsService {
   async markMessageDelivered(messageId: number, userId: number) {
     const message = await this.prisma.chatMessage.findUnique({
       where: { id: messageId },
-      include: { job: true },
-    });
+    }); // No include needed
 
     if (!message) {
       throw new NotFoundException('Message not found');
     }
 
-    // Only recipient can mark as delivered
     if (message.senderId === userId) {
       return message;
     }
@@ -205,21 +237,19 @@ export class ChatsService {
       where: { id: messageId },
       data: {
         deliveredAt: new Date(),
-      } as any, // Type cast to bypass Prisma validation
+      } as any,
     });
   }
 
   async markMessageRead(messageId: number, userId: number) {
     const message = await this.prisma.chatMessage.findUnique({
       where: { id: messageId },
-      include: { job: true },
     });
 
     if (!message) {
       throw new NotFoundException('Message not found');
     }
 
-    // Only recipient can mark as read
     if (message.senderId === userId) {
       return message;
     }
@@ -230,16 +260,15 @@ export class ChatsService {
       data: {
         readAt: new Date(),
         deliveredAt: msg.deliveredAt || new Date(),
-      } as any, // Type cast to bypass Prisma validation
+      } as any,
     });
   }
 
-  async markChatRead(jobId: number, userId: number) {
-    // Use raw query to bypass Prisma type checking
+  async markChatRead(conversationId: number, userId: number) {
     const result = await this.prisma.$executeRaw`
       UPDATE "ChatMessage"
       SET "readAt" = NOW()
-      WHERE "jobId" = ${jobId}
+      WHERE "conversationId" = ${conversationId}
         AND "senderId" != ${userId}
         AND "readAt" IS NULL
     `;

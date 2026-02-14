@@ -100,47 +100,47 @@ export class ChatGateway
     @SubscribeMessage('join_room')
     handleJoinRoom(
         @ConnectedSocket() client: AuthenticatedSocket,
-        @MessageBody() data: { jobId: string },
+        @MessageBody() data: { conversationId: string },
     ) {
-        const roomName = `job:${data.jobId}`;
+        const roomName = `conversation:${data.conversationId}`;
         client.join(roomName);
         this.logger.log(`User ${client.userId} joined room: ${roomName}`);
-        return { event: 'room_joined', data: { jobId: data.jobId } };
+        return { event: 'room_joined', data: { conversationId: data.conversationId } };
     }
 
     @SubscribeMessage('leave_room')
     handleLeaveRoom(
         @ConnectedSocket() client: AuthenticatedSocket,
-        @MessageBody() data: { jobId: string },
+        @MessageBody() data: { conversationId: string },
     ) {
-        const roomName = `job:${data.jobId}`;
+        const roomName = `conversation:${data.conversationId}`;
         client.leave(roomName);
         this.logger.log(`User ${client.userId} left room: ${roomName}`);
-        return { event: 'room_left', data: { jobId: data.jobId } };
+        return { event: 'room_left', data: { conversationId: data.conversationId } };
     }
 
     @SubscribeMessage('typing_start')
     handleTypingStart(
         @ConnectedSocket() client: AuthenticatedSocket,
-        @MessageBody() data: { jobId: string },
+        @MessageBody() data: { conversationId: string },
     ) {
-        const roomName = `job:${data.jobId}`;
+        const roomName = `conversation:${data.conversationId}`;
         // Broadcast to everyone in room except sender
         client.to(roomName).emit('typing_start', {
             userId: client.userId,
-            jobId: data.jobId,
+            conversationId: data.conversationId,
         });
     }
 
     @SubscribeMessage('typing_stop')
     handleTypingStop(
         @ConnectedSocket() client: AuthenticatedSocket,
-        @MessageBody() data: { jobId: string },
+        @MessageBody() data: { conversationId: string },
     ) {
-        const roomName = `job:${data.jobId}`;
+        const roomName = `conversation:${data.conversationId}`;
         client.to(roomName).emit('typing_stop', {
             userId: client.userId,
-            jobId: data.jobId,
+            conversationId: data.conversationId,
         });
     }
 
@@ -153,13 +153,12 @@ export class ChatGateway
     @SubscribeMessage('mark_delivered')
     async handleMarkDelivered(
         @ConnectedSocket() client: AuthenticatedSocket,
-        @MessageBody() data: { messageId: number; jobId: string },
+        @MessageBody() data: { messageId: number; conversationId: string },
     ) {
         try {
             await this.chatsService.markMessageDelivered(data.messageId, client.userId);
 
             // Notify message sender
-            // Note: We'll need to get sender ID from message
             const message = await this.chatsService.getMessage(data.messageId);
             if (message) {
                 this.emitToUser(message.senderId, 'message_delivered', {
@@ -175,7 +174,7 @@ export class ChatGateway
     @SubscribeMessage('mark_read')
     async handleMarkRead(
         @ConnectedSocket() client: AuthenticatedSocket,
-        @MessageBody() data: { messageId: number; jobId: string },
+        @MessageBody() data: { messageId: number; conversationId: string },
     ) {
         try {
             await this.chatsService.markMessageRead(data.messageId, client.userId);
@@ -196,13 +195,12 @@ export class ChatGateway
     @SubscribeMessage('mark_chat_read')
     async handleMarkChatRead(
         @ConnectedSocket() client: AuthenticatedSocket,
-        @MessageBody() data: { jobId: number },
+        @MessageBody() data: { conversationId: number },
     ) {
         try {
-            const result = await this.chatsService.markChatRead(data.jobId, client.userId);
+            const result = await this.chatsService.markChatRead(data.conversationId, client.userId);
 
             // Notify other participant about read receipts
-            // This will be handled by markChatRead returning affected messages
             return { event: 'chat_marked_read', data: { markedCount: result.count } };
         } catch (error) {
             this.logger.error(`Failed to mark chat read: ${error.message}`);
@@ -210,8 +208,8 @@ export class ChatGateway
     }
 
     // Helper method to emit new messages after REST API creates them
-    emitNewMessage(jobId: number, message: any) {
-        const roomName = `job:${jobId}`;
+    emitNewMessage(conversationId: number, message: any) {
+        const roomName = `conversation:${conversationId}`;
         this.server.to(roomName).emit('new_message', message);
     }
 

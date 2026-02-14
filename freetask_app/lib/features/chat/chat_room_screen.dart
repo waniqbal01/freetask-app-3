@@ -48,13 +48,13 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
             (ChatThread element) => element.id == widget.chatId,
             orElse: () => const ChatThread(
               id: 'unknown',
-              jobTitle: 'Chat',
+              title: 'Chat',
               participantName: 'Pengguna',
             ),
           ),
           orElse: () => const ChatThread(
             id: 'unknown',
-            jobTitle: 'Chat',
+            title: 'Chat',
             participantName: 'Pengguna',
           ),
         );
@@ -100,11 +100,11 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 6, vertical: 1),
                         decoration: BoxDecoration(
-                          color: _getStatusColor(thread.jobStatus),
+                          color: _getStatusColor(thread.status),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          thread.jobStatus.replaceAll('_', ' ').toLowerCase(),
+                          thread.status.replaceAll('_', ' ').toLowerCase(),
                           style: const TextStyle(
                               fontSize: 9,
                               color: Colors.white,
@@ -256,7 +256,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     final trimmed = text.trim();
     try {
       await ref.read(chatRepositoryProvider).sendMessage(
-            jobId: widget.chatId,
+            conversationId: widget.chatId,
             text: trimmed,
           );
       _controller.clear();
@@ -278,7 +278,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
       final url = await ref.read(chatRepositoryProvider).uploadChatImage(file);
 
       await ref.read(chatRepositoryProvider).sendMessage(
-            jobId: widget.chatId,
+            conversationId: widget.chatId,
             text: '', // Empty text for image message
             type: 'image',
             attachmentUrl: url,
@@ -301,7 +301,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
           : 'file';
 
       await ref.read(chatRepositoryProvider).sendMessage(
-            jobId: widget.chatId,
+            conversationId: widget.chatId,
             text: file.name, // Filename as text for file type
             type: type,
             attachmentUrl: url,

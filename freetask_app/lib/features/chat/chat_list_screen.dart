@@ -153,11 +153,14 @@ class ChatListScreen extends ConsumerWidget {
                       final lastAtLabel = _formatTimestamp(thread.lastAt);
 
                       Color statusColor;
-                      switch (thread.jobStatus.toUpperCase()) {
+                      // Determine status color based on thread status
+                      // 'ACTIVE' is the default for normal conversations
+                      switch (thread.status.toUpperCase()) {
                         case 'PENDING':
                           statusColor = Colors.orange;
                           break;
                         case 'IN_PROGRESS':
+                        case 'ACTIVE':
                           statusColor = const Color(0xFF2196F3);
                           break;
                         case 'COMPLETED':
@@ -165,6 +168,7 @@ class ChatListScreen extends ConsumerWidget {
                           break;
                         case 'CANCELLED':
                         case 'REJECTED':
+                        case 'ARCHIVED':
                           statusColor = Colors.red;
                           break;
                         default:
@@ -246,7 +250,7 @@ class ChatListScreen extends ConsumerWidget {
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        thread.jobTitle,
+                                        thread.title,
                                         style: TextStyle(
                                           fontSize: 13,
                                           color: Colors.grey.shade700,
@@ -286,7 +290,7 @@ class ChatListScreen extends ConsumerWidget {
                                               ),
                                             ),
                                             child: Text(
-                                              thread.jobStatus
+                                              thread.status
                                                   .replaceAll('_', ' ')
                                                   .toLowerCase(),
                                               style: TextStyle(
@@ -710,7 +714,7 @@ class _ChatSearchDelegate extends SearchDelegate<String> {
         final filtered = threads.where((thread) {
           final searchLower = query.toLowerCase();
           return thread.participantName.toLowerCase().contains(searchLower) ||
-              thread.jobTitle.toLowerCase().contains(searchLower) ||
+              thread.title.toLowerCase().contains(searchLower) ||
               (thread.lastMessage?.toLowerCase().contains(searchLower) ??
                   false);
         }).toList();
@@ -749,7 +753,7 @@ class _ChatSearchDelegate extends SearchDelegate<String> {
                 ),
               ),
               title: Text(thread.participantName),
-              subtitle: Text(thread.jobTitle),
+              subtitle: Text(thread.title),
               onTap: () {
                 close(context, '');
                 context.push('/chats/${thread.id}/messages');

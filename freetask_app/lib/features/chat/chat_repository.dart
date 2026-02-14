@@ -36,10 +36,10 @@ final chatThreadsProviderWithQuery =
   return repository.fetchThreads(limit: query.limit, offset: query.offset);
 });
 
-final chatMessagesProvider =
-    StreamProvider.family<List<ChatMessage>, String>((Ref ref, String jobId) {
+final chatMessagesProvider = StreamProvider.family<List<ChatMessage>, String>(
+    (Ref ref, String conversationId) {
   final repository = ref.watch(chatRepositoryProvider);
-  return repository.streamMessages(jobId);
+  return repository.streamMessages(conversationId);
 });
 
 class ChatRepository {
@@ -67,9 +67,11 @@ class ChatRepository {
   final _circuitOpenController = StreamController<bool>.broadcast();
   Stream<bool> get circuitOpenStream => _circuitOpenController.stream;
 
-  bool hasMore(String jobId) => _hasMore[jobId] ?? false;
-  bool isLoadingMore(String jobId) => _isLoadingMore[jobId] ?? false;
-  bool isInitialLoading(String jobId) => _isInitialLoading[jobId] ?? false;
+  bool hasMore(String conversationId) => _hasMore[conversationId] ?? false;
+  bool isLoadingMore(String conversationId) =>
+      _isLoadingMore[conversationId] ?? false;
+  bool isInitialLoading(String conversationId) =>
+      _isInitialLoading[conversationId] ?? false;
 
   Future<List<ChatThread>> fetchThreads({String? limit, String? offset}) async {
     final paginationQuery = _buildPagination(limit: limit, offset: offset);
@@ -98,27 +100,47 @@ class ChatRepository {
     }
   }
 
-  Stream<List<ChatMessage>> streamMessages(String jobId) {
+  Future<ChatThread> createConversation({required String otherUserId}) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/chats/conversation',
+        data: {'otherUserId': otherUserId},
+        options: await _authorizedOptions(),
+      );
+
+      final data = response.data;
+      if (data == null) {
+        throw Exception('Gagal memulakan perbualan.');
+      }
+      return ChatThread.fromJson(data);
+    } on DioException catch (error) {
+      await _handleError(error);
+      rethrow;
+    }
+  }
+
+  Stream<List<ChatMessage>> streamMessages(String conversationId) {
     final controller = _controllers.putIfAbsent(
-      jobId,
+      conversationId,
       () => StreamController<List<ChatMessage>>.broadcast(
-        onListen: () => _startPolling(jobId),
-        onCancel: () => _stopPolling(jobId),
+        onListen: () => _startPolling(conversationId),
+        onCancel: () => _stopPolling(conversationId),
       ),
     );
-    _isInitialLoading[jobId] = true;
+    _isInitialLoading[conversationId] = true;
     unawaited(
-      _loadMessages(jobId).catchError((Object error, StackTrace stackTrace) {
+      _loadMessages(conversationId)
+          .catchError((Object error, StackTrace stackTrace) {
         _notifyStreamError(error);
         controller.addError(error, stackTrace);
       }),
     );
-    _emit(jobId);
+    _emit(conversationId);
     return controller.stream;
   }
 
   Future<void> sendMessage({
-    required String jobId,
+    required String conversationId,
     required String text,
     String? attachmentUrl,
     String type = 'text',
@@ -131,7 +153,7 @@ class ChatRepository {
     try {
       await _retryRequest(() async {
         await _dio.post<void>(
-          '/chats/$jobId/messages',
+          '/chats/$conversationId/messages',
           data: <String, dynamic>{
             'content': trimmed,
             'type': type,
@@ -140,7 +162,7 @@ class ChatRepository {
           options: await _authorizedOptions(),
         );
       });
-      await _loadMessages(jobId, mergeExisting: true);
+      await _loadMessages(conversationId, mergeExisting: true);
     } on DioException catch (error) {
       await _handleError(error);
       rethrow;
@@ -206,33 +228,33 @@ class ChatRepository {
     _circuitOpenController.close();
   }
 
-  Future<void> reloadMessages(String jobId) {
-    return _loadMessages(jobId);
+  Future<void> reloadMessages(String conversationId) {
+    return _loadMessages(conversationId);
   }
 
-  Future<void> loadMoreMessages(String jobId) {
-    return _loadMessages(jobId, append: true, mergeExisting: true);
+  Future<void> loadMoreMessages(String conversationId) {
+    return _loadMessages(conversationId, append: true, mergeExisting: true);
   }
 
-  Future<void> _loadMessages(String jobId,
+  Future<void> _loadMessages(String conversationId,
       {bool append = false, bool mergeExisting = true}) async {
-    final current = _messages[jobId] ?? <ChatMessage>[];
-    if (append && (_isLoadingMore[jobId] ?? false)) {
+    final current = _messages[conversationId] ?? <ChatMessage>[];
+    if (append && (_isLoadingMore[conversationId] ?? false)) {
       return;
     }
 
     if (!append && current.isEmpty) {
-      _isInitialLoading[jobId] = true;
+      _isInitialLoading[conversationId] = true;
     }
     if (append) {
-      _isLoadingMore[jobId] = true;
+      _isLoadingMore[conversationId] = true;
     }
-    _emit(jobId);
+    _emit(conversationId);
 
     try {
       final response = await _retryRequest(() async {
         return _dio.get<List<dynamic>>(
-          '/chats/$jobId/messages',
+          '/chats/$conversationId/messages',
           queryParameters: _buildPagination(
             limit: _pageSize.toString(),
             offset: append ? current.length.toString() : '0',
@@ -256,16 +278,16 @@ class ChatRepository {
         merged = messages;
       }
 
-      _messages[jobId] = merged;
-      _hasMore[jobId] = messages.length >= _pageSize;
-      _emit(jobId);
+      _messages[conversationId] = merged;
+      _hasMore[conversationId] = messages.length >= _pageSize;
+      _emit(conversationId);
     } on DioException catch (error) {
       await _handleError(error);
       _notifyStreamError('Rangkaian terputus. Tap untuk cuba lagi.');
       rethrow;
     } finally {
-      _isLoadingMore[jobId] = false;
-      _isInitialLoading[jobId] = false;
+      _isLoadingMore[conversationId] = false;
+      _isInitialLoading[conversationId] = false;
     }
   }
 
@@ -280,13 +302,13 @@ class ChatRepository {
     return query;
   }
 
-  void _emit(String jobId) {
+  void _emit(String conversationId) {
     final controller = _controllers.putIfAbsent(
-      jobId,
+      conversationId,
       () => StreamController<List<ChatMessage>>.broadcast(),
     );
-    controller.add(
-        List<ChatMessage>.unmodifiable(_messages[jobId] ?? <ChatMessage>[]));
+    controller.add(List<ChatMessage>.unmodifiable(
+        _messages[conversationId] ?? <ChatMessage>[]));
   }
 
   List<ChatMessage> _dedupeMessages(List<ChatMessage> messages) {
@@ -407,21 +429,22 @@ class ChatRepository {
     );
   }
 
-  void _startPolling(String jobId) {
-    if (_pollingTimers.containsKey(jobId)) return;
+  void _startPolling(String conversationId) {
+    if (_pollingTimers.containsKey(conversationId)) return;
 
     // Initial load
-    _loadMessages(jobId);
+    _loadMessages(conversationId);
 
     // Poll every 3 seconds
-    _pollingTimers[jobId] = Timer.periodic(const Duration(seconds: 3), (_) {
-      _loadMessages(jobId);
+    _pollingTimers[conversationId] =
+        Timer.periodic(const Duration(seconds: 3), (_) {
+      _loadMessages(conversationId);
     });
   }
 
-  void _stopPolling(String jobId) {
-    _pollingTimers[jobId]?.cancel();
-    _pollingTimers.remove(jobId);
+  void _stopPolling(String conversationId) {
+    _pollingTimers[conversationId]?.cancel();
+    _pollingTimers.remove(conversationId);
   }
 
   String resolveErrorMessage(DioException error) {

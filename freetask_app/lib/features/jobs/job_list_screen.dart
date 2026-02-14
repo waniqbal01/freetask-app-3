@@ -13,6 +13,7 @@ import '../../models/job.dart';
 import '../../models/user.dart';
 import '../../theme/app_theme.dart';
 import '../auth/auth_repository.dart';
+import '../chat/chat_repository.dart';
 import '../reviews/review_dialog.dart';
 import '../reviews/reviews_repository.dart';
 import 'jobs_repository.dart';
@@ -45,6 +46,18 @@ class _JobListScreenState extends State<JobListScreen> {
 
   // Freelancer Sub-tab management (only for Freelancer role)
   int _freelancerSubTabIndex = 0; // 0: Services, 1: Jobs
+
+  static const List<String> _activeJobStatuses = [
+    'pending',
+    'awaiting_payment',
+    'accepted',
+    'in_progress',
+    'in_review',
+    'disputed',
+    'payout_processing',
+    'payout_hold',
+    'payout_failed',
+  ];
 
   @override
   void initState() {
@@ -119,6 +132,7 @@ class _JobListScreenState extends State<JobListScreen> {
       final jobs = await jobsRepository.getClientJobs(
         limit: widget.limitQuery,
         offset: widget.offsetQuery,
+        status: _activeJobStatuses,
       );
       if (!mounted) return;
       setState(() {
@@ -159,6 +173,7 @@ class _JobListScreenState extends State<JobListScreen> {
       final jobs = await jobsRepository.getFreelancerJobs(
         limit: widget.limitQuery,
         offset: widget.offsetQuery,
+        status: _activeJobStatuses,
       );
       if (!mounted) return;
       setState(() {
@@ -244,6 +259,50 @@ class _JobListScreenState extends State<JobListScreen> {
         _isProcessing = false;
       });
       showErrorSnackBar(context, AppStrings.errorGeneric);
+    }
+  }
+
+  Future<void> _openChat(Job job) async {
+    final currentUserId = _currentUser?.id;
+    if (currentUserId == null) return;
+
+    // Determine other user ID
+    final otherUserId =
+        currentUserId == job.clientId ? job.freelancerId : job.clientId;
+
+    if (otherUserId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ID pengguna tidak sah.')),
+      );
+      return;
+    }
+
+    // Show loading indicator if needed, or just handle it silently/with UI feedback
+    // Ideally we should have a loading state for this action, but for now we'll use _isProcessing
+    // slightly risky if multiple actions overlap, but okay for this scope.
+    if (_isProcessing) return;
+    setState(() {
+      _isProcessing = true;
+    });
+
+    try {
+      final chatRepo = ChatRepository();
+      final thread =
+          await chatRepo.createConversation(otherUserId: otherUserId);
+
+      if (!mounted) return;
+      context.push('/chats/${thread.id}/messages');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal membuka chat: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
     }
   }
 
@@ -452,7 +511,7 @@ class _JobListScreenState extends State<JobListScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
-                  onPressed: () => context.push('/chats/${job.id}/messages'),
+                  onPressed: () => _openChat(job),
                   icon: const Icon(Icons.chat_bubble_outline),
                   label: const Text(AppStrings.btnOpenChat),
                 ),
