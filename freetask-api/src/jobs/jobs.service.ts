@@ -97,28 +97,48 @@ export class JobsService {
       throw new ForbiddenException('Only clients can create inquiries');
     }
 
-    const service = await this.prisma.service.findUnique({
-      where: { id: dto.serviceId },
-    });
-    if (!service) {
-      throw new NotFoundException('Service not found');
+    let service: any = null;
+    let freelancerId = dto.freelancerId;
+    let title = 'General Inquiry';
+
+    if (dto.serviceId) {
+      service = await this.prisma.service.findUnique({
+        where: { id: dto.serviceId },
+      });
+      if (!service) {
+        throw new NotFoundException('Service not found');
+      }
+      freelancerId = service.freelancerId;
+      title = service.title;
+    }
+
+    if (!freelancerId) {
+      throw new BadRequestException('Either serviceId or freelancerId must be provided.');
+    }
+
+    // Verify freelancer exists if directly messaging (optional but good practice)
+    if (!dto.serviceId) {
+      const freelancer = await this.prisma.user.findUnique({ where: { id: freelancerId } });
+      if (!freelancer || freelancer.role !== UserRole.FREELANCER) {
+        throw new NotFoundException('Freelancer not found or invalid user.');
+      }
     }
 
     const job = await this.prisma.job.create({
       data: {
-        title: service.title,
+        title: title,
         description: dto.message,
         amount: new Prisma.Decimal(0),
         status: JobStatus.INQUIRY,
-        serviceId: service.id,
+        serviceId: service?.id ?? null,
         clientId: userId,
-        freelancerId: service.freelancerId,
+        freelancerId: freelancerId,
       },
       include: this.jobInclude,
     });
 
     await this.notificationsService.sendNotification({
-      userId: service.freelancerId,
+      userId: freelancerId,
       title: 'New Inquiry',
       body: `New inquiry: ${dto.message.substring(0, 50)}...`,
       data: { type: 'job_inquiry', jobId: job.id.toString() },

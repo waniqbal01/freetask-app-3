@@ -91,29 +91,47 @@ class JobsRepository {
     }
   }
 
-  Future<Job> createInquiry(String serviceId, String message) async {
+  Future<Job> createInquiry({
+    String? serviceId,
+    String? freelancerId,
+    required String message,
+  }) async {
     try {
-      final parsedServiceId = int.tryParse(serviceId.toString());
-      if (parsedServiceId == null) {
-        throw StateError('ID servis tidak sah.');
-      }
       final trimmedMessage = message.trim();
       if (trimmedMessage.isEmpty) {
         throw StateError('Mesej tidak boleh kosong.');
       }
 
+      final Map<String, dynamic> data = {'message': trimmedMessage};
+
+      if (serviceId != null) {
+        final parsedServiceId = int.tryParse(serviceId);
+        if (parsedServiceId == null) {
+          throw StateError('ID servis tidak sah.');
+        }
+        data['serviceId'] = parsedServiceId;
+      }
+
+      if (freelancerId != null) {
+        final parsedFreelancerId = int.tryParse(freelancerId);
+        if (parsedFreelancerId != null) {
+          data['freelancerId'] = parsedFreelancerId;
+        }
+      }
+
+      if (!data.containsKey('serviceId') && !data.containsKey('freelancerId')) {
+        throw StateError('Sila pilih servis atau freelancer.');
+      }
+
       final response = await _dio.post<Map<String, dynamic>>(
         '/jobs/inquiry',
-        data: <String, dynamic>{
-          'serviceId': parsedServiceId,
-          'message': trimmedMessage,
-        },
+        data: data,
         options: await _authorizedOptions(),
       );
-      final data = response.data ?? <String, dynamic>{};
+      final responseData = response.data ?? <String, dynamic>{};
 
       debugPrint('✅ Inquiry created successfully');
-      return Job.fromJson(data);
+      return Job.fromJson(responseData);
     } on DioException catch (error) {
       debugPrint('🔴 FAILED TO CREATE INQUIRY');
       debugPrint('Service ID: $serviceId');

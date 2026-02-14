@@ -141,8 +141,8 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     setState(() => _isHireLoading = true);
     try {
       final job = await jobsRepository.createInquiry(
-        widget.serviceId,
-        message,
+        serviceId: widget.serviceId,
+        message: message,
       );
       if (mounted) {
         context.push('/chats/${job.id}/messages');

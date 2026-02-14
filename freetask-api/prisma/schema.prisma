@@ -158,8 +158,8 @@ model Job {
   billplzPayoutId        String?
   payoutRetryCount       Int      @default(0)
   payoutHoldReason       String?
-  service        Service     @relation(fields: [serviceId], references: [id])
-  serviceId      Int
+  service        Service?    @relation(fields: [serviceId], references: [id])
+  serviceId      Int?
   client         User        @relation("ClientJobs", fields: [clientId], references: [id])
   clientId       Int
   freelancer     User        @relation("FreelancerJobs", fields: [freelancerId], references: [id])

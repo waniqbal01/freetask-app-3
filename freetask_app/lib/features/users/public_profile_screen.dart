@@ -172,48 +172,13 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   }
 
   Future<void> _handleProfileMessage(Map<String, dynamic> user) async {
-    final servicesData = (user['services'] as List<dynamic>?) ?? [];
-    final services = servicesData
-        .map((e) => Service.fromJson(e as Map<String, dynamic>))
-        .toList();
-
-    if (services.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Freelancer ini tiada servis untuk dihubungi.')),
-      );
-      return;
-    }
-
-    Service? selectedService;
-    if (services.length == 1) {
-      selectedService = services.first;
-    } else {
-      selectedService = await showDialog<Service>(
-        context: context,
-        builder: (context) => SimpleDialog(
-          title: const Text('Pilih Servis'),
-          children: services
-              .map(
-                (service) => SimpleDialogOption(
-                  onPressed: () => Navigator.pop(context, service),
-                  child: Text(service.title),
-                ),
-              )
-              .toList(),
-        ),
-      );
-    }
-
-    if (selectedService == null) return;
-
     if (!mounted) return;
 
     final controller = TextEditingController();
     final message = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Mesej mengenai ${selectedService!.title}'),
+        title: const Text('Mesej Freelancer'),
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(
@@ -239,8 +204,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
 
     try {
       final job = await jobsRepository.createInquiry(
-        selectedService.id,
-        message,
+        freelancerId: widget.userId,
+        message: message,
       );
       if (mounted) {
         context.push('/chats/${job.id}/messages');
