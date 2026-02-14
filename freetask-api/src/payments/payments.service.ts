@@ -63,7 +63,7 @@ export class PaymentsService {
             amountInCents,
             job.client.email,
             job.client.name,
-            `Payment for service: ${job.service.title}`,
+            `Payment for service: ${job.service?.title ?? 'Custom Service'}`,
             `${process.env.API_URL || 'http://localhost:3000'}/payments/webhook`, // Server-to-server Webhook
             `${process.env.API_URL || 'http://localhost:3000'}/payments/callback`, // User Redirect (Backend -> Frontend)
         );
@@ -386,10 +386,12 @@ export class PaymentsService {
             amountInCents,
             job.client.email,
             job.client.name,
-            `Retry payment for service: ${job.service.title}`,
-            `${process.env.API_URL || 'http://localhost:3000'}/payments/callback`,
-            `${process.env.APP_URL || 'http://localhost:8080'}/jobs/${job.id}`,
+            `Payment for service: ${job.service?.title ?? 'Custom Service'}`,
+            `${process.env.API_URL || 'http://localhost:3000'}/payments/webhook`, // Server-to-server Webhook
+            `${process.env.API_URL || 'http://localhost:3000'}/payments/callback`, // User Redirect (Backend -> Frontend)
         );
+
+        // ... existing code ...
 
         // Update payment with new transaction ID
         const updatedPayment = await this.prisma.payment.update({
