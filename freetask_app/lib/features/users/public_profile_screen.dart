@@ -133,7 +133,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     ),
                   ),
                   _buildServiceList(services),
-                ] else
+                ] else if (user['role']?.toString().toUpperCase() ==
+                    'FREELANCER')
                   const Padding(
                     padding: EdgeInsets.all(32.0),
                     child: Center(

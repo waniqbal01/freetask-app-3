@@ -45,6 +45,23 @@ class ServicesRepository {
     }
   }
 
+  Future<List<Service>> getMyServices() async {
+    try {
+      final response = await _dio.get<List<dynamic>>(
+        '/services/me',
+        options: await _authorizedOptions(),
+      );
+      final data = response.data ?? <dynamic>[];
+      return data
+          .whereType<Map<String, dynamic>>()
+          .map(Service.fromJson)
+          .toList(growable: false);
+    } on DioException catch (error) {
+      await _handleDioError(error);
+      rethrow;
+    }
+  }
+
   Future<Service> getServiceById(String id) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(

@@ -18,22 +18,38 @@ import 'chat_models.dart';
 import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
 
+import '../../core/websocket/socket_service.dart';
+
 final chatRepositoryProvider = Provider<ChatRepository>((Ref ref) {
   final repository = ChatRepository();
   ref.onDispose(repository.dispose);
   return repository;
 });
 
-final chatThreadsProvider = FutureProvider<List<ChatThread>>((Ref ref) async {
+final chatThreadsProvider = StreamProvider<List<ChatThread>>((Ref ref) {
   final repository = ref.watch(chatRepositoryProvider);
-  return repository.fetchThreads();
+  return repository.threadsStream;
 });
 
 final chatThreadsProviderWithQuery =
-    FutureProvider.family<List<ChatThread>, ({String? limit, String? offset})>(
-        (Ref ref, query) async {
+    StreamProvider.family<List<ChatThread>, ({String? limit, String? offset})>(
+        (Ref ref, query) {
   final repository = ref.watch(chatRepositoryProvider);
-  return repository.fetchThreads(limit: query.limit, offset: query.offset);
+  // If requesting the main list (first page), return the live stream
+  if (query.offset == null || query.offset == '0' || query.offset == '') {
+    // Ensure initial fetch is triggered if stream is empty/stale?
+    // The repository constructor doesn't auto-fetch.
+    // But StreamProvider will listen to current value.
+    // We should trigger a fetch if needed.
+    // Pattern: return stream, but side-effect fetch?
+    // Or repository.threadsStream should start with a fetch?
+    // Let's rely on repository.fetchThreads() to be called or the stream to emit.
+    // Better: return Valid stream that starts with a fetch.
+    return repository.threadsStream;
+  }
+  // For other pages, just fetch once as a stream (no live updates to page 2 for now to avoid complexity)
+  return Stream.fromFuture(
+      repository.fetchThreads(limit: query.limit, offset: query.offset));
 });
 
 final chatMessagesProvider = StreamProvider.family<List<ChatMessage>, String>(
@@ -47,25 +63,36 @@ class ChatRepository {
       : _storage = storage ?? appStorage,
         _dio = dio ?? HttpClient().dio {
     _logoutSubscription = authRepository.onLogout.listen((_) => dispose());
+    _socketSubscription =
+        SocketService.instance.newMessageStream.listen(_onNewMessage);
+    // Initial fetch of threads on startup? Or lazy?
+    // Let's lazy fetch when threadsStream is listened to?
+    // StreamController.broadcast onListen can trigger fetch.
   }
 
   final AppStorage _storage;
   final Dio _dio;
   StreamSubscription? _logoutSubscription;
+  StreamSubscription? _socketSubscription;
+
   List<ChatThread> _threads = <ChatThread>[];
   final Map<String, List<ChatMessage>> _messages =
       <String, List<ChatMessage>>{};
   final Map<String, StreamController<List<ChatMessage>>> _controllers =
       <String, StreamController<List<ChatMessage>>>{};
-  final Map<String, Timer> _pollingTimers = <String, Timer>{};
+  final _threadsController = StreamController<List<ChatThread>>.broadcast();
+
+  Stream<List<ChatThread>> get threadsStream {
+    if (_threads.isEmpty) {
+      fetchThreads(); // Trigger initial fetch
+    }
+    return _threadsController.stream;
+  }
+
   static const int _pageSize = 50;
   final Map<String, bool> _hasMore = <String, bool>{};
   final Map<String, bool> _isLoadingMore = <String, bool>{};
   final Map<String, bool> _isInitialLoading = <String, bool>{};
-
-  // Circuit breaker stream
-  final _circuitOpenController = StreamController<bool>.broadcast();
-  Stream<bool> get circuitOpenStream => _circuitOpenController.stream;
 
   bool hasMore(String conversationId) => _hasMore[conversationId] ?? false;
   bool isLoadingMore(String conversationId) =>
@@ -92,8 +119,16 @@ class ChatRepository {
           a.lastAt ?? DateTime.fromMillisecondsSinceEpoch(0),
         ),
       );
-      _threads = List<ChatThread>.unmodifiable(threads);
-      return _threads;
+
+      // If fetching first page, update cache
+      if (offset == null || offset == '0' || offset == '') {
+        _threads =
+            threads; // Should be unmodifiable? We modify it in _onNewMessage
+        // So keep it modifiable
+        _threadsController.add(List<ChatThread>.unmodifiable(_threads));
+      }
+
+      return threads;
     } on DioException catch (error) {
       await _handleError(error);
       rethrow;
@@ -112,7 +147,10 @@ class ChatRepository {
       if (data == null) {
         throw Exception('Gagal memulakan perbualan.');
       }
-      return ChatThread.fromJson(data);
+      final thread = ChatThread.fromJson(data);
+      // Optimistically add to top of threads
+      _updateThread(thread);
+      return thread;
     } on DioException catch (error) {
       await _handleError(error);
       rethrow;
@@ -123,20 +161,111 @@ class ChatRepository {
     final controller = _controllers.putIfAbsent(
       conversationId,
       () => StreamController<List<ChatMessage>>.broadcast(
-        onListen: () => _startPolling(conversationId),
-        onCancel: () => _stopPolling(conversationId),
+        onListen: () => _onListenToConversation(conversationId),
+        onCancel: () => _onCancelConversation(conversationId),
       ),
     );
-    _isInitialLoading[conversationId] = true;
-    unawaited(
-      _loadMessages(conversationId)
-          .catchError((Object error, StackTrace stackTrace) {
-        _notifyStreamError(error);
-        controller.addError(error, stackTrace);
-      }),
-    );
-    _emit(conversationId);
+    // Return existing data immediately if available
+    if (_messages.containsKey(conversationId)) {
+      controller
+          .add(List<ChatMessage>.unmodifiable(_messages[conversationId]!));
+    }
     return controller.stream;
+  }
+
+  Future<void> _onListenToConversation(String conversationId) async {
+    _isInitialLoading[conversationId] = true;
+
+    // Connect to specific room
+    // Ensure socket is connected
+    final baseUrl = await HttpClient().currentBaseUrl();
+    await SocketService.instance.connect(baseUrl);
+    SocketService.instance.joinRoom(conversationId);
+
+    // Initial load via HTTP
+    await _loadMessages(conversationId)
+        .catchError((Object error, StackTrace stackTrace) {
+      _notifyStreamError(error);
+      // Don't close controller on error, just notify. User can retry.
+    });
+  }
+
+  void _onCancelConversation(String conversationId) {
+    SocketService.instance.leaveRoom(conversationId);
+    // We don't remove the controller immediately as it might be re-listened to
+    // or we might want to keep cache. But to correspond with polling logic removal:
+    // We can keep it or dispose it. The provider is autoDispose? No.
+    // So let's leave it.
+  }
+
+  void _onNewMessage(ChatMessage message) {
+    // Update messages for conversation if active
+    final conversationId = message.jobId;
+    if (conversationId.isNotEmpty) {
+      final currentMessages = _messages[conversationId] ?? <ChatMessage>[];
+
+      // Check if message already exists
+      if (!currentMessages.any((m) => m.id == message.id)) {
+        final updatedMessages = <ChatMessage>[message, ...currentMessages];
+        updatedMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+        _messages[conversationId] = updatedMessages;
+        _emit(conversationId);
+      }
+
+      // Update threads list
+      _updateThreadForMessage(message);
+    }
+  }
+
+  void _updateThreadForMessage(ChatMessage message) {
+    final conversationId = message.jobId;
+    // Find existing thread
+    final index = _threads.indexWhere((t) => t.id == conversationId);
+
+    ChatThread? thread;
+    if (index != -1) {
+      thread = _threads[index];
+
+      // Calculate unread count
+      // If I am sender, unread count shouldn't increase.
+      // message has senderId.
+      final myId = authRepository.currentUser?.id;
+      final isMe = myId != null && myId.toString() == message.senderId;
+
+      int newUnread = thread.unreadCount;
+      if (!isMe) {
+        newUnread += 1;
+      }
+
+      thread = thread.copyWith(
+        lastMessage:
+            message.type == 'text' ? message.text : '[${message.type}]',
+        lastAt: message.timestamp,
+        unreadCount: newUnread,
+      );
+
+      _threads.removeAt(index);
+    } else {
+      // Thread not in list. Should we fetch it?
+      // Ideally yes, but for now we might construct a partial thread or ignore?
+      // If we ignore, it won't appear until refresh.
+      // Let's ignore for now to avoid complex fetch logic here,
+      // or we could fetch the specific conversation.
+      // But _onNewMessage is async/void, be careful with errors.
+      return;
+    }
+
+    _threads.insert(0, thread);
+    _threadsController.add(List<ChatThread>.unmodifiable(_threads));
+  }
+
+  void _updateThread(ChatThread thread) {
+    final index = _threads.indexWhere((t) => t.id == thread.id);
+    if (index != -1) {
+      _threads.removeAt(index);
+    }
+    _threads.insert(0, thread);
+    _threadsController.add(List<ChatThread>.unmodifiable(_threads));
   }
 
   Future<void> sendMessage({
@@ -151,18 +280,27 @@ class ChatRepository {
       return;
     }
     try {
-      await _retryRequest(() async {
-        await _dio.post<void>(
-          '/chats/$conversationId/messages',
-          data: <String, dynamic>{
-            'content': trimmed,
-            'type': type,
-            'attachmentUrl': attachmentUrl,
-          },
-          options: await _authorizedOptions(),
-        );
-      });
-      await _loadMessages(conversationId, mergeExisting: true);
+      // Optimistic update could be added here, but for now we rely on socket event
+      // coming back from server after creation.
+      await _dio.post<void>(
+        '/chats/$conversationId/messages',
+        data: <String, dynamic>{
+          'content': trimmed,
+          'type': type, // 'text', 'image', 'file'
+          'attachmentUrl': attachmentUrl,
+        },
+        options: await _authorizedOptions(),
+      );
+
+      // No need to _loadMessages manually if socket works.
+      // But purely for safety/redundancy or if socket is slow/disconnected:
+      // We can fetch. But socket should handle it.
+      // Let's rely on socket to avoid duplicates or race conditions if possible.
+      // However, if socket is disconnected, we won't get the update.
+      // So checking socket status might be good.
+      if (!SocketService.instance.isConnected) {
+        await _loadMessages(conversationId, mergeExisting: true);
+      }
     } on DioException catch (error) {
       await _handleError(error);
       rethrow;
@@ -218,14 +356,15 @@ class ChatRepository {
 
   void dispose() {
     _logoutSubscription?.cancel();
+    _socketSubscription?.cancel();
+
     for (final controller in _controllers.values) {
       controller.close();
     }
-    for (final timer in _pollingTimers.values) {
-      timer.cancel();
-    }
-    _pollingTimers.clear();
-    _circuitOpenController.close();
+    SocketService.instance.disconnect();
+
+    _controllers.clear();
+    _threadsController.close();
   }
 
   Future<void> reloadMessages(String conversationId) {
@@ -252,16 +391,14 @@ class ChatRepository {
     _emit(conversationId);
 
     try {
-      final response = await _retryRequest(() async {
-        return _dio.get<List<dynamic>>(
-          '/chats/$conversationId/messages',
-          queryParameters: _buildPagination(
-            limit: _pageSize.toString(),
-            offset: append ? current.length.toString() : '0',
-          ),
-          options: await _authorizedOptions(),
-        );
-      });
+      final response = await _dio.get<List<dynamic>>(
+        '/chats/$conversationId/messages',
+        queryParameters: _buildPagination(
+          limit: _pageSize.toString(),
+          offset: append ? current.length.toString() : '0',
+        ),
+        options: await _authorizedOptions(),
+      );
       final data = response.data ?? <dynamic>[];
       final messages = data
           .whereType<Map<String, dynamic>>()
@@ -269,10 +406,53 @@ class ChatRepository {
           .toList(growable: false)
         ..sort((ChatMessage a, ChatMessage b) =>
             a.timestamp.compareTo(b.timestamp));
+
       List<ChatMessage> merged;
       if (append) {
+        // Appending means fetching OLDER messages since we are scrolling up in a reverse list?
+        // Wait. UI: ListView with reverse: false?
+        // In ChatRoomScreen: ListView.builder (default reverse: false).
+        // And it renders top-down.
+        // ScrollToBottomFAB implies bottom is newest.
+        // So fetching MORE usually implies fetching older messages to prepend?
+        // Let's check logic:
+        // offset 0 is newest/latest page?
+        // Backend `listMessages` in `ChatsService.ts`:
+        // orderBy: { createdAt: 'desc' }, take, skip... returned reversed.
+        // So offset 0 returns {latest 50 messages, ordered oldest to newest}.
+        // Offset 50 returns {next 50 older messages, ordered oldest to newest}.
+        // So 'append' = true means we fetched OLDER messages.
+        // They should be PREPENDED to the current list of newer messages?
+        // If current list is [Oldest -> Newest].
+        // And we fetch OlderChunk [Oldest -> Older].
+        // Result should be [OlderChunk, Current].
+
+        // original logic:
+        /*
+        if (append) {
+           merged = _dedupeMessages(<ChatMessage>[...messages, ...current]);
+        }
+        */
+        // If messages is OlderChunk and current is NewerChunk.
+        // [...messages, ...current] results in [Older, Newer]. Correct.
         merged = _dedupeMessages(<ChatMessage>[...messages, ...current]);
       } else if (mergeExisting && current.isNotEmpty) {
+        // Reloading/Fetching latest.
+        // fetched messages are latest.
+        // current might have some old ones.
+        // If we allow holes, it's complex.
+        // But usually we just replace or merge if we are sure we are fetching from 0.
+        // original logic:
+        /*
+         } else if (mergeExisting && current.isNotEmpty) {
+            merged = _dedupeMessages(<ChatMessage>[...current, ...messages]);
+         }
+         */
+        // If messages = Newest 50.
+        // Current = [Oldest ... Newest].
+        // [...current, ...messages] puts fetched messages AT END.
+        // If they overlap, dedupe handles it.
+        // This seems correct for adding new messages or refreshing latest key.
         merged = _dedupeMessages(<ChatMessage>[...current, ...messages]);
       } else {
         merged = messages;
@@ -303,10 +483,11 @@ class ChatRepository {
   }
 
   void _emit(String conversationId) {
-    final controller = _controllers.putIfAbsent(
-      conversationId,
-      () => StreamController<List<ChatMessage>>.broadcast(),
-    );
+    if (!_controllers.containsKey(conversationId)) return;
+
+    final controller = _controllers[conversationId]!;
+    if (controller.isClosed) return;
+
     controller.add(List<ChatMessage>.unmodifiable(
         _messages[conversationId] ?? <ChatMessage>[]));
   }
@@ -318,82 +499,6 @@ class ChatRepository {
     return messages
         .where((ChatMessage message) => seen.add(message.id))
         .toList(growable: false);
-  }
-
-  // Circuit breaker state
-  final List<DateTime> _recentFailures = <DateTime>[];
-  DateTime? _circuitBreakerCooldownUntil;
-
-  bool _isCircuitBreakerOpen() {
-    // Remove old failures (older than 60s)
-    final cutoff = DateTime.now().subtract(const Duration(seconds: 60));
-    _recentFailures.removeWhere((timestamp) => timestamp.isBefore(cutoff));
-
-    // Check if in cooldown
-    if (_circuitBreakerCooldownUntil != null) {
-      if (DateTime.now().isBefore(_circuitBreakerCooldownUntil!)) {
-        _circuitOpenController.add(true);
-        return true;
-      }
-      // Cooldown expired, reset
-      _circuitBreakerCooldownUntil = null;
-      _recentFailures.clear();
-      _circuitOpenController.add(false);
-    }
-
-    // If >10 failures in last 60s, activate cooldown
-    if (_recentFailures.length >= 10) {
-      _circuitBreakerCooldownUntil =
-          DateTime.now().add(const Duration(minutes: 5));
-      _circuitOpenController.add(true);
-      notificationService.messengerKey.currentState?.showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Service unavailable. Too many failures. Please try again in 5 minutes.',
-          ),
-          duration: Duration(seconds: 10),
-        ),
-      );
-      return true;
-    }
-
-    _circuitOpenController.add(false);
-    return false;
-  }
-
-  void _recordFailure() {
-    _recentFailures.add(DateTime.now());
-  }
-
-  Future<T> _retryRequest<T>(Future<T> Function() action) async {
-    // Check circuit breaker first
-    if (_isCircuitBreakerOpen()) {
-      throw DioException(
-        requestOptions: RequestOptions(path: ''),
-        message: 'Circuit breaker open: service unavailable',
-      );
-    }
-
-    DioException? lastError;
-    for (int attempt = 0; attempt < 3; attempt++) {
-      try {
-        final result = await action();
-        // Success - clear recent failures on success
-        if (_recentFailures.isNotEmpty) {
-          _recentFailures.clear();
-        }
-        return result;
-      } on DioException catch (error) {
-        lastError = error;
-        _recordFailure();
-        if (attempt == 2) {
-          rethrow;
-        }
-        await Future<void>.delayed(
-            Duration(milliseconds: 200 * (1 << attempt)));
-      }
-    }
-    throw lastError ?? Exception('Permintaan gagal selepas percubaan semula.');
   }
 
   Future<Options> _authorizedOptions() async {
@@ -427,24 +532,6 @@ class ChatRepository {
     notificationService.messengerKey.currentState?.showSnackBar(
       SnackBar(content: Text(message)),
     );
-  }
-
-  void _startPolling(String conversationId) {
-    if (_pollingTimers.containsKey(conversationId)) return;
-
-    // Initial load
-    _loadMessages(conversationId);
-
-    // Poll every 3 seconds
-    _pollingTimers[conversationId] =
-        Timer.periodic(const Duration(seconds: 3), (_) {
-      _loadMessages(conversationId);
-    });
-  }
-
-  void _stopPolling(String conversationId) {
-    _pollingTimers[conversationId]?.cancel();
-    _pollingTimers.remove(conversationId);
   }
 
   String resolveErrorMessage(DioException error) {

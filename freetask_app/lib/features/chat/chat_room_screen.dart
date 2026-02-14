@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/utils/error_utils.dart';
@@ -59,6 +60,9 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
           ),
         );
 
+    final currentUserAsync = ref.watch(currentUserProvider);
+    final currentUserId = currentUserAsync.value?.id;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB), // Light blue-grey background
       appBar: AppBar(
@@ -73,61 +77,69 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
         ),
         foregroundColor: Colors.white,
         titleSpacing: 0,
-        title: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: Colors.white,
-              radius: 18,
-              child: Text(
-                  thread.participantName.isNotEmpty
-                      ? thread.participantName[0].toUpperCase()
-                      : '?',
-                  style: const TextStyle(
-                      color: Color(0xFF2196F3), fontWeight: FontWeight.bold)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(thread.participantName,
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: _getStatusColor(thread.status),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          thread.status.replaceAll('_', ' ').toLowerCase(),
-                          style: const TextStyle(
-                              fontSize: 9,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.3),
-                        ),
-                      ),
-                      // Online status placeholder (will update via WebSocket)
-                      const SizedBox(width: 8),
-                      Text(
-                        'online',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.white.withOpacity(0.9),
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+        title: InkWell(
+          onTap: () {
+            if (thread.participantId != null &&
+                thread.participantId!.isNotEmpty) {
+              context.push('/users/${thread.participantId}');
+            }
+          },
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: Colors.white,
+                radius: 18,
+                child: Text(
+                    thread.participantName.isNotEmpty
+                        ? thread.participantName[0].toUpperCase()
+                        : '?',
+                    style: const TextStyle(
+                        color: Color(0xFF2196F3), fontWeight: FontWeight.bold)),
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(thread.participantName,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(thread.status),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            thread.status.replaceAll('_', ' ').toLowerCase(),
+                            style: const TextStyle(
+                                fontSize: 9,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.3),
+                          ),
+                        ),
+                        // Online status placeholder (will update via WebSocket)
+                        const SizedBox(width: 8),
+                        Text(
+                          'online',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.white.withOpacity(0.9),
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       body: Column(
@@ -194,8 +206,8 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                             _DateHeader(timestamp: message.timestamp),
                           _MessageBubble(
                             message: message,
-                            isMe: message.senderId ==
-                                ref.read(currentUserProvider).value?.id,
+                            isMe: currentUserId != null &&
+                                message.senderId == currentUserId,
                           ),
                         ],
                       );

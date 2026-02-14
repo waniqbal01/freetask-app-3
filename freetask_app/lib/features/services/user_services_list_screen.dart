@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/service.dart';
 import 'services_repository.dart';
-import '../auth/auth_repository.dart';
 import '../../widgets/service_card.dart';
 
 class UserServicesView extends StatefulWidget {
@@ -28,9 +27,8 @@ class _UserServicesViewState extends State<UserServicesView> {
   }
 
   Future<List<Service>> _fetchServices() async {
-    final user = await authRepository.getCurrentUser();
-    if (user == null) throw Exception('User not logged in');
-    return servicesRepository.getServices(freelancerId: int.parse(user.id));
+    // We use getMyServices to fetch all services (including pending) for the current user
+    return servicesRepository.getMyServices();
   }
 
   @override
