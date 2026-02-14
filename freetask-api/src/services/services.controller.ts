@@ -19,7 +19,7 @@ import { UserRole } from '@prisma/client';
 
 @Controller('services')
 export class ServicesController {
-  constructor(private readonly servicesService: ServicesService) {}
+  constructor(private readonly servicesService: ServicesService) { }
 
   @UseGuards(JwtAuthGuard)
   @Post()
@@ -48,6 +48,12 @@ export class ServicesController {
       limit ? parseInt(limit) : undefined,
       offset ? parseInt(offset) : undefined,
     );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  findMyServices(@GetUser('userId') userId: number) {
+    return this.servicesService.findMyServices(userId);
   }
 
   @Get('categories')

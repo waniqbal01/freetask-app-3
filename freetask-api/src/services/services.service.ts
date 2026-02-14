@@ -11,7 +11,7 @@ import { UpdateServiceDto } from './dto/update-service.dto';
 
 @Injectable()
 export class ServicesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(userId: number, role: UserRole, dto: CreateServiceDto) {
     if (role !== UserRole.FREELANCER) {
@@ -85,11 +85,11 @@ export class ServicesService {
         approvalStatus: 'APPROVED',
         ...(q
           ? {
-              OR: [
-                { title: { contains: q, mode: 'insensitive' } },
-                { description: { contains: q, mode: 'insensitive' } },
-              ],
-            }
+            OR: [
+              { title: { contains: q, mode: 'insensitive' } },
+              { description: { contains: q, mode: 'insensitive' } },
+            ],
+          }
           : {}),
         ...(category ? { category } : {}),
         ...(freelancerId ? { freelancerId } : {}),
@@ -110,6 +110,29 @@ export class ServicesService {
       orderBy,
       take,
       skip,
+    });
+
+    return services.map((service) => this.serializeService(service));
+  }
+
+  async findMyServices(userId: number) {
+    const services = await this.prisma.service.findMany({
+      where: {
+        freelancerId: userId,
+      },
+      include: {
+        freelancer: {
+          select: { id: true, name: true, avatarUrl: true },
+        },
+        _count: {
+          select: {
+            jobs: {
+              where: { status: 'COMPLETED' },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
     });
 
     return services.map((service) => this.serializeService(service));
