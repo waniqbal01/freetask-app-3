@@ -5,6 +5,7 @@ enum JobStatus {
   accepted,
   inProgress,
   inReview,
+  inRevision,
   completed,
   cancelled,
   rejected,
@@ -35,6 +36,7 @@ class Job {
     this.submissionMessage,
     this.orderAttachments,
     this.submissionAttachments,
+    this.conversationId,
   });
 
   factory Job.fromJson(Map<String, dynamic> json) {
@@ -83,6 +85,8 @@ class Job {
       submissionAttachments: (json['submissionAttachments'] as List?)
           ?.map((e) => e.toString())
           .toList(),
+      conversationId: json['conversationId']?.toString() ??
+          json['conversation_id']?.toString(),
     );
   }
 
@@ -92,6 +96,7 @@ class Job {
     String? disputeReason,
     DateTime? createdAt,
     String? description, // Added to copyWith
+    String? conversationId,
   }) {
     return Job(
       id: id,
@@ -112,6 +117,7 @@ class Job {
       submissionMessage: submissionMessage,
       orderAttachments: orderAttachments,
       submissionAttachments: submissionAttachments,
+      conversationId: conversationId ?? this.conversationId,
     );
   }
 
@@ -133,6 +139,7 @@ class Job {
   final String? submissionMessage;
   final List<String>? orderAttachments;
   final List<String>? submissionAttachments;
+  final String? conversationId;
 
   static JobStatus _parseStatus(dynamic value) {
     if (value is JobStatus) {
@@ -156,6 +163,8 @@ class Job {
         return JobStatus.inProgress;
       case 'IN_REVIEW':
         return JobStatus.inReview;
+      case 'IN_REVISION':
+        return JobStatus.inRevision;
       case 'COMPLETED':
         return JobStatus.completed;
       case 'CANCELLED':

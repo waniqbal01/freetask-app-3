@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
@@ -7,7 +12,7 @@ import { ChatThreadDto } from './dto/chat-thread.dto';
 
 @Injectable()
 export class ChatsService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async listThreads(
     userId: number,
@@ -19,7 +24,7 @@ export class ChatsService {
 
     const conversations = await this.prisma.conversation.findMany({
       where: {
-        participants: { some: { id: userId } }
+        participants: { some: { id: userId } },
       },
       include: {
         participants: {
@@ -36,7 +41,9 @@ export class ChatsService {
     });
 
     return conversations.map((convo) => {
-      const otherParticipant = convo.participants.find(p => p.id !== userId) || convo.participants[0];
+      const otherParticipant =
+        convo.participants.find((p) => p.id !== userId) ||
+        convo.participants[0];
       const participantName = otherParticipant?.name || 'Unknown User';
       const participantId = otherParticipant?.id || 0;
 
@@ -50,7 +57,8 @@ export class ChatsService {
         jobTitle: 'Conversation',
         participantName,
         participantId,
-        lastMessage: lastMsg?.content ?? (lastMsg?.attachmentUrl ? 'Attachment' : null),
+        lastMessage:
+          lastMsg?.content ?? (lastMsg?.attachmentUrl ? 'Attachment' : null),
         lastAt: lastMsg?.createdAt ?? convo.updatedAt,
         jobStatus: 'ACTIVE' as any,
         unreadCount,
@@ -80,25 +88,23 @@ export class ChatsService {
       skip,
     });
 
-    return messages
-      .reverse()
-      .map((message) => {
-        const msg = message as any;
-        return {
-          id: msg.id,
-          jobId: msg.conversationId, // Map to jobId for legacy frontend support if needed, or update frontend to use conversationId
-          senderId: msg.sender.id,
-          senderName: msg.sender.name,
-          content: msg.content,
-          type: msg.type,
-          attachmentUrl: msg.attachmentUrl,
-          createdAt: msg.createdAt,
-          status: msg.status || 'SENT',
-          deliveredAt: msg.deliveredAt || null,
-          readAt: msg.readAt || null,
-          replyToId: msg.replyToId || null,
-        } satisfies ChatMessageDto;
-      });
+    return messages.reverse().map((message) => {
+      const msg = message as any;
+      return {
+        id: msg.id,
+        jobId: msg.conversationId, // Map to jobId for legacy frontend support if needed, or update frontend to use conversationId
+        senderId: msg.sender.id,
+        senderName: msg.sender.name,
+        content: msg.content,
+        type: msg.type,
+        attachmentUrl: msg.attachmentUrl,
+        createdAt: msg.createdAt,
+        status: msg.status || 'SENT',
+        deliveredAt: msg.deliveredAt || null,
+        readAt: msg.readAt || null,
+        replyToId: msg.replyToId || null,
+      } satisfies ChatMessageDto;
+    });
   }
 
   async postMessage(
@@ -155,7 +161,10 @@ export class ChatsService {
     } satisfies ChatMessageDto;
   }
 
-  async getOrCreateConversation(userId: number, otherUserId: number): Promise<ChatThreadDto> {
+  async getOrCreateConversation(
+    userId: number,
+    otherUserId: number,
+  ): Promise<ChatThreadDto> {
     if (userId === otherUserId) {
       throw new BadRequestException('Cannot chat with yourself');
     }
@@ -164,23 +173,30 @@ export class ChatsService {
     // Optimization: Find conversations of user, simplified
     const clientConvos = await this.prisma.conversation.findMany({
       where: { participants: { some: { id: userId } } },
-      include: { participants: true, messages: { take: 1, orderBy: { createdAt: 'desc' } } }
+      include: {
+        participants: true,
+        messages: { take: 1, orderBy: { createdAt: 'desc' } },
+      },
     });
 
-    let conversation = clientConvos.find(c => c.participants.some(p => p.id === otherUserId));
+    let conversation = clientConvos.find((c) =>
+      c.participants.some((p) => p.id === otherUserId),
+    );
 
     if (!conversation) {
       conversation = await this.prisma.conversation.create({
         data: {
           participants: {
-            connect: [{ id: userId }, { id: otherUserId }]
-          }
+            connect: [{ id: userId }, { id: otherUserId }],
+          },
         },
-        include: { participants: true, messages: { take: 1 } }
+        include: { participants: true, messages: { take: 1 } },
       });
     }
 
-    const otherParticipant = conversation.participants.find(p => p.id !== userId);
+    const otherParticipant = conversation.participants.find(
+      (p) => p.id !== userId,
+    );
     return {
       id: conversation.id,
       jobTitle: 'Conversation',
@@ -189,21 +205,24 @@ export class ChatsService {
       lastMessage: conversation.messages[0]?.content ?? null,
       lastAt: conversation.updatedAt,
       jobStatus: 'ACTIVE' as any,
-      unreadCount: 0
+      unreadCount: 0,
     };
   }
 
-  private async ensureConversationParticipant(conversationId: number, userId: number) {
+  private async ensureConversationParticipant(
+    conversationId: number,
+    userId: number,
+  ) {
     const convo = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
-      include: { participants: { select: { id: true } } }
+      include: { participants: { select: { id: true } } },
     });
 
     if (!convo) {
       throw new NotFoundException('Conversation not found');
     }
 
-    const isParticipant = convo.participants.some(p => p.id === userId);
+    const isParticipant = convo.participants.some((p) => p.id === userId);
     if (!isParticipant) {
       throw new ForbiddenException('You are not part of this conversation');
     }

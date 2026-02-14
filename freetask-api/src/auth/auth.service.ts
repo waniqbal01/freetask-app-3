@@ -21,7 +21,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-  ) { }
+  ) {}
 
   private readonly logger = new Logger(AuthService.name);
 
@@ -106,7 +106,9 @@ export class AuthService {
     const [sessionIdPart, rawToken] = refreshToken?.split('.') ?? [];
     const sessionId = Number(sessionIdPart);
     if (!sessionId || !rawToken) {
-      this.logger.warn(`Refresh failed: Invalid token format (token: ${refreshToken})`);
+      this.logger.warn(
+        `Refresh failed: Invalid token format (token: ${refreshToken})`,
+      );
       throw new UnauthorizedException('Refresh token tidak sah');
     }
 
@@ -116,23 +118,34 @@ export class AuthService {
     });
 
     if (!session || session.revoked) {
-      this.logger.warn(`Refresh failed: Session ${sessionId} not found or revoked`);
-      throw new UnauthorizedException('Sesi telah tamat. Sila log masuk semula.');
+      this.logger.warn(
+        `Refresh failed: Session ${sessionId} not found or revoked`,
+      );
+      throw new UnauthorizedException(
+        'Sesi telah tamat. Sila log masuk semula.',
+      );
     }
 
     if (session.refreshTokenExpiresAt.getTime() < Date.now()) {
-      this.logger.warn(`Refresh failed: Session ${sessionId} expired at ${session.refreshTokenExpiresAt}`);
+      this.logger.warn(
+        `Refresh failed: Session ${sessionId} expired at ${session.refreshTokenExpiresAt}`,
+      );
       await this.prisma.session.update({
         where: { id: session.id },
         data: { revoked: true },
       });
-      throw new UnauthorizedException('Sesi telah tamat. Sila log masuk semula.');
+      throw new UnauthorizedException(
+        'Sesi telah tamat. Sila log masuk semula.',
+      );
     }
 
     const tokenMatches =
-      !!session.refreshTokenHash && (await bcrypt.compare(rawToken, session.refreshTokenHash));
+      !!session.refreshTokenHash &&
+      (await bcrypt.compare(rawToken, session.refreshTokenHash));
     if (!tokenMatches) {
-      this.logger.warn(`Refresh failed: Token mismatch for session ${sessionId}`);
+      this.logger.warn(
+        `Refresh failed: Token mismatch for session ${sessionId}`,
+      );
       await this.prisma.session.update({
         where: { id: session.id },
         data: { revoked: true },
@@ -154,7 +167,10 @@ export class AuthService {
     });
 
     const nextRefreshToken = `${updatedSession.id}.${nextRawToken}`;
-    const accessToken = await this.signAccessToken(session.user, updatedSession.id);
+    const accessToken = await this.signAccessToken(
+      session.user,
+      updatedSession.id,
+    );
 
     return {
       accessToken,
@@ -210,7 +226,10 @@ export class AuthService {
     });
   }
 
-  private resolveDuration(input: string | undefined, fallbackMs: number | undefined): number {
+  private resolveDuration(
+    input: string | undefined,
+    fallbackMs: number | undefined,
+  ): number {
     if (!input) {
       if (fallbackMs === undefined) {
         throw new Error('JWT configuration missing: Explicit expiry required');

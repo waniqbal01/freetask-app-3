@@ -21,13 +21,19 @@ type EscrowRecord = {
 export class EscrowService {
   private readonly logger = new Logger(EscrowService.name);
 
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async getForUser(jobId: number, userId: number, role: UserRole) {
     const { job, escrow } = await this.ensureEscrow(jobId);
 
-    if (role !== UserRole.ADMIN && job.clientId !== userId && job.freelancerId !== userId) {
-      throw new ForbiddenException('You are not allowed to view this escrow record');
+    if (
+      role !== UserRole.ADMIN &&
+      job.clientId !== userId &&
+      job.freelancerId !== userId
+    ) {
+      throw new ForbiddenException(
+        'You are not allowed to view this escrow record',
+      );
     }
 
     return this.serializeEscrow(escrow);
@@ -56,8 +62,11 @@ export class EscrowService {
 
     if (escrow.status !== EscrowStatus.PENDING) {
       // If already held (e.g. by webhook race condition), just return it
-      if (escrow.status === EscrowStatus.HELD) return this.serializeEscrow(escrow);
-      throw new ConflictException('Escrow can only be held from the PENDING state');
+      if (escrow.status === EscrowStatus.HELD)
+        return this.serializeEscrow(escrow);
+      throw new ConflictException(
+        'Escrow can only be held from the PENDING state',
+      );
     }
 
     const updated = await this.updateStatus(escrow.id, EscrowStatus.HELD);
@@ -69,21 +78,23 @@ export class EscrowService {
     this.ensureReleaseOrRefundAllowed(job.status, 'release');
 
     if (escrow.status !== EscrowStatus.HELD) {
-      throw new ConflictException('Escrow must be HELD before it can be released');
+      throw new ConflictException(
+        'Escrow must be HELD before it can be released',
+      );
     }
 
     // Transaction: Update Escrow -> Credit Freelancer
     const result = await this.prisma.$transaction(async (tx) => {
       const updatedEscrow = await tx.escrow.update({
         where: { id: escrow.id },
-        data: { status: EscrowStatus.RELEASED, updatedAt: new Date() }
+        data: { status: EscrowStatus.RELEASED, updatedAt: new Date() },
       });
 
       // Credit freelancer balance
       if (escrow.amount && Number(escrow.amount) > 0) {
         await tx.user.update({
           where: { id: job.freelancerId },
-          data: { balance: { increment: escrow.amount } }
+          data: { balance: { increment: escrow.amount } },
         });
       }
 
@@ -100,21 +111,23 @@ export class EscrowService {
     if (escrow.status !== EscrowStatus.HELD) {
       // Allow refunding even if PENDING? Usually refunds happen after payment (HELD).
       // If PENDING, maybe just cancel? But let's stick to HELD for now.
-      throw new ConflictException('Escrow must be HELD before it can be refunded');
+      throw new ConflictException(
+        'Escrow must be HELD before it can be refunded',
+      );
     }
 
     // Transaction: Update Escrow -> Credit Client (Refund to wallet)
     const result = await this.prisma.$transaction(async (tx) => {
       const updatedEscrow = await tx.escrow.update({
         where: { id: escrow.id },
-        data: { status: EscrowStatus.REFUNDED, updatedAt: new Date() }
+        data: { status: EscrowStatus.REFUNDED, updatedAt: new Date() },
       });
 
       // Credit client balance (internal refund)
       if (escrow.amount && Number(escrow.amount) > 0) {
         await tx.user.update({
           where: { id: job.clientId },
-          data: { balance: { increment: escrow.amount } }
+          data: { balance: { increment: escrow.amount } },
         });
       }
 
@@ -138,12 +151,14 @@ export class EscrowService {
     // If syncing leads to RELEASE or REFUND, we should probably trigger the internal logic to ensure balance update.
     // However, syncOnJobStatus is likely called WITHIN a transaction that updates Job status.
     // So we just update the escrow status here, BUT we need to make sure balance is updated too.
-    // This methods seems to be a "passive" sync. 
+    // This methods seems to be a "passive" sync.
     // REVISIT: If this is passive sync, we might miss balance updates if we just change status.
     // For now, let's assume specific actions (Complete Job etc) will call internalRelease explicitely.
     // If this sync is just for consistency, we log it.
 
-    this.logger.log(`Syncing escrow ${escrow.id} for job ${job.id} → ${desiredStatus}`);
+    this.logger.log(
+      `Syncing escrow ${escrow.id} for job ${job.id} → ${desiredStatus}`,
+    );
 
     const updated = await tx.escrow.update({
       where: { id: escrow.id },
@@ -160,7 +175,11 @@ export class EscrowService {
   }
 
   private ensureHoldAllowed(status: JobStatus) {
-    const allowedStatuses: JobStatus[] = [JobStatus.PENDING, JobStatus.AWAITING_PAYMENT, JobStatus.IN_PROGRESS]; // Fixed ACCEPTED -> AWAITING_PAYMENT
+    const allowedStatuses: JobStatus[] = [
+      JobStatus.PENDING,
+      JobStatus.AWAITING_PAYMENT,
+      JobStatus.IN_PROGRESS,
+    ]; // Fixed ACCEPTED -> AWAITING_PAYMENT
     if (!allowedStatuses.includes(status)) {
       throw new ConflictException(
         `Escrow hold not allowed when job status is ${status.toString().toUpperCase()}`,
@@ -168,8 +187,14 @@ export class EscrowService {
     }
   }
 
-  private ensureReleaseOrRefundAllowed(status: JobStatus, action: 'release' | 'refund') {
-    const releaseAllowed: JobStatus[] = [JobStatus.COMPLETED, JobStatus.DISPUTED];
+  private ensureReleaseOrRefundAllowed(
+    status: JobStatus,
+    action: 'release' | 'refund',
+  ) {
+    const releaseAllowed: JobStatus[] = [
+      JobStatus.COMPLETED,
+      JobStatus.DISPUTED,
+    ];
     const refundAllowed: JobStatus[] = [
       JobStatus.COMPLETED,
       JobStatus.DISPUTED,
@@ -188,10 +213,17 @@ export class EscrowService {
     }
   }
 
-  private resolveStatusForJob(status: JobStatus, escrow: EscrowRecord): EscrowStatus | null {
+  private resolveStatusForJob(
+    status: JobStatus,
+    escrow: EscrowRecord,
+  ): EscrowStatus | null {
     switch (status) {
       case JobStatus.COMPLETED: {
-        if (([EscrowStatus.REFUNDED, EscrowStatus.REFUNDED] as EscrowStatus[]).includes(escrow.status)) {
+        if (
+          (
+            [EscrowStatus.REFUNDED, EscrowStatus.REFUNDED] as EscrowStatus[]
+          ).includes(escrow.status)
+        ) {
           return null;
         }
         if (escrow.status === EscrowStatus.RELEASED) {
@@ -204,13 +236,21 @@ export class EscrowService {
         if (escrow.status === EscrowStatus.RELEASED) {
           return null;
         }
-        if (([EscrowStatus.REFUNDED, EscrowStatus.REFUNDED] as EscrowStatus[]).includes(escrow.status)) {
+        if (
+          (
+            [EscrowStatus.REFUNDED, EscrowStatus.REFUNDED] as EscrowStatus[]
+          ).includes(escrow.status)
+        ) {
           return null;
         }
         return escrow.amount ? EscrowStatus.REFUNDED : EscrowStatus.REFUNDED;
       }
       case JobStatus.DISPUTED: {
-        if (([EscrowStatus.RELEASED, EscrowStatus.REFUNDED] as EscrowStatus[]).includes(escrow.status)) {
+        if (
+          (
+            [EscrowStatus.RELEASED, EscrowStatus.REFUNDED] as EscrowStatus[]
+          ).includes(escrow.status)
+        ) {
           return null;
         }
         // When job is disputed, escrow should be HELD (not released until resolved)
@@ -230,19 +270,31 @@ export class EscrowService {
     newStatus: JobStatus,
   ): string | null {
     if (newStatus === JobStatus.COMPLETED) {
-      if (([EscrowStatus.REFUNDED, EscrowStatus.REFUNDED] as EscrowStatus[]).includes(escrow.status)) {
+      if (
+        (
+          [EscrowStatus.REFUNDED, EscrowStatus.REFUNDED] as EscrowStatus[]
+        ).includes(escrow.status)
+      ) {
         return `Cannot complete job: escrow already ${escrow.status.toLowerCase()}`;
       }
     }
 
-    if (([JobStatus.CANCELED, JobStatus.CANCELED] as JobStatus[]).includes(newStatus)) {
+    if (
+      ([JobStatus.CANCELED, JobStatus.CANCELED] as JobStatus[]).includes(
+        newStatus,
+      )
+    ) {
       if (escrow.status === EscrowStatus.RELEASED) {
         return 'Cannot cancel/reject job: escrow already released to freelancer';
       }
     }
 
     if (newStatus === JobStatus.DISPUTED) {
-      if (([EscrowStatus.RELEASED, EscrowStatus.REFUNDED] as EscrowStatus[]).includes(escrow.status)) {
+      if (
+        (
+          [EscrowStatus.RELEASED, EscrowStatus.REFUNDED] as EscrowStatus[]
+        ).includes(escrow.status)
+      ) {
         return `Cannot dispute job: escrow already ${escrow.status.toLowerCase()}`;
       }
     }
@@ -320,4 +372,3 @@ export class EscrowService {
     };
   }
 }
-

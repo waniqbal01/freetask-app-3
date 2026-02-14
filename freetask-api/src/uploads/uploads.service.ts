@@ -11,7 +11,9 @@ import { randomUUID } from 'crypto';
 
 @Injectable()
 export class UploadsService {
-  private readonly uploadsDir = normalize(join(process.cwd(), process.env.UPLOAD_DIR ?? 'uploads'));
+  private readonly uploadsDir = normalize(
+    join(process.cwd(), process.env.UPLOAD_DIR ?? 'uploads'),
+  );
   private readonly logger = new Logger(UploadsService.name);
 
   ensureUploadsDir() {
@@ -35,7 +37,9 @@ export class UploadsService {
 
     const fileExt = UploadsService.sanitizeExtension(extname(originalName));
     if (!UploadsService.isAllowedExtension(fileExt)) {
-      throw new BadRequestException('Jenis fail tidak dibenarkan. Hanya gambar/PDF/DOC.');
+      throw new BadRequestException(
+        'Jenis fail tidak dibenarkan. Hanya gambar/PDF/DOC.',
+      );
     }
 
     const uuid = randomUUID();
@@ -62,10 +66,14 @@ export class UploadsService {
       !!sniffedMime &&
       !!expectedMime &&
       sniffedMime.toLowerCase() !== expectedMime.toLowerCase();
-    const isSuspicious = isMismatch || !UploadsService.isAllowedMimeType(sniffedMime ?? expectedMime);
+    const isSuspicious =
+      isMismatch ||
+      !UploadsService.isAllowedMimeType(sniffedMime ?? expectedMime);
 
     if (isMismatch) {
-      this.logger.warn(`MIME mismatch for ${safeFilename}: detected ${sniffedMime}, expected ${expectedMime}`);
+      this.logger.warn(
+        `MIME mismatch for ${safeFilename}: detected ${sniffedMime}, expected ${expectedMime}`,
+      );
     }
 
     const mimeType = isSuspicious
@@ -86,7 +94,9 @@ export class UploadsService {
    */
   async getPublicFileStream(rawFilename: string) {
     if (!UploadsService.isPublicFile(rawFilename)) {
-      this.logger.warn(`Blocked public access attempt for non-public file: ${rawFilename}`);
+      this.logger.warn(
+        `Blocked public access attempt for non-public file: ${rawFilename}`,
+      );
       throw new NotFoundException('File not found or not publicly accessible');
     }
     return this.getFileStream(rawFilename);
@@ -154,7 +164,8 @@ export class UploadsService {
       '.gif': 'image/gif',
       '.pdf': 'application/pdf',
       '.doc': 'application/msword',
-      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.docx':
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     };
 
     return map[extension.toLowerCase()];
@@ -182,7 +193,12 @@ export class UploadsService {
    * Enforces RFC 4122 compliance with version and variant field validation.
    */
   static isPublicFile(filename: string): boolean {
-    if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+    if (
+      !filename ||
+      filename.includes('..') ||
+      filename.includes('/') ||
+      filename.includes('\\')
+    ) {
       return false;
     }
 
@@ -193,7 +209,9 @@ export class UploadsService {
 
   static sanitizeBaseName(originalName: string) {
     const normalized = basename(originalName).replace(/[/\\]+/g, '');
-    const base = normalized.replace(extname(normalized), '').replace(/\s+/g, '-');
+    const base = normalized
+      .replace(extname(normalized), '')
+      .replace(/\s+/g, '-');
     const safe = base.replace(/[^a-zA-Z0-9-_]/g, '');
     return safe.length === 0 ? 'file' : safe;
   }

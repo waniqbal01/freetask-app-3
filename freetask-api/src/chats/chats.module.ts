@@ -10,4 +10,4 @@ import { forwardRef } from '@nestjs/common';
   providers: [ChatsService],
   exports: [ChatsService],
 })
-export class ChatsModule { }
+export class ChatsModule {}

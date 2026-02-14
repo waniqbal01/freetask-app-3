@@ -6,7 +6,7 @@ import { toAppUser } from './user.mapper';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   create(data: Prisma.UserCreateInput) {
     return this.prisma.user.create({ data });
@@ -42,7 +42,7 @@ export class UsersService {
 
     // Fetch user's services to show on profile (only approved)
     const services = await this.prisma.service.findMany({
-      where: { 
+      where: {
         freelancerId: id,
         approvalStatus: 'APPROVED', // Only show approved services
       },
@@ -52,7 +52,7 @@ export class UsersService {
         price: true,
         thumbnailUrl: true,
         category: true,
-      }
+      },
     });
 
     const aggregate = await this.prisma.review.aggregate({

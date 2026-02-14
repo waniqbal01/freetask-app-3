@@ -22,12 +22,25 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       });
     }
 
-    const session = await this.prisma.session.findUnique({ where: { id: payload.sid } });
+    const session = await this.prisma.session.findUnique({
+      where: { id: payload.sid },
+    });
 
-    if (!session || session.revoked || session.refreshTokenExpiresAt.getTime() < Date.now()) {
-      throw new UnauthorizedException('Sesi telah tamat. Sila log masuk semula.');
+    if (
+      !session ||
+      session.revoked ||
+      session.refreshTokenExpiresAt.getTime() < Date.now()
+    ) {
+      throw new UnauthorizedException(
+        'Sesi telah tamat. Sila log masuk semula.',
+      );
     }
 
-    return { id: payload.sub, userId: payload.sub, role: payload.role, sessionId: payload.sid };
+    return {
+      id: payload.sub,
+      userId: payload.sub,
+      role: payload.role,
+      sessionId: payload.sid,
+    };
   }
 }

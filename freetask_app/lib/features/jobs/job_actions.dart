@@ -63,6 +63,15 @@ class JobActions {
         }
         break;
 
+      case JobStatus.inRevision:
+        if (role == 'FREELANCER') {
+          actions.add(JobAction.submit);
+        }
+        if (role == 'CLIENT') {
+          actions.add(JobAction.dispute);
+        }
+        break;
+
       case JobStatus.completed:
         // Both can dispute a completed job
         if (role == 'FREELANCER' || role == 'CLIENT') {

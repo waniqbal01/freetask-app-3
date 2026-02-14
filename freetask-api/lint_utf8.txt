@@ -1,0 +1,121 @@
+
+> freetask-api@0.0.1 lint
+> eslint "{src,apps,libs,test}/**/*.ts" --fix
+
+
+C:\Users\USER\freetask-app-3\freetask-api\src\admin\admin.service.ts
+  314:51  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  503:11  error  'escrowStatus' is defined but never used  @typescript-eslint/no-unused-vars
+  602:15  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\USER\freetask-app-3\freetask-api\src\admin\dto\reject-service.dto.ts
+  1:20  error  'IsOptional' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\USER\freetask-app-3\freetask-api\src\auth\auth.service.ts
+  46:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  62:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\USER\freetask-app-3\freetask-api\src\auth\jwt-auth.guard.ts
+  6:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  6:42  error  'info' is defined but never used          @typescript-eslint/no-unused-vars
+
+C:\Users\USER\freetask-app-3\freetask-api\src\chats\chats.service.spec.ts
+   49:55  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   66:73  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  116:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  124:73  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  130:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  141:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  193:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\USER\freetask-app-3\freetask-api\src\chats\chats.service.ts
+   63:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   92:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  147:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  207:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  259:12  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  276:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  282:12  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\USER\freetask-app-3\freetask-api\src\chats\dto\create-message.dto.ts
+  1:10  error  'IsNotEmpty' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\USER\freetask-app-3\freetask-api\src\common\interceptors\transform-decimal.interceptor.ts
+  13:71  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  17:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  17:34  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  36:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\USER\freetask-app-3\freetask-api\src\escrow\escrow.service.spec.ts
+  6:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  8:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  9:24  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\USER\freetask-app-3\freetask-api\src\jobs\dto\create-inquiry.dto.ts
+  8:3  error  'MinLength' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\USER\freetask-app-3\freetask-api\src\jobs\jobs.service.spec.ts
+  42:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  49:14  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\USER\freetask-app-3\freetask-api\src\jobs\jobs.service.ts
+   74:35  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  107:18  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  311:35  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\USER\freetask-app-3\freetask-api\src\main.ts
+  104:21  error  Require statement not part of import statement  @typescript-eslint/no-var-requires
+  126:21  error  Require statement not part of import statement  @typescript-eslint/no-var-requires
+
+C:\Users\USER\freetask-app-3\freetask-api\src\notifications\dto\notification.dto.ts
+   6:3   error  'IsBoolean' is defined but never used     @typescript-eslint/no-unused-vars
+  26:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  46:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\USER\freetask-app-3\freetask-api\src\notifications\notifications.service.ts
+  129:23  error  Require statement not part of import statement  @typescript-eslint/no-var-requires
+
+C:\Users\USER\freetask-app-3\freetask-api\src\payments\billplz.service.ts
+  152:29  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\USER\freetask-app-3\freetask-api\src\payments\dto\payment.dto.ts
+  1:39  error  'IsDecimal' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\USER\freetask-app-3\freetask-api\src\payments\payments-callback.controller.ts
+  12:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\USER\freetask-app-3\freetask-api\src\payments\payments.controller.ts
+  13:3   error  'InternalServerErrorException' is defined but never used  @typescript-eslint/no-unused-vars
+  65:22  error  Unexpected any. Specify a different type                  @typescript-eslint/no-explicit-any
+  81:39  error  Unexpected any. Specify a different type                  @typescript-eslint/no-explicit-any
+
+C:\Users\USER\freetask-app-3\freetask-api\src\payments\payments.service.ts
+    7:10  error  'ConfigService' is defined but never used  @typescript-eslint/no-unused-vars
+  187:32  error  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  282:49  error  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+
+C:\Users\USER\freetask-app-3\freetask-api\src\repro.ts
+  27:18  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\USER\freetask-app-3\freetask-api\src\uploads\uploads.controller.spec.ts
+  15:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\USER\freetask-app-3\freetask-api\src\uploads\uploads.controller.ts
+  74:16  error  Require statement not part of import statement  @typescript-eslint/no-var-requires
+  75:13  error  Require statement not part of import statement  @typescript-eslint/no-var-requires
+  80:31  error  Require statement not part of import statement  @typescript-eslint/no-var-requires
+  81:34  error  Require statement not part of import statement  @typescript-eslint/no-var-requires
+  91:36  error  Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  91:53  error  Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+
+C:\Users\USER\freetask-app-3\freetask-api\src\websocket\chat.gateway.ts
+   41:13  error  'server' is defined but never used        @typescript-eslint/no-unused-vars
+  155:38  error  'client' is defined but never used        @typescript-eslint/no-unused-vars
+  227:51  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  233:59  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\USER\freetask-app-3\freetask-api\src\withdrawals\dto\create-withdrawal.dto.ts
+  13:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 64 problems (64 errors, 0 warnings)
+

@@ -18,10 +18,18 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { UploadsService } from './uploads.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { UploadsMulterExceptionFilter } from './uploads.filter';
-import { ApiBearerAuth, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+
+interface RequestWithUser extends Request {
+  user: { userId: number };
+}
 
 @ApiBearerAuth()
 @ApiTags('uploads')
@@ -29,7 +37,7 @@ import { Throttle } from '@nestjs/throttler';
 export class UploadsController {
   private readonly logger = new Logger(UploadsController.name);
 
-  constructor(private readonly uploadsService: UploadsService) { }
+  constructor(private readonly uploadsService: UploadsService) {}
 
   @Post()
   @UseGuards(JwtAuthGuard) // Auth required only for upload
@@ -55,7 +63,9 @@ export class UploadsController {
         const fileExt = extname(file.originalname || '').toLowerCase();
         if (!UploadsService.isAllowedExtension(fileExt)) {
           return cb(
-            new BadRequestException('Jenis fail tidak dibenarkan. Hanya gambar/PDF/DOC.'),
+            new BadRequestException(
+              'Jenis fail tidak dibenarkan. Hanya gambar/PDF/DOC.',
+            ),
             false,
           );
         }
@@ -82,9 +92,14 @@ export class UploadsController {
       }),
     }),
   )
-  uploadFile(@UploadedFile() file: any, @Req() req: any) {
+  uploadFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: RequestWithUser,
+  ) {
     if (!file) {
-      this.logger.warn(`Upload failed: No file provided by user ${req.user?.userId}`);
+      this.logger.warn(
+        `Upload failed: No file provided by user ${req.user?.userId}`,
+      );
       throw new BadRequestException('Tiada fail dihantar');
     }
 
@@ -100,17 +115,24 @@ export class UploadsController {
   @Get('public/:filename')
   async getPublicFile(
     @Param('filename') filename: string,
-    @Res() res: Response
+    @Res() res: Response,
   ) {
-    const { stream, mimeType, filename: safeName, asAttachment } =
-      await this.uploadsService.getPublicFileStream(filename);
+    const {
+      stream,
+      mimeType,
+      filename: safeName,
+      asAttachment,
+    } = await this.uploadsService.getPublicFileStream(filename);
 
     // Explicit CORS for public images to allow Flutter Web <img /> tags
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Type', mimeType);
 
     const dispositionType = asAttachment ? 'attachment' : 'inline';
-    res.setHeader('Content-Disposition', `${dispositionType}; filename="${safeName}"`);
+    res.setHeader(
+      'Content-Disposition',
+      `${dispositionType}; filename="${safeName}"`,
+    );
 
     stream.pipe(res);
   }
@@ -118,12 +140,25 @@ export class UploadsController {
   // Protected endpoint for authenticated users
   @UseGuards(JwtAuthGuard)
   @Get(':filename')
-  @ApiUnauthorizedResponse({ description: 'Unauthorized - JWT diperlukan untuk muat turun.' })
-  async downloadFile(@Param('filename') filename: string, @Res({ passthrough: true }) res: Response) {
-    const { stream, mimeType, filename: safeName, asAttachment } = await this.uploadsService.getFileStream(filename);
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - JWT diperlukan untuk muat turun.',
+  })
+  async downloadFile(
+    @Param('filename') filename: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const {
+      stream,
+      mimeType,
+      filename: safeName,
+      asAttachment,
+    } = await this.uploadsService.getFileStream(filename);
     res.setHeader('Content-Type', mimeType);
     const dispositionType = asAttachment ? 'attachment' : 'inline';
-    res.setHeader('Content-Disposition', `${dispositionType}; filename="${safeName}"`);
+    res.setHeader(
+      'Content-Disposition',
+      `${dispositionType}; filename="${safeName}"`,
+    );
     return new StreamableFile(stream);
   }
 }

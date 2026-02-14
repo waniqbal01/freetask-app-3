@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Query, UseGuards, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Query,
+  UseGuards,
+  Logger,
+} from '@nestjs/common';
 import { ReviewsService } from './reviews.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { GetUser } from '../auth/get-user.decorator';
@@ -9,11 +17,13 @@ import { CreateReviewDto } from './dto/create-review.dto';
 export class ReviewsController {
   private readonly logger = new Logger(ReviewsController.name);
 
-  constructor(private readonly reviewsService: ReviewsService) { }
+  constructor(private readonly reviewsService: ReviewsService) {}
 
   @Post()
   create(@GetUser('userId') userId: number, @Body() dto: CreateReviewDto) {
-    this.logger.log(`Review submission by user ${userId} for job ${dto.jobId}, reviewee ${dto.revieweeId}, rating ${dto.rating}`);
+    this.logger.log(
+      `Review submission by user ${userId} for job ${dto.jobId}, reviewee ${dto.revieweeId}, rating ${dto.rating}`,
+    );
     return this.reviewsService.create(userId, dto);
   }
 
@@ -30,7 +40,9 @@ export class ReviewsController {
     return this.reviewsService.findMany({
       jobId: Number.isFinite(parsedJobId) ? parsedJobId : undefined,
       serviceId: Number.isFinite(parsedServiceId) ? parsedServiceId : undefined,
-      freelancerId: Number.isFinite(parsedFreelancerId) ? parsedFreelancerId : undefined,
+      freelancerId: Number.isFinite(parsedFreelancerId)
+        ? parsedFreelancerId
+        : undefined,
     });
   }
 

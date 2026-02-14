@@ -14,7 +14,9 @@ describe('ChatsService', () => {
     messages: [],
   };
 
-  let prisma: jest.Mocked<Pick<PrismaService, 'job' | 'chatMessage' | '$transaction'>>;
+  let prisma: jest.Mocked<
+    Pick<PrismaService, 'job' | 'chatMessage' | '$transaction'>
+  >;
   let service: ChatsService;
 
   beforeEach(() => {
@@ -29,7 +31,9 @@ describe('ChatsService', () => {
         create: jest.fn(),
       },
       $transaction: jest.fn(),
-    } as unknown as jest.Mocked<Pick<PrismaService, 'job' | 'chatMessage' | '$transaction'>>;
+    } as unknown as jest.Mocked<
+      Pick<PrismaService, 'job' | 'chatMessage' | '$transaction'>
+    >;
 
     prisma.$transaction.mockImplementation(async (cb) => {
       return cb(prisma as unknown as PrismaService);
@@ -42,7 +46,9 @@ describe('ChatsService', () => {
     (prisma.job.findUnique as jest.Mock).mockResolvedValue(null);
 
     await expect(
-      service.postMessage(baseJob.id, 99, 'CLIENT' as any, { content: 'Hello' }),
+      service.postMessage(baseJob.id, 99, 'CLIENT' as any, {
+        content: 'Hello',
+      }),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
@@ -57,7 +63,9 @@ describe('ChatsService', () => {
       sender: { id: baseJob.clientId, name: 'Client A' },
     });
 
-    await service.postMessage(baseJob.id, baseJob.clientId, 'CLIENT' as any, { content: 'Hi' });
+    await service.postMessage(baseJob.id, baseJob.clientId, 'CLIENT' as any, {
+      content: 'Hi',
+    });
 
     expect(prisma.job.update).toHaveBeenCalledWith({
       where: { id: baseJob.id },
@@ -103,14 +111,24 @@ describe('ChatsService', () => {
       sender: { id: baseJob.clientId, name: 'Client A' },
     });
 
-    const initialOrder = await service.listThreads(baseJob.clientId, 'CLIENT' as any);
+    const initialOrder = await service.listThreads(
+      baseJob.clientId,
+      'CLIENT' as any,
+    );
     expect(initialOrder.map((thread) => thread.id)).toEqual([2, 1]);
     expect(initialOrder[0].lastMessage).toBe('Latest');
-    expect(initialOrder[0].lastAt?.toISOString()).toBe('2024-01-03T00:00:00.000Z');
+    expect(initialOrder[0].lastAt?.toISOString()).toBe(
+      '2024-01-03T00:00:00.000Z',
+    );
 
-    await service.postMessage(baseJob.id, baseJob.clientId, 'CLIENT' as any, { content: 'Ping' });
+    await service.postMessage(baseJob.id, baseJob.clientId, 'CLIENT' as any, {
+      content: 'Ping',
+    });
 
-    const reordered = await service.listThreads(baseJob.clientId, 'CLIENT' as any);
+    const reordered = await service.listThreads(
+      baseJob.clientId,
+      'CLIENT' as any,
+    );
     expect(reordered.map((thread) => thread.id)).toEqual([1, 2]);
     expect(reordered[0].lastMessage).toBe('Ping');
   });
@@ -118,10 +136,18 @@ describe('ChatsService', () => {
   it('keeps order stable when no updates occur', async () => {
     (prisma.job.findMany as jest.Mock).mockResolvedValue([baseJob]);
 
-    const threads = await service.listThreads(baseJob.clientId, 'CLIENT' as any);
+    const threads = await service.listThreads(
+      baseJob.clientId,
+      'CLIENT' as any,
+    );
 
     expect(prisma.job.findMany).toHaveBeenCalledWith({
-      where: { OR: [{ clientId: baseJob.clientId }, { freelancerId: baseJob.clientId }] },
+      where: {
+        OR: [
+          { clientId: baseJob.clientId },
+          { freelancerId: baseJob.clientId },
+        ],
+      },
       include: {
         client: { select: { id: true, name: true } },
         freelancer: { select: { id: true, name: true } },
@@ -161,10 +187,15 @@ describe('ChatsService', () => {
       },
     ]);
 
-    const result = await service.listMessages(baseJob.id, baseJob.clientId, 'CLIENT' as any, {
-      limit: 2,
-      offset: 1,
-    });
+    const result = await service.listMessages(
+      baseJob.id,
+      baseJob.clientId,
+      'CLIENT' as any,
+      {
+        limit: 2,
+        offset: 1,
+      },
+    );
 
     expect(prisma.chatMessage.findMany).toHaveBeenCalledWith({
       where: { jobId: baseJob.id },

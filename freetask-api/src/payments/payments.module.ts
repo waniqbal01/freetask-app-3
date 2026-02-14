@@ -8,9 +8,9 @@ import { EscrowModule } from '../escrow/escrow.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-    imports: [PrismaModule, EscrowModule, NotificationsModule],
-    controllers: [PaymentsController, PaymentsCallbackController],
-    providers: [PaymentsService, BillplzService],
-    exports: [PaymentsService, BillplzService],
+  imports: [PrismaModule, EscrowModule, NotificationsModule],
+  controllers: [PaymentsController, PaymentsCallbackController],
+  providers: [PaymentsService, BillplzService],
+  exports: [PaymentsService, BillplzService],
 })
-export class PaymentsModule { }
+export class PaymentsModule {}

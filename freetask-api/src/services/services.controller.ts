@@ -19,7 +19,7 @@ import { UserRole } from '@prisma/client';
 
 @Controller('services')
 export class ServicesController {
-  constructor(private readonly servicesService: ServicesService) { }
+  constructor(private readonly servicesService: ServicesService) {}
 
   @UseGuards(JwtAuthGuard)
   @Post()
@@ -72,7 +72,10 @@ export class ServicesController {
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number, @GetUser('userId') userId: number) {
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('userId') userId: number,
+  ) {
     return this.servicesService.remove(id, userId);
   }
 }

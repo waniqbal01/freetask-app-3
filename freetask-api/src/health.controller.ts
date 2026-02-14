@@ -8,12 +8,12 @@ import { UserRole } from '@prisma/client';
 
 /**
  * Health Check Controller
- * 
+ *
  * PUBLIC /health endpoint:
  * - Lightweight, instant response
  * - No database/service dependencies
  * - Used for wake-up and load balancer checks
- * 
+ *
  * ADMIN /health/detailed endpoint:
  * - Includes database connectivity check
  * - Requires authentication
@@ -29,10 +29,10 @@ export class HealthController {
   @Throttle({ default: { limit: 60, ttl: 60000 } })
   @Get()
   getPublicHealth() {
-    return { 
+    return {
       status: 'ok',
       timestamp: new Date().toISOString(),
-      service: 'freetask-api'
+      service: 'freetask-api',
     };
   }
 
@@ -45,10 +45,10 @@ export class HealthController {
     // Lazy inject PrismaService - only used when needed
     // Verify DB connection without exposing query details
     await prisma.$queryRaw`SELECT 1 as ok`;
-    return { 
-      status: 'ok', 
+    return {
+      status: 'ok',
       database: 'connected',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 }

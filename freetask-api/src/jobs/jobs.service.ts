@@ -58,7 +58,14 @@ export class JobsService {
       // Trim title to prevent whitespace inconsistencies
       const trimmedTitle = (dto.title ?? service.title).trim();
 
-      this.logger.log(`Creating job for service ${dto.serviceId} by client ${userId}`);
+      this.logger.log(
+        `Creating job for service ${dto.serviceId} by client ${userId}`,
+      );
+
+      const conversation = await this.chatsService.getOrCreateConversation(
+        userId,
+        service.freelancerId,
+      );
 
       const job = await this.prisma.job.create({
         data: {
@@ -68,7 +75,10 @@ export class JobsService {
           serviceId: service.id,
           clientId: userId,
           freelancerId: service.freelancerId,
-          orderAttachments: dto.attachments ? (dto.attachments as any) : undefined,
+          conversationId: conversation.id,
+          orderAttachments: dto.attachments
+            ? (dto.attachments as Prisma.InputJsonValue)
+            : undefined,
         },
         include: this.jobInclude,
       });
@@ -87,7 +97,10 @@ export class JobsService {
       this.logger.log(`Job ${job.id} created successfully`);
       return this.withFlatFields(job);
     } catch (error) {
-      this.logger.error(`Failed to create job for service ${dto.serviceId}`, error);
+      this.logger.error(
+        `Failed to create job for service ${dto.serviceId}`,
+        error,
+      );
       throw error;
     }
   }
@@ -97,7 +110,8 @@ export class JobsService {
       throw new ForbiddenException('Only clients can create inquiries');
     }
 
-    let service: any = null;
+    let service: { id: number; freelancerId: number; title: string } | null =
+      null;
     let freelancerId = dto.freelancerId;
     let title = 'General Inquiry';
 
@@ -113,16 +127,25 @@ export class JobsService {
     }
 
     if (!freelancerId) {
-      throw new BadRequestException('Either serviceId or freelancerId must be provided.');
+      throw new BadRequestException(
+        'Either serviceId or freelancerId must be provided.',
+      );
     }
 
     // Verify freelancer exists if directly messaging (optional but good practice)
     if (!dto.serviceId) {
-      const freelancer = await this.prisma.user.findUnique({ where: { id: freelancerId } });
+      const freelancer = await this.prisma.user.findUnique({
+        where: { id: freelancerId },
+      });
       if (!freelancer || freelancer.role !== UserRole.FREELANCER) {
         throw new NotFoundException('Freelancer not found or invalid user.');
       }
     }
+
+    const conversation = await this.chatsService.getOrCreateConversation(
+      userId,
+      freelancerId,
+    );
 
     const job = await this.prisma.job.create({
       data: {
@@ -130,9 +153,10 @@ export class JobsService {
         description: dto.message,
         amount: new Prisma.Decimal(0),
         status: JobStatus.INQUIRY,
-        serviceId: service?.id ?? null,
+        serviceId: (service?.id ?? null) as any,
         clientId: userId,
         freelancerId: freelancerId,
+        conversationId: conversation.id,
       },
       include: this.jobInclude,
     });
@@ -162,7 +186,11 @@ export class JobsService {
 
     const normalizedFilter =
       effectiveFilter ??
-      (role === UserRole.CLIENT ? 'client' : role === UserRole.FREELANCER ? 'freelancer' : 'all');
+      (role === UserRole.CLIENT
+        ? 'client'
+        : role === UserRole.FREELANCER
+          ? 'freelancer'
+          : 'all');
 
     const where: Prisma.JobWhereInput =
       normalizedFilter === 'client'
@@ -174,15 +202,23 @@ export class JobsService {
             : { OR: [{ clientId: userId }, { freelancerId: userId }] };
 
     if (status) {
-      const statuses = status.split(',') as JobStatus[];
-      (where as any).status = { in: statuses };
+      const statuses = status.split(',').map((s) => s.trim().toUpperCase());
+      const validStatuses = statuses.filter((s) =>
+        Object.values(JobStatus).includes(s as JobStatus),
+      ) as JobStatus[];
+
+      if (validStatuses.length > 0) {
+        where.status = { in: validStatuses };
+      }
     }
 
     const take = Math.min(Math.max(pagination?.limit ?? 20, 1), 50);
     const skip = Math.max(pagination?.offset ?? 0, 0);
 
     try {
-      this.logger.debug(`Finding jobs for user ${userId} with filter ${normalizedFilter}`);
+      this.logger.debug(
+        `Finding jobs for user ${userId} with filter ${normalizedFilter}`,
+      );
 
       const jobs = await this.prisma.job.findMany({
         where,
@@ -196,7 +232,9 @@ export class JobsService {
       return jobs.map((job) => this.withFlatFields(job));
     } catch (error) {
       this.logger.error(`Failed to fetch jobs for user ${userId}`, error);
-      this.logger.error(`Query params: filter=${normalizedFilter}, status=${status}, limit=${take}, offset=${skip}`);
+      this.logger.error(
+        `Query params: filter=${normalizedFilter}, status=${status}, limit=${take}, offset=${skip}`,
+      );
       throw error;
     }
   }
@@ -204,7 +242,10 @@ export class JobsService {
   async findOneForUser(id: number, userId: number, role: UserRole) {
     const job =
       role === UserRole.ADMIN
-        ? await this.prisma.job.findUnique({ where: { id }, include: this.jobInclude })
+        ? await this.prisma.job.findUnique({
+          where: { id },
+          include: this.jobInclude,
+        })
         : await this.prisma.job.findFirst({
           where: {
             id,
@@ -254,17 +295,25 @@ export class JobsService {
   private async setJobStarted(id: number) {
     await this.prisma.job.update({
       where: { id },
-      data: { startedAt: new Date() }
+      data: { startedAt: new Date() },
     });
   }
 
-  async submitJob(id: number, userId: number, role: UserRole, dto: SubmitJobDto) {
+  async submitJob(
+    id: number,
+    userId: number,
+    role: UserRole,
+    dto: SubmitJobDto,
+  ) {
     this.ensureRole(role, [UserRole.FREELANCER]);
     const job = await this.ensureJobForFreelancer(id, userId);
     this.ensureValidTransition(job.status, JobStatus.IN_REVIEW);
 
     const now = new Date();
     const autoCompleteAt = new Date(now.getTime() + 48 * 60 * 60 * 1000); // 48 hours from now
+
+    // Ensure conversation exists for system message
+    const conversationId = await this.ensureConversationForJob(job);
 
     const updatedJob = await this.prisma.$transaction(async (tx) => {
       const j = await tx.job.update({
@@ -274,7 +323,9 @@ export class JobsService {
           submittedAt: now,
           autoCompleteAt: autoCompleteAt,
           submissionMessage: dto.message,
-          submissionAttachments: dto.attachments ? (dto.attachments as any) : undefined,
+          submissionAttachments: dto.attachments
+            ? (dto.attachments as Prisma.InputJsonValue)
+            : undefined,
         },
         include: this.jobInclude,
       });
@@ -290,7 +341,7 @@ export class JobsService {
     });
 
     // System Message in Chat
-    await this.chatsService.postMessage(id, userId, role, {
+    await this.chatsService.postMessage(conversationId, userId, role, {
       content: `[SYSTEM] Work submitted: ${dto.message || 'No description provided.'}`,
       type: 'system',
     });
@@ -310,7 +361,9 @@ export class JobsService {
 
     if (job.startedAt) {
       const duration = Date.now() - job.startedAt.getTime();
-      this.logger.log(`Job #${id} duration: ${duration}ms (Min: ${MIN_DURATION_MS}ms)`);
+      this.logger.log(
+        `Job #${id} duration: ${duration}ms (Min: ${MIN_DURATION_MS}ms)`,
+      );
 
       if (duration < MIN_DURATION_MS) {
         statusToSet = JobStatus.PAYOUT_HOLD;
@@ -323,7 +376,15 @@ export class JobsService {
       this.logger.warn(`Job #${id} has no startedAt. Skipping duration check.`);
     }
 
-    const updatedJob = await this.applyStatusUpdate(id, statusToSet, undefined, holdReason ?? undefined);
+    const updatedJob = await this.applyStatusUpdate(
+      id,
+      statusToSet,
+      undefined,
+      holdReason ?? undefined,
+    );
+
+    // Ensure conversation exists for system message
+    const conversationId = await this.ensureConversationForJob(job);
 
     // Notify Freelancer
     await this.notificationsService.sendNotification({
@@ -334,7 +395,7 @@ export class JobsService {
     });
 
     // System Message
-    await this.chatsService.postMessage(id, userId, role, {
+    await this.chatsService.postMessage(conversationId, userId, role, {
       content: '[SYSTEM] Job marked as completed by client.',
       type: 'system',
     });
@@ -342,20 +403,37 @@ export class JobsService {
     return updatedJob;
   }
 
-  async requestRevision(id: number, userId: number, role: UserRole, dto: RequestRevisionDto) {
+  async requestRevision(
+    id: number,
+    userId: number,
+    role: UserRole,
+    dto: RequestRevisionDto,
+  ) {
     this.ensureRole(role, [UserRole.CLIENT]);
     const job = await this.ensureJobForClient(id, userId);
-    this.ensureValidTransition(job.status, JobStatus.IN_PROGRESS);
+    this.ensureValidTransition(job.status, JobStatus.IN_REVISION);
+
+    // Enforce Revision Limit (e.g., 2)
+    const MAX_REVISIONS = 2;
+    if (job.revisionCount >= MAX_REVISIONS) {
+      throw new ForbiddenException(
+        `Maximum revision limit (${MAX_REVISIONS}) reached. You must accept or dispute.`,
+      );
+    }
 
     // Reset auto complete
     const updatedJob = await this.prisma.job.update({
       where: { id },
       data: {
-        status: JobStatus.IN_PROGRESS,
+        status: JobStatus.IN_REVISION,
         autoCompleteAt: null,
+        revisionCount: { increment: 1 },
       },
       include: this.jobInclude,
     });
+
+    // Ensure conversation exists for system message
+    const conversationId = await this.ensureConversationForJob(job);
 
     // Notify Freelancer
     await this.notificationsService.sendNotification({
@@ -366,7 +444,7 @@ export class JobsService {
     });
 
     // System Message
-    await this.chatsService.postMessage(id, userId, role, {
+    await this.chatsService.postMessage(conversationId, userId, role, {
       content: `[SYSTEM] Revision requested: ${dto.reason}`,
       type: 'system',
     });
@@ -379,12 +457,21 @@ export class JobsService {
     const job = await this.ensureJobForFreelancer(id, userId);
     this.ensureValidTransition(job.status, JobStatus.CANCELED);
 
+    // Ensure conversation exists for system message
+    const conversationId = await this.ensureConversationForJob(job);
+
     // Notify Client
     await this.notificationsService.sendNotification({
       userId: job.clientId,
       title: 'Order Rejected',
       body: `Freelancer declined your order #${job.id}`,
       data: { type: 'job_rejected', jobId: job.id.toString() },
+    });
+
+    // System Message
+    await this.chatsService.postMessage(conversationId, userId, role, {
+      content: '[SYSTEM] Order rejected by freelancer.',
+      type: 'system',
     });
 
     return this.applyStatusUpdate(id, JobStatus.CANCELED);
@@ -394,11 +481,21 @@ export class JobsService {
     this.ensureRole(role, [UserRole.CLIENT]);
     const job = await this.ensureJobForClient(id, userId);
     this.ensureValidTransition(job.status, JobStatus.CANCELED);
+
+    // Ensure conversation exists for system message
+    const conversationId = await this.ensureConversationForJob(job);
+
+    // System Message
+    await this.chatsService.postMessage(conversationId, userId, role, {
+      content: '[SYSTEM] Job canceled by client.',
+      type: 'system',
+    });
+
     return this.applyStatusUpdate(id, JobStatus.CANCELED);
   }
 
   // Deprecated direct complete by Freelancer (now goes through Submit -> Review)
-  // Kept for backward compat or forced completion if needed, 
+  // Kept for backward compat or forced completion if needed,
   // but standard flow should be submitJob
   async completeJob(id: number, userId: number, role: UserRole) {
     this.ensureRole(role, [UserRole.FREELANCER]);
@@ -407,7 +504,12 @@ export class JobsService {
     return this.applyStatusUpdate(id, JobStatus.COMPLETED);
   }
 
-  async disputeJob(id: number, userId: number, role: UserRole, dto: DisputeJobDto) {
+  async disputeJob(
+    id: number,
+    userId: number,
+    role: UserRole,
+    dto: DisputeJobDto,
+  ) {
     this.ensureRole(role, [UserRole.FREELANCER, UserRole.CLIENT]);
     const job = await this.ensureJobParticipant(id, userId);
     this.ensureValidTransition(job.status, JobStatus.DISPUTED);
@@ -480,7 +582,6 @@ export class JobsService {
           body: `Job #${job.id} has been auto-completed due to inactivity.`,
           data: { type: 'job_autocompleted', jobId: job.id.toString() },
         });
-
       } catch (error) {
         this.logger.error(`Failed to auto-complete job ${job.id}`, error);
       }
@@ -490,43 +591,66 @@ export class JobsService {
   private ensureValidTransition(current: JobStatus, next: JobStatus) {
     const transitions: Record<JobStatus, JobStatus[]> = {
       [JobStatus.INQUIRY]: [
-        JobStatus.PENDING,          // Converted to Job
-        JobStatus.CANCELED,         // Abandoned
+        JobStatus.PENDING, // Converted to Job
+        JobStatus.CANCELED, // Abandoned
       ],
       [JobStatus.PENDING]: [
         JobStatus.AWAITING_PAYMENT, // Freelancer accept
-        JobStatus.CANCELED,          // Freelancer reject
-        JobStatus.CANCELED,         // Client cancel
+        JobStatus.CANCELED, // Freelancer reject
+        JobStatus.CANCELED, // Client cancel
       ],
       [JobStatus.AWAITING_PAYMENT]: [
-        JobStatus.IN_PROGRESS,       // Payment completed
-        JobStatus.CANCELED,         // Client cancel before payment
+        JobStatus.IN_PROGRESS, // Payment completed
+        JobStatus.CANCELED, // Client cancel before payment
       ],
       [JobStatus.IN_PROGRESS]: [
-        JobStatus.IN_REVIEW,         // Freelancer submit work
-        JobStatus.COMPLETED,         // Legacy/Manual fallback
+        JobStatus.IN_REVIEW, // Freelancer submit work
+        JobStatus.COMPLETED, // Legacy/Manual fallback
         JobStatus.CANCELED,
         JobStatus.DISPUTED,
       ],
       [JobStatus.IN_REVIEW]: [
-        JobStatus.COMPLETED,         // Client accept
-        JobStatus.IN_PROGRESS,       // Revision
+        JobStatus.COMPLETED, // Client accept
+        JobStatus.IN_REVISION, // Revision
         JobStatus.DISPUTED,
       ],
-      [JobStatus.COMPLETED]: [JobStatus.DISPUTED, JobStatus.PAYOUT_PROCESSING, JobStatus.PAYOUT_HOLD],
+      [JobStatus.IN_REVISION]: [
+        JobStatus.IN_REVIEW, // Freelancer submit work
+        JobStatus.DISPUTED,
+      ],
+      [JobStatus.COMPLETED]: [
+        JobStatus.DISPUTED,
+        JobStatus.PAYOUT_PROCESSING,
+        JobStatus.PAYOUT_HOLD,
+      ],
       [JobStatus.CANCELED]: [],
       [JobStatus.DISPUTED]: [JobStatus.COMPLETED, JobStatus.CANCELED],
-      [JobStatus.SUBMITTED]: [JobStatus.COMPLETED, JobStatus.IN_PROGRESS, JobStatus.DISPUTED], // Added missing SUBMITTED status
-      [JobStatus.PAYOUT_PROCESSING]: [JobStatus.PAID_OUT, JobStatus.PAYOUT_FAILED],
+      [JobStatus.SUBMITTED]: [
+        JobStatus.COMPLETED,
+        JobStatus.IN_PROGRESS,
+        JobStatus.DISPUTED,
+      ], // Added missing SUBMITTED status
+      [JobStatus.PAYOUT_PROCESSING]: [
+        JobStatus.PAID_OUT,
+        JobStatus.PAYOUT_FAILED,
+      ],
       [JobStatus.PAID_OUT]: [],
-      [JobStatus.PAYOUT_FAILED]: [JobStatus.PAYOUT_PROCESSING, JobStatus.PAYOUT_FAILED_MANUAL],
-      [JobStatus.PAYOUT_HOLD]: [JobStatus.COMPLETED, JobStatus.PAYOUT_FAILED_MANUAL],
+      [JobStatus.PAYOUT_FAILED]: [
+        JobStatus.PAYOUT_PROCESSING,
+        JobStatus.PAYOUT_FAILED_MANUAL,
+      ],
+      [JobStatus.PAYOUT_HOLD]: [
+        JobStatus.COMPLETED,
+        JobStatus.PAYOUT_FAILED_MANUAL,
+      ],
       [JobStatus.PAYOUT_FAILED_MANUAL]: [JobStatus.PAYOUT_PROCESSING], // Allow retry?
     };
 
     const allowedNextStates = transitions[current] ?? [];
     if (!allowedNextStates.includes(next)) {
-      throw new ConflictException(`Invalid status transition from ${current} to ${next}`);
+      throw new ConflictException(
+        `Invalid status transition from ${current} to ${next}`,
+      );
     }
   }
 
@@ -536,7 +660,12 @@ export class JobsService {
     }
   }
 
-  private async applyStatusUpdate(id: number, status: JobStatus, disputeReason?: string, holdReason?: string) {
+  private async applyStatusUpdate(
+    id: number,
+    status: JobStatus,
+    disputeReason?: string,
+    holdReason?: string,
+  ) {
     const result = await this.prisma.$transaction(async (tx) => {
       // Fetch job and escrow BEFORE making any changes
       const existingJob = await tx.job.findUnique({ where: { id } });
@@ -564,20 +693,26 @@ export class JobsService {
           status,
           disputeReason: disputeReason ?? null,
           payoutHoldReason: holdReason ?? null,
-          startedAt: status === JobStatus.IN_PROGRESS && !existingJob.startedAt ? new Date() : undefined, // Set startedAt if moving to IN_PROGRESS
+          startedAt:
+            status === JobStatus.IN_PROGRESS && !existingJob.startedAt
+              ? new Date()
+              : undefined, // Set startedAt if moving to IN_PROGRESS
           autoCompleteAt: status === JobStatus.COMPLETED ? null : undefined, // clear if completed
         },
         include: this.jobInclude,
       });
 
       // Credit Pending Balance & Calculate Fees on Completion
-      // NOTE: If status is PAYOUT_HOLD, we treat it similarly to COMPLETED for calculation, 
+      // NOTE: If status is PAYOUT_HOLD, we treat it similarly to COMPLETED for calculation,
       // but we do NOT release Escrow yet (Hold Escrow?).
       // Logic: If PAYOUT_HOLD, Job is "Done" effectively, but payment is stuck.
       // Escrow should be HELD -> RELEASED? No. Payout Logic will check status.
       // Ops... ensureValidTransition needs to know about PAYOUT_HOLD.
 
-      if (status === JobStatus.COMPLETED && existingJob.status !== JobStatus.COMPLETED) {
+      if (
+        status === JobStatus.COMPLETED &&
+        existingJob.status !== JobStatus.COMPLETED
+      ) {
         const amount = new Prisma.Decimal(existingJob.amount);
         const freelancerShare = amount.mul(0.9);
         const platformShare = amount.mul(0.1);
@@ -587,8 +722,8 @@ export class JobsService {
           where: { id },
           data: {
             freelancerPayoutAmount: freelancerShare,
-            platformFeeAmount: platformShare
-          }
+            platformFeeAmount: platformShare,
+          },
         });
 
         // Update User Pending Balance (Always done, as Weekly payout uses this as "Available")
@@ -620,15 +755,23 @@ export class JobsService {
     // Post-Transaction Actions
     if (status === JobStatus.COMPLETED) {
       // Fire and forget immediate payout logic
-      this.paymentsService.processJobPayout(id).catch(err =>
-        this.logger.error(`Immediate payout trigger failed for Job ${id}`, err)
-      );
+      this.paymentsService
+        .processJobPayout(id)
+        .catch((err) =>
+          this.logger.error(
+            `Immediate payout trigger failed for Job ${id}`,
+            err,
+          ),
+        );
     }
 
     return result;
   }
 
-  private async createEscrowRecord(jobId: number, amount?: Prisma.Decimal | null) {
+  private async createEscrowRecord(
+    jobId: number,
+    amount?: Prisma.Decimal | null,
+  ) {
     await this.prisma.$executeRaw`
       INSERT INTO "Escrow" ("jobId", status, amount, "createdAt", "updatedAt")
       VALUES (${jobId}, 'PENDING', ${amount ?? null}, NOW(), NOW())
@@ -642,7 +785,9 @@ export class JobsService {
       throw new NotFoundException('Job not found');
     }
     if (job.freelancerId !== userId) {
-      throw new ForbiddenException('Only assigned freelancer can perform this action');
+      throw new ForbiddenException(
+        'Only assigned freelancer can perform this action',
+      );
     }
     return job;
   }
@@ -685,11 +830,16 @@ export class JobsService {
 
   private withFlatFields<
     T extends {
-      service?: { id: number; title: string; thumbnailUrl?: string | null } | null;
+      service?: {
+        id: number;
+        title: string;
+        thumbnailUrl?: string | null;
+      } | null;
       client?: { id: number; name: string } | null;
       freelancer?: { id: number; name: string } | null;
       clientId?: number;
       freelancerId?: number;
+      conversationId?: number | null;
     },
   >(job: T) {
     return {
@@ -699,5 +849,29 @@ export class JobsService {
       clientId: job.client?.id ?? job.clientId ?? null,
       freelancerId: job.freelancer?.id ?? job.freelancerId ?? null,
     };
+  }
+
+  private async ensureConversationForJob(
+    job: { id: number; clientId: number; freelancerId: number; conversationId?: number | null },
+  ): Promise<number> {
+    if (job.conversationId) {
+      return job.conversationId;
+    }
+
+    this.logger.log(`Job ${job.id} missing conversationId. Creating/Fetching...`);
+
+    // Fallback for legacy jobs
+    const conversation = await this.chatsService.getOrCreateConversation(
+      job.clientId,
+      job.freelancerId,
+    );
+
+    // Update job to link conversation for future
+    await this.prisma.job.update({
+      where: { id: job.id },
+      data: { conversationId: conversation.id },
+    });
+
+    return conversation.id;
   }
 }

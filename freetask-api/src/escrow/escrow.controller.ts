@@ -1,4 +1,11 @@
-import { Controller, Get, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { EscrowService } from './escrow.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -8,7 +15,7 @@ import { UserRole } from '@prisma/client';
 @Controller('escrow')
 @UseGuards(JwtAuthGuard)
 export class EscrowController {
-  constructor(private readonly escrowService: EscrowService) { }
+  constructor(private readonly escrowService: EscrowService) {}
 
   @Get(':jobId')
   getForJob(

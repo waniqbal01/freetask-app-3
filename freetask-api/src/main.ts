@@ -21,8 +21,14 @@ async function bootstrap() {
     const isProduction = process.env.NODE_ENV === 'production';
 
     // Validate JWT_REFRESH_EXPIRES_IN in production
-    if (isProduction && (!process.env.JWT_REFRESH_EXPIRES_IN || process.env.JWT_REFRESH_EXPIRES_IN.trim().length === 0)) {
-      throw new Error('JWT_REFRESH_EXPIRES_IN is required in production to start the API server');
+    if (
+      isProduction &&
+      (!process.env.JWT_REFRESH_EXPIRES_IN ||
+        process.env.JWT_REFRESH_EXPIRES_IN.trim().length === 0)
+    ) {
+      throw new Error(
+        'JWT_REFRESH_EXPIRES_IN is required in production to start the API server',
+      );
     }
 
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -37,7 +43,9 @@ async function bootstrap() {
 
     if (isProduction) {
       if (configuredOrigins.length === 0) {
-        throw new Error('ALLOWED_ORIGINS must be configured in production for CORS');
+        throw new Error(
+          'ALLOWED_ORIGINS must be configured in production for CORS',
+        );
       }
       if (configuredOrigins.includes('*')) {
         throw new Error('ALLOWED_ORIGINS cannot use wildcard * in production');
@@ -55,19 +63,30 @@ async function bootstrap() {
       origin: (origin, cb) => {
         if (!origin) return cb(null, true);
         const normalizedOrigin = normalizeOrigin(origin);
-        if (configuredOrigins.includes(normalizedOrigin) || configuredOrigins.includes('*')) {
+        if (
+          configuredOrigins.includes(normalizedOrigin) ||
+          configuredOrigins.includes('*')
+        ) {
           return cb(null, true);
         }
         if (!isProduction && configuredOrigins.length === 0) {
-          if (devFallbackPatterns.some((pattern) => pattern.test(normalizedOrigin))) {
+          if (
+            devFallbackPatterns.some((pattern) =>
+              pattern.test(normalizedOrigin),
+            )
+          ) {
             return cb(null, true);
           }
         }
         if (isProduction && configuredOrigins.length === 0) {
-          logger.error(`CORS blocked origin ${origin} because ALLOWED_ORIGINS is empty in production`);
+          logger.error(
+            `CORS blocked origin ${origin} because ALLOWED_ORIGINS is empty in production`,
+          );
           return cb(new Error(`CORS blocked origin: ${origin}`), false);
         }
-        if (devFallbackPatterns.some((pattern) => pattern.test(normalizedOrigin))) {
+        if (
+          devFallbackPatterns.some((pattern) => pattern.test(normalizedOrigin))
+        ) {
           return cb(null, true);
         }
         return cb(new Error(`CORS blocked origin: ${origin}`), false);
@@ -93,7 +112,9 @@ async function bootstrap() {
         });
         logger.log('Firebase Admin initialized successfully');
       } else {
-        logger.warn('FIREBASE_CREDENTIALS not provided. Push notifications will describe only.');
+        logger.warn(
+          'FIREBASE_CREDENTIALS not provided. Push notifications will describe only.',
+        );
       }
     } catch (error) {
       logger.error('Failed to initialize Firebase Admin', error);
@@ -147,8 +168,6 @@ async function bootstrap() {
 
     console.log(`🚀 Application running at: ${await app.getUrl()}`);
     console.log('Allowed Origins:', configuredOrigins);
-
-
   } catch (error) {
     logger.error('❌ Failed to bootstrap application.');
     logger.error('Error details:', error);

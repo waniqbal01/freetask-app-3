@@ -14,4 +14,4 @@ import { PaymentsModule } from '../payments/payments.module';
   controllers: [JobsController],
   providers: [JobsService, RolesGuard, EscrowService],
 })
-export class JobsModule { }
+export class JobsModule {}

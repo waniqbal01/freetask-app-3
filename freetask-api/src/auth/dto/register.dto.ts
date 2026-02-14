@@ -23,7 +23,9 @@ export class RegisterDto {
 
   @IsString()
   @IsNotEmpty()
-  @IsIn(['CLIENT', 'FREELANCER'], { message: 'Role must be CLIENT or FREELANCER' })
+  @IsIn(['CLIENT', 'FREELANCER'], {
+    message: 'Role must be CLIENT or FREELANCER',
+  })
   @Transform(({ value }) => value?.toString().toUpperCase())
   role: string;
 

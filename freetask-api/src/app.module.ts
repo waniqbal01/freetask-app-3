@@ -55,4 +55,4 @@ import { WebsocketModule } from './websocket/websocket.module';
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}

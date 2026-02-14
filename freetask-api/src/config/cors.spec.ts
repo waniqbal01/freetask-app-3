@@ -27,9 +27,11 @@ describe('getAllowedOrigins', () => {
   it('throws in production when no origins configured', () => {
     const errorSpy = jest.spyOn(logger, 'error');
 
-    expect(() => getAllowedOrigins(logger, true, { ALLOWED_ORIGINS: '' } as NodeJS.ProcessEnv)).toThrow(
-      /ALLOWED_ORIGINS and PUBLIC_BASE_URL are required in production/,
-    );
+    expect(() =>
+      getAllowedOrigins(logger, true, {
+        ALLOWED_ORIGINS: '',
+      } as NodeJS.ProcessEnv),
+    ).toThrow(/ALLOWED_ORIGINS and PUBLIC_BASE_URL are required in production/);
     expect(errorSpy).toHaveBeenCalled();
   });
 });

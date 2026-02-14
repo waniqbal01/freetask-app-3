@@ -113,6 +113,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return AppStrings.jobStatusInProgress;
       case JobStatus.inReview:
         return 'In Review';
+      case JobStatus.inRevision:
+        return 'In Revision';
       case JobStatus.completed:
         return AppStrings.jobStatusCompleted;
       case JobStatus.cancelled:
@@ -147,6 +149,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return scheme.primary;
       case JobStatus.inReview:
         return Colors.purple;
+      case JobStatus.inRevision:
+        return Colors.orangeAccent;
       case JobStatus.completed:
         return Colors.green;
       case JobStatus.cancelled:

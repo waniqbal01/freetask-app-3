@@ -786,12 +786,21 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       return;
     }
 
+    // Use linked conversation if available
+    if (job.conversationId != null && job.conversationId!.isNotEmpty) {
+      if (!mounted) return;
+      context.push('/chats/${job.conversationId}/messages');
+      return;
+    }
+
     setState(() {
       _isProcessing = true;
     });
 
     try {
+      // Fallback for legacy jobs
       final chatRepo = ChatRepository();
+      // Note: check if createConversation returns a model with 'id'
       final thread =
           await chatRepo.createConversation(otherUserId: otherUserId);
 

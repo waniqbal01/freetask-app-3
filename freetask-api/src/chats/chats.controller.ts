@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, UseGuards, Logger } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Query,
+  UseGuards,
+  Logger,
+} from '@nestjs/common';
 import { ChatsService } from './chats.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { GetUser } from '../auth/get-user.decorator';
@@ -16,7 +26,7 @@ export class ChatsController {
   constructor(
     private readonly chatsService: ChatsService,
     private readonly chatGateway: ChatGateway,
-  ) { }
+  ) {}
 
   @Get()
   @Throttle({ default: { limit: 15, ttl: 60000 } })
@@ -25,7 +35,10 @@ export class ChatsController {
     @GetUser('role') role: UserRole,
     @Query() query?: PaginationQueryDto,
   ) {
-    return this.chatsService.listThreads(userId, role, { limit: query?.limit, offset: query?.offset });
+    return this.chatsService.listThreads(userId, role, {
+      limit: query?.limit,
+      offset: query?.offset,
+    });
   }
 
   @Post('conversation')
@@ -45,7 +58,10 @@ export class ChatsController {
     @GetUser('role') role: UserRole,
     @Query() query?: PaginationQueryDto,
   ) {
-    return this.chatsService.listMessages(conversationId, userId, role, { limit: query?.limit, offset: query?.offset });
+    return this.chatsService.listMessages(conversationId, userId, role, {
+      limit: query?.limit,
+      offset: query?.offset,
+    });
   }
 
   @Post(':conversationId/messages')
@@ -56,9 +72,16 @@ export class ChatsController {
     @GetUser('role') role: UserRole,
     @Body() dto: CreateMessageDto,
   ) {
-    this.logger.log(`Message sent by user ${userId} in conversation ${conversationId}`);
+    this.logger.log(
+      `Message sent by user ${userId} in conversation ${conversationId}`,
+    );
 
-    const message = await this.chatsService.postMessage(conversationId, userId, role, dto);
+    const message = await this.chatsService.postMessage(
+      conversationId,
+      userId,
+      role,
+      dto,
+    );
 
     // Broadcast via WebSocket
     this.chatGateway.emitNewMessage(conversationId, message);

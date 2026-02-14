@@ -11,7 +11,7 @@ import { UpdateServiceDto } from './dto/update-service.dto';
 
 @Injectable()
 export class ServicesService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(userId: number, role: UserRole, dto: CreateServiceDto) {
     if (role !== UserRole.FREELANCER) {
@@ -57,7 +57,9 @@ export class ServicesService {
     const skip = Math.max(offset ?? 0, 0);
 
     // Build orderBy clause based on sortBy parameter
-    let orderBy: Prisma.ServiceOrderByWithRelationInput | Prisma.ServiceOrderByWithRelationInput[] = [];
+    let orderBy:
+      | Prisma.ServiceOrderByWithRelationInput
+      | Prisma.ServiceOrderByWithRelationInput[] = [];
 
     if (sortBy === 'popular') {
       // Use _count aggregation for efficient sorting
@@ -83,11 +85,11 @@ export class ServicesService {
         approvalStatus: 'APPROVED',
         ...(q
           ? {
-            OR: [
-              { title: { contains: q, mode: 'insensitive' } },
-              { description: { contains: q, mode: 'insensitive' } },
-            ],
-          }
+              OR: [
+                { title: { contains: q, mode: 'insensitive' } },
+                { description: { contains: q, mode: 'insensitive' } },
+              ],
+            }
           : {}),
         ...(category ? { category } : {}),
         ...(freelancerId ? { freelancerId } : {}),
@@ -181,9 +183,9 @@ export class ServicesService {
     }
   }
 
-  private serializeService<T extends { price: Prisma.Decimal | number | string }>(
-    service: T,
-  ) {
+  private serializeService<
+    T extends { price: Prisma.Decimal | number | string },
+  >(service: T) {
     const price = service.price;
     const normalizedPrice =
       price instanceof Prisma.Decimal

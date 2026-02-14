@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, UnauthorizedException, ValidationPipe } from '@nestjs/common';
+import {
+  INestApplication,
+  UnauthorizedException,
+  ValidationPipe,
+} from '@nestjs/common';
 import * as request from 'supertest';
 import { UploadsModule } from './uploads.module';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';

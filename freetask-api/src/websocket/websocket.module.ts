@@ -6,14 +6,14 @@ import { forwardRef } from '@nestjs/common';
 import { ChatsModule } from '../chats/chats.module';
 
 @Module({
-    imports: [
-        JwtModule.register({
-            secret: process.env.JWT_SECRET,
-            signOptions: { expiresIn: '7d' },
-        }),
-        forwardRef(() => ChatsModule),
-    ],
-    providers: [ChatGateway, WsJwtGuard],
-    exports: [ChatGateway],
+  imports: [
+    JwtModule.register({
+      secret: process.env.JWT_SECRET,
+      signOptions: { expiresIn: '7d' },
+    }),
+    forwardRef(() => ChatsModule),
+  ],
+  providers: [ChatGateway, WsJwtGuard],
+  exports: [ChatGateway],
 })
-export class WebsocketModule { }
+export class WebsocketModule {}

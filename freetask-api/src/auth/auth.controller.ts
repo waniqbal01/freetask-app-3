@@ -10,7 +10,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 @UseGuards(ThrottlerGuard)
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
   @Post('register')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
@@ -38,7 +38,10 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('logout')
-  logout(@GetUser('userId') userId: number, @GetUser('sessionId') sessionId?: number) {
+  logout(
+    @GetUser('userId') userId: number,
+    @GetUser('sessionId') sessionId?: number,
+  ) {
     return this.authService.logout(userId, sessionId);
   }
 }

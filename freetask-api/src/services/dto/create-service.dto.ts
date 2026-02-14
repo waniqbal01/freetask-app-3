@@ -1,5 +1,12 @@
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, MaxLength } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateServiceDto {
   @IsString()
@@ -24,8 +31,6 @@ export class CreateServiceDto {
   @IsOptional()
   @IsString()
   thumbnailUrl?: string;
-
-
 
   @IsOptional()
   isActive?: boolean;

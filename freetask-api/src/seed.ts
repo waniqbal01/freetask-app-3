@@ -95,13 +95,19 @@ async function main() {
   }
 
   if (allowDevAutoSeed) {
-    console.info('ℹ️  Auto-seeding empty development database (set SEED_FORCE=true to override).');
+    console.info(
+      'ℹ️  Auto-seeding empty development database (set SEED_FORCE=true to override).',
+    );
   }
 
   if (reset) {
-    console.warn('⚠️⚠️⚠️ DESTRUCTIVE MODE: All data will be deleted in 5 seconds. Press Ctrl+C to cancel.');
-    await new Promise(resolve => setTimeout(resolve, 5000));
-    console.warn('⚠️  Proceeding with destructive seed: existing data will be wiped.');
+    console.warn(
+      '⚠️⚠️⚠️ DESTRUCTIVE MODE: All data will be deleted in 5 seconds. Press Ctrl+C to cancel.',
+    );
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+    console.warn(
+      '⚠️  Proceeding with destructive seed: existing data will be wiped.',
+    );
     // Delete dependent tables first to avoid FK constraint errors
     await prisma.escrow.deleteMany();
     await prisma.session.deleteMany();
@@ -111,28 +117,78 @@ async function main() {
     await prisma.service.deleteMany();
     await prisma.user.deleteMany();
   } else {
-    console.info('Running in non-destructive mode (SEED_RESET=false). Existing data is preserved.');
+    console.info(
+      'Running in non-destructive mode (SEED_RESET=false). Existing data is preserved.',
+    );
   }
 
   const rawPassword = 'Password123!';
   const password = await bcrypt.hash(rawPassword, 10);
 
   const freelancers = await Promise.all([
-    upsertUser('freelancer1@example.com', 'Freelancer One', password, UserRole.FREELANCER, 'https://ui-avatars.com/api/?name=Freelancer+One&background=random'),
-    upsertUser('freelancer2@example.com', 'Freelancer Two', password, UserRole.FREELANCER, 'https://ui-avatars.com/api/?name=Freelancer+Two&background=random'),
-    upsertUser('freelancer@example.com', 'Freelancer QA', password, UserRole.FREELANCER, 'https://ui-avatars.com/api/?name=Freelancer+QA&background=random'),
+    upsertUser(
+      'freelancer1@example.com',
+      'Freelancer One',
+      password,
+      UserRole.FREELANCER,
+      'https://ui-avatars.com/api/?name=Freelancer+One&background=random',
+    ),
+    upsertUser(
+      'freelancer2@example.com',
+      'Freelancer Two',
+      password,
+      UserRole.FREELANCER,
+      'https://ui-avatars.com/api/?name=Freelancer+Two&background=random',
+    ),
+    upsertUser(
+      'freelancer@example.com',
+      'Freelancer QA',
+      password,
+      UserRole.FREELANCER,
+      'https://ui-avatars.com/api/?name=Freelancer+QA&background=random',
+    ),
   ]);
 
   const clients = await Promise.all([
-    upsertUser('client1@example.com', 'Client One', password, UserRole.CLIENT, 'https://ui-avatars.com/api/?name=Client+One&background=random'),
-    upsertUser('client2@example.com', 'Client Two', password, UserRole.CLIENT, 'https://ui-avatars.com/api/?name=Client+Two&background=random'),
-    upsertUser('client@example.com', 'Client QA', password, UserRole.CLIENT, 'https://ui-avatars.com/api/?name=Client+QA&background=random'),
+    upsertUser(
+      'client1@example.com',
+      'Client One',
+      password,
+      UserRole.CLIENT,
+      'https://ui-avatars.com/api/?name=Client+One&background=random',
+    ),
+    upsertUser(
+      'client2@example.com',
+      'Client Two',
+      password,
+      UserRole.CLIENT,
+      'https://ui-avatars.com/api/?name=Client+Two&background=random',
+    ),
+    upsertUser(
+      'client@example.com',
+      'Client QA',
+      password,
+      UserRole.CLIENT,
+      'https://ui-avatars.com/api/?name=Client+QA&background=random',
+    ),
   ]);
 
-  const admin = await upsertUser('admin@example.com', 'Admin User', password, UserRole.ADMIN, 'https://ui-avatars.com/api/?name=Admin+User&background=random');
+  const admin = await upsertUser(
+    'admin@example.com',
+    'Admin User',
+    password,
+    UserRole.ADMIN,
+    'https://ui-avatars.com/api/?name=Admin+User&background=random',
+  );
 
   const services = await Promise.all([
-    upsertService('Logo Design', 'Professional logo design service.', 150, 'Design & Creative', freelancers[0].id),
+    upsertService(
+      'Logo Design',
+      'Professional logo design service.',
+      150,
+      'Design & Creative',
+      freelancers[0].id,
+    ),
     upsertService(
       'Website Development',
       'Full-stack website development.',
@@ -233,8 +289,9 @@ async function main() {
   ]);
 
   await Promise.all(
-    jobs.map((job) =>
-      prisma.$executeRaw`
+    jobs.map(
+      (job) =>
+        prisma.$executeRaw`
         INSERT INTO "Escrow" ("jobId", status, amount, "createdAt", "updatedAt")
         VALUES (${job.id}, 'PENDING', CAST(${job.amount.toString()} AS DECIMAL(10,2)), NOW(), NOW())
         ON CONFLICT ("jobId") DO NOTHING
@@ -337,8 +394,12 @@ async function main() {
   });
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log(`\n🔑 Password for all users: ${rawPassword}`);
-  console.log('\n💡 Tip: Use admin@example.com to test escrow hold/release/refund actions.');
-  console.log('    Jobs with HELD/DISPUTED escrow status have been seeded for testing.\n');
+  console.log(
+    '\n💡 Tip: Use admin@example.com to test escrow hold/release/refund actions.',
+  );
+  console.log(
+    '    Jobs with HELD/DISPUTED escrow status have been seeded for testing.\n',
+  );
 }
 
 main()

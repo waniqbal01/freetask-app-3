@@ -1,11 +1,15 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { JobStatus, Prisma } from '@prisma/client';
 
 @Injectable()
 export class ReviewsService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(userId: number, dto: CreateReviewDto) {
     const job = await this.prisma.job.findUnique({
@@ -26,7 +30,10 @@ export class ReviewsService {
     }
 
     // Validate revieweeId is either client or freelancer of job
-    if (dto.revieweeId !== job.clientId && dto.revieweeId !== job.freelancerId) {
+    if (
+      dto.revieweeId !== job.clientId &&
+      dto.revieweeId !== job.freelancerId
+    ) {
       throw new ForbiddenException('Reviewee must be part of this job');
     }
 
@@ -37,10 +44,12 @@ export class ReviewsService {
 
     // Check for existing review with same (jobId, reviewerId, revieweeId)
     const existingReview = job.reviews.find(
-      (r) => r.reviewerId === userId && r.revieweeId === dto.revieweeId
+      (r) => r.reviewerId === userId && r.revieweeId === dto.revieweeId,
     );
     if (existingReview) {
-      throw new ForbiddenException('You have already reviewed this person for this job');
+      throw new ForbiddenException(
+        'You have already reviewed this person for this job',
+      );
     }
 
     const review = await this.prisma.review.create({
@@ -56,7 +65,11 @@ export class ReviewsService {
     return review;
   }
 
-  findMany(filters: { jobId?: number; serviceId?: number; freelancerId?: number }) {
+  findMany(filters: {
+    jobId?: number;
+    serviceId?: number;
+    freelancerId?: number;
+  }) {
     const where: Prisma.ReviewWhereInput = {};
 
     if (filters.jobId) {

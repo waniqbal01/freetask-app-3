@@ -1,6 +1,6 @@
 export class CreatePortfolioItemDto {
-    title: string;
-    description?: string;
-    category?: string;
-    mediaUrl?: string;
+  title: string;
+  description?: string;
+  category?: string;
+  mediaUrl?: string;
 }

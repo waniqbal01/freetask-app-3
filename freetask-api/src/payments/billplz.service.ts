@@ -1,7 +1,30 @@
-import { Injectable, Logger, UnauthorizedException, BadRequestException, ServiceUnavailableException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  UnauthorizedException,
+  BadRequestException,
+  ServiceUnavailableException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance } from 'axios';
 import * as crypto from 'crypto';
+
+export interface BillplzPayload {
+  id: string;
+  collection_id: string;
+  paid: boolean;
+  state: string;
+  amount: number;
+  paid_amount: number;
+  due_at: string;
+  email: string;
+  mobile: string | null;
+  name: string;
+  url: string;
+  paid_at?: string;
+  paid_at_readable?: string;
+}
 
 @Injectable()
 export class BillplzService {
@@ -14,16 +37,22 @@ export class BillplzService {
   constructor(private configService: ConfigService) {
     // Get environment variables with proper type handling
     this.apiKey = this.configService.get<string>('BILLPLZ_API_KEY') ?? '';
-    this.signatureKey = this.configService.get<string>('BILLPLZ_X_SIGNATURE_KEY') ?? '';
-    this.collectionId = this.configService.get<string>('BILLPLZ_COLLECTION_ID') ?? '';
+    this.signatureKey =
+      this.configService.get<string>('BILLPLZ_X_SIGNATURE_KEY') ?? '';
+    this.collectionId =
+      this.configService.get<string>('BILLPLZ_COLLECTION_ID') ?? '';
 
-    this.logger.log(`Billplz Config Loaded - API Key set: ${!!this.apiKey}, Collection ID: ${this.collectionId}, Sandbox: ${this.configService.get('BILLPLZ_SANDBOX')}`);
+    this.logger.log(
+      `Billplz Config Loaded - API Key set: ${!!this.apiKey}, Collection ID: ${this.collectionId}, Sandbox: ${this.configService.get('BILLPLZ_SANDBOX')}`,
+    );
 
     // Check for sandbox mode
     const sandboxEnv = this.configService.get('BILLPLZ_SANDBOX');
     const isSandbox = sandboxEnv === 'true' || sandboxEnv === true;
 
-    this.logger.log(`Billplz Mode: ${isSandbox ? 'SANDBOX' : 'PRODUCTION'} (Value: ${sandboxEnv})`);
+    this.logger.log(
+      `Billplz Mode: ${isSandbox ? 'SANDBOX' : 'PRODUCTION'} (Value: ${sandboxEnv})`,
+    );
 
     const baseURL = isSandbox
       ? 'https://www.billplz-sandbox.com/api/v3'
@@ -61,12 +90,16 @@ export class BillplzService {
       // Validate required credentials before making API call
       if (!this.apiKey) {
         this.logger.error('❌ BILLPLZ_API_KEY is not configured!');
-        throw new InternalServerErrorException('Billplz API Key is missing. Please configure BILLPLZ_API_KEY in .env file');
+        throw new InternalServerErrorException(
+          'Billplz API Key is missing. Please configure BILLPLZ_API_KEY in .env file',
+        );
       }
 
       if (!this.collectionId) {
         this.logger.error('❌ BILLPLZ_COLLECTION_ID is not configured!');
-        throw new InternalServerErrorException('Billplz Collection ID is missing. Please configure BILLPLZ_COLLECTION_ID in .env file');
+        throw new InternalServerErrorException(
+          'Billplz Collection ID is missing. Please configure BILLPLZ_COLLECTION_ID in .env file',
+        );
       }
 
       const payload = {
@@ -80,13 +113,19 @@ export class BillplzService {
         description: description,
       };
 
-      this.logger.log(`📤 Creating Billplz bill for ${email} - RM${(amountInCents / 100).toFixed(2)}`);
+      this.logger.log(
+        `📤 Creating Billplz bill for ${email} - RM${(amountInCents / 100).toFixed(2)}`,
+      );
       this.logger.debug(`Request payload: ${JSON.stringify(payload, null, 2)}`);
 
       const response = await this.client.post('/bills', payload);
 
-      this.logger.log(`✅ Billplz bill created successfully - ID: ${response.data.id}`);
-      this.logger.debug(`Billplz response: ${JSON.stringify(response.data, null, 2)}`);
+      this.logger.log(
+        `✅ Billplz bill created successfully - ID: ${response.data.id}`,
+      );
+      this.logger.debug(
+        `Billplz response: ${JSON.stringify(response.data, null, 2)}`,
+      );
 
       return response.data;
     } catch (error) {
@@ -101,14 +140,23 @@ export class BillplzService {
 
         // Provide user-friendly error messages
         if (error.response.status === 401) {
-          throw new UnauthorizedException('Billplz authentication failed. Please check BILLPLZ_API_KEY is correct.');
+          throw new UnauthorizedException(
+            'Billplz authentication failed. Please check BILLPLZ_API_KEY is correct.',
+          );
         } else if (error.response.status === 400) {
-          const errorMsg = error.response.data?.error?.message || JSON.stringify(error.response.data) || 'Invalid request';
-          throw new BadRequestException(`Billplz rejected the payment request: ${errorMsg}`);
+          const errorMsg =
+            error.response.data?.error?.message ||
+            JSON.stringify(error.response.data) ||
+            'Invalid request';
+          throw new BadRequestException(
+            `Billplz rejected the payment request: ${errorMsg}`,
+          );
         }
       } else if (error.request) {
         this.logger.error('❌ No response from Billplz API:', error.message);
-        throw new ServiceUnavailableException('Cannot connect to Billplz. Please check your internet connection.');
+        throw new ServiceUnavailableException(
+          'Cannot connect to Billplz. Please check your internet connection.',
+        );
       } else {
         this.logger.error('❌ Error creating Billplz bill:', error.message);
       }
@@ -117,9 +165,11 @@ export class BillplzService {
     }
   }
 
-  verifyXSignature(payload: any, signature: string): boolean {
+  verifyXSignature(payload: BillplzPayload, signature: string): boolean {
     if (!this.signatureKey) {
-      this.logger.warn('BILLPLZ_X_SIGNATURE_KEY is not set. Skipping signature verification.');
+      this.logger.warn(
+        'BILLPLZ_X_SIGNATURE_KEY is not set. Skipping signature verification.',
+      );
       return true; // Skip verification if key is missing (dev mode)
     }
 
@@ -127,7 +177,10 @@ export class BillplzService {
     // https://www.billplz.com/api#x-signature
     const sourceString = `amount${payload.amount}|collection_id${payload.collection_id}|due_at${payload.due_at}|email${payload.email}|id${payload.id}|mobile${payload.mobile}|name${payload.name}|paid_amount${payload.paid_amount}|paid_at${payload.paid_at}|paid_at_readable${payload.paid_at_readable}|state${payload.state}|url${payload.url}|x_signature${this.signatureKey}`;
 
-    const generatedSignature = crypto.createHmac('sha256', this.signatureKey).update(sourceString).digest('hex');
+    const generatedSignature = crypto
+      .createHmac('sha256', this.signatureKey)
+      .update(sourceString)
+      .digest('hex');
 
     return generatedSignature === signature;
   }
@@ -142,7 +195,10 @@ export class BillplzService {
       const response = await this.client.get(`/bills/${billId}`);
       return response.data;
     } catch (error) {
-      this.logger.error(`❌ Error fetching Billplz bill ${billId}:`, error.message);
+      this.logger.error(
+        `❌ Error fetching Billplz bill ${billId}:`,
+        error.message,
+      );
       return null;
     }
   }
@@ -157,7 +213,9 @@ export class BillplzService {
     try {
       // Validate required credentials
       if (!this.apiKey) {
-        throw new InternalServerErrorException('Billplz API Key is missing for Payout.');
+        throw new InternalServerErrorException(
+          'Billplz API Key is missing for Payout.',
+        );
       }
 
       // Billplz V4 Payout API
@@ -172,10 +230,12 @@ export class BillplzService {
         description: `Payout for ${referenceId}`,
       };
 
-      this.logger.log(`💸 Initiating Payout to ${bankCode} (${bankAccount}) - RM${(amountInCents / 100).toFixed(2)}`);
+      this.logger.log(
+        `💸 Initiating Payout to ${bankCode} (${bankAccount}) - RM${(amountInCents / 100).toFixed(2)}`,
+      );
       this.logger.debug(`Payout payload: ${JSON.stringify(payload, null, 2)}`);
 
-      // Using the same axios client but overwriting the URL if needed, 
+      // Using the same axios client but overwriting the URL if needed,
       // or cleaner: just use absolute URL for V4 if base is V3.
       // The client is configured with V3 base URL. We need V4.
       // So we will pass the full URL to override base.
@@ -187,14 +247,23 @@ export class BillplzService {
 
       const response = await this.client.post(payoutUrl, payload);
 
-      this.logger.log(`✅ Payout created successfully - ID: ${response.data.id}`);
-      this.logger.debug(`Payout response: ${JSON.stringify(response.data, null, 2)}`);
+      this.logger.log(
+        `✅ Payout created successfully - ID: ${response.data.id}`,
+      );
+      this.logger.debug(
+        `Payout response: ${JSON.stringify(response.data, null, 2)}`,
+      );
 
       return response.data;
     } catch (error) {
       if (error.response) {
-        this.logger.error(`❌ Billplz Payout Error (${error.response.status}):`, error.response.data);
-        throw new BadRequestException(`Payout failed: ${JSON.stringify(error.response.data)}`);
+        this.logger.error(
+          `❌ Billplz Payout Error (${error.response.status}):`,
+          error.response.data,
+        );
+        throw new BadRequestException(
+          `Payout failed: ${JSON.stringify(error.response.data)}`,
+        );
       }
       this.logger.error('❌ Error creating payout:', error.message);
       throw error;

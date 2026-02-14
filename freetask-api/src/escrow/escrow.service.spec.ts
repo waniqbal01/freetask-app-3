@@ -10,15 +10,19 @@ describe('EscrowService state guards', () => {
   };
 
   describe('ensureHoldAllowed', () => {
-    const allowed = [JobStatus.PENDING, JobStatus.AWAITING_PAYMENT, JobStatus.IN_PROGRESS];
+    const allowed = [
+      JobStatus.PENDING,
+      JobStatus.AWAITING_PAYMENT,
+      JobStatus.IN_PROGRESS,
+    ];
     it.each(allowed)('allows hold when status is %s', (status) => {
       expect(() => callPrivate('ensureHoldAllowed', status)).not.toThrow();
     });
 
     it('throws for invalid states', () => {
-      expect(() => callPrivate('ensureHoldAllowed', JobStatus.COMPLETED)).toThrow(
-        ConflictException,
-      );
+      expect(() =>
+        callPrivate('ensureHoldAllowed', JobStatus.COMPLETED),
+      ).toThrow(ConflictException);
     });
   });
 
@@ -26,27 +30,40 @@ describe('EscrowService state guards', () => {
     it.each([JobStatus.COMPLETED, JobStatus.DISPUTED])(
       'allows release when status is %s',
       (status) => {
-        expect(() => callPrivate('ensureReleaseOrRefundAllowed', status, 'release')).not.toThrow();
+        expect(() =>
+          callPrivate('ensureReleaseOrRefundAllowed', status, 'release'),
+        ).not.toThrow();
       },
     );
 
-    it.each([JobStatus.CANCELED, JobStatus.CANCELED, JobStatus.AWAITING_PAYMENT])(
-      'allows refund when status is %s',
-      (status) => {
-        expect(() => callPrivate('ensureReleaseOrRefundAllowed', status, 'refund')).not.toThrow();
-      },
-    );
+    it.each([
+      JobStatus.CANCELED,
+      JobStatus.CANCELED,
+      JobStatus.AWAITING_PAYMENT,
+    ])('allows refund when status is %s', (status) => {
+      expect(() =>
+        callPrivate('ensureReleaseOrRefundAllowed', status, 'refund'),
+      ).not.toThrow();
+    });
 
     it('blocks release for unexpected states', () => {
       expect(() =>
-        callPrivate('ensureReleaseOrRefundAllowed', JobStatus.IN_PROGRESS, 'release'),
+        callPrivate(
+          'ensureReleaseOrRefundAllowed',
+          JobStatus.IN_PROGRESS,
+          'release',
+        ),
       ).toThrow(ConflictException);
     });
 
     it('blocks refund for unexpected states', () => {
-      expect(() => callPrivate('ensureReleaseOrRefundAllowed', JobStatus.PENDING, 'refund')).toThrow(
-        ConflictException,
-      );
+      expect(() =>
+        callPrivate(
+          'ensureReleaseOrRefundAllowed',
+          JobStatus.PENDING,
+          'refund',
+        ),
+      ).toThrow(ConflictException);
     });
   });
 });

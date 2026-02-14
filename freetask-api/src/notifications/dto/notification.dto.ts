@@ -1,41 +1,47 @@
-import { IsString, IsNotEmpty, IsOptional, IsInt, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsInt,
+  IsBoolean,
+} from 'class-validator';
 
 export class CreateNotificationDto {
-    @IsInt()
-    userId: number;
+  @IsInt()
+  userId: number;
 
-    @IsString()
-    @IsNotEmpty()
-    title: string;
+  @IsString()
+  @IsNotEmpty()
+  title: string;
 
-    @IsString()
-    @IsNotEmpty()
-    body: string;
+  @IsString()
+  @IsNotEmpty()
+  body: string;
 
-    @IsString()
-    @IsOptional()
-    type?: string;
+  @IsString()
+  @IsOptional()
+  type?: string;
 
-    @IsOptional()
-    data?: any;
+  @IsOptional()
+  data?: any;
 }
 
 export class SendNotificationDto {
-    @IsInt()
-    userId: number;
+  @IsInt()
+  userId: number;
 
-    @IsString()
-    @IsNotEmpty()
-    title: string;
+  @IsString()
+  @IsNotEmpty()
+  title: string;
 
-    @IsString()
-    @IsNotEmpty()
-    body: string;
+  @IsString()
+  @IsNotEmpty()
+  body: string;
 
-    @IsString()
-    @IsOptional()
-    type?: string;
+  @IsString()
+  @IsOptional()
+  type?: string;
 
-    @IsOptional()
-    data?: any;
+  @IsOptional()
+  data?: any;
 }
