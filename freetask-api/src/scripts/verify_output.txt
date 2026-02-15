@@ -5,7 +5,10 @@ Bucket: uploads
 ⚠️ WARNING: SUPABASE_KEY does not start with "ey". It looks like an invalid JWT.
    Current format starts with: sb_se
 ✅ Connection successful!
-Found 0 files in bucket 'uploads'.
+Found 2 files in bucket 'uploads'.
 Attempting to upload test file...
-✅ Upload successful: test-upload-1771148877362.txt
+✅ Upload successful: test-upload-1771149513941.txt
+ℹ️ Public URL: https://yviyhbzkmlttplszqfzo.supabase.co/storage/v1/object/public/uploads/test-upload-1771149513941.txt
+Checking bucket public status...
+Bucket Public: true
 ✅ Test file cleaned up.

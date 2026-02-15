@@ -10,6 +10,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger, UseGuards } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { WsJwtGuard } from './ws-jwt.guard';
 import { ChatsService } from '../chats/chats.service';
 
@@ -26,8 +27,7 @@ interface AuthenticatedSocket extends Socket {
 })
 @UseGuards(WsJwtGuard)
 export class ChatGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
-{
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
@@ -36,7 +36,10 @@ export class ChatGateway
   private socketUsers = new Map<string, number>(); // socketId -> userId
   private lastSeen = new Map<number, Date>(); // userId -> lastSeenTime
 
-  constructor(private readonly chatsService: ChatsService) {}
+  constructor(
+    private readonly chatsService: ChatsService,
+    private readonly jwtService: JwtService,
+  ) { }
 
   afterInit(server: Server) {
     this.logger.log('WebSocket Gateway initialized');
@@ -44,9 +47,33 @@ export class ChatGateway
 
   async handleConnection(client: AuthenticatedSocket) {
     try {
+      // Manually verify token because Guard doesn't run for handleConnection
+      const token = this.extractToken(client);
+
+      if (!token) {
+        this.logger.warn(`Connection rejected: No token provided`);
+        client.disconnect();
+        return;
+      }
+
+      try {
+        const payload = this.jwtService.verify(token, {
+          secret: process.env.JWT_SECRET,
+        });
+
+        // Attach user info to socket
+        client.userId = payload.userId;
+        client.userName = payload.name;
+
+      } catch (e) {
+        this.logger.warn(`Connection rejected: Invalid token - ${e.message}`);
+        client.disconnect();
+        return;
+      }
+
       const userId = client.userId;
       if (!userId) {
-        this.logger.warn(`Connection rejected: No userId in socket`);
+        this.logger.warn(`Connection rejected: No userId in socket after auth`);
         client.disconnect();
         return;
       }
@@ -249,5 +276,17 @@ export class ChatGateway
   // Get last seen time
   getUserLastSeen(userId: number): Date | null {
     return this.lastSeen.get(userId) || null;
+  }
+
+  private extractToken(client: Socket): string | null {
+    // Try to get token from Authorization header
+    const authHeader = client.handshake.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      return authHeader.substring(7);
+    }
+
+    // Try to get from query params (fallback)
+    const token = client.handshake.auth?.token || client.handshake.query?.token;
+    return token ? String(token) : null;
   }
 }

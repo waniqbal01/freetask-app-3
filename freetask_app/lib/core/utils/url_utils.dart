@@ -14,17 +14,16 @@ class UrlUtils {
       return '';
     }
 
-    // 1. Rewrite protected paths to public paths (Robust logic)
+    // 1. Return absolute URL if already absolute (prioritize external/Supabase URLs)
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+
+    // 2. Rewrite protected paths to public paths (Only for local paths)
     String processedUrl = url;
     if (processedUrl.contains('/uploads/') &&
         !processedUrl.contains('/uploads/public/')) {
       processedUrl = processedUrl.replaceFirst('/uploads/', '/uploads/public/');
-    }
-
-    // 2. Return absolute URL if already absolute
-    if (processedUrl.startsWith('http://') ||
-        processedUrl.startsWith('https://')) {
-      return processedUrl;
     }
 
     // 3. Build absolute URL using dynamic base url or env default

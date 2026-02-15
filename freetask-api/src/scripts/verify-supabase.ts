@@ -79,6 +79,31 @@ async function checkSupabase() {
                 }
             } else {
                 log(`✅ Upload successful: ${testFileName}`);
+                const { data: publicUrlData } = supabase.storage.from(bucketName).getPublicUrl(testFileName);
+                log(`ℹ️ Public URL: ${publicUrlData.publicUrl}`);
+
+                // Check if public access works
+                try {
+                    // We can't easily curl from here without axios/fetch, but we can print it
+                    // The user 400 error suggests the bucket might not be effectively public or policy missing
+                    log('Checking bucket public status...');
+                    const { data: bucketInfo, error: bucketInfoError } = await supabase.storage.getBucket(bucketName);
+                    if (bucketInfo) {
+                        log(`Bucket Public: ${bucketInfo.public}`);
+                        if (!bucketInfo.public) {
+                            log('⚠️ Bucket is NOT public. Updating...');
+                            const { error: updateError } = await supabase.storage.updateBucket(bucketName, { public: true });
+                            if (updateError) log(`❌ Failed to update bucket: ${updateError.message}`);
+                            else log('✅ Bucket updated to public.');
+                        }
+                    } else {
+                        log(`⚠️ Could not get bucket info: ${bucketInfoError?.message}`);
+                    }
+
+                } catch (e) {
+                    log(`⚠️ Error checking public status: ${e}`);
+                }
+
                 // Clean up
                 await supabase.storage.from(bucketName).remove([testFileName]);
                 log('✅ Test file cleaned up.');
