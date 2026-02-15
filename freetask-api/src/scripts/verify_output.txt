@@ -1,0 +1,11 @@
+Checking Supabase connection...
+URL: https://yviyhbzkmlttplszqfzo.supabase.co
+Key: sb_secret_...
+Bucket: uploads
+⚠️ WARNING: SUPABASE_KEY does not start with "ey". It looks like an invalid JWT.
+   Current format starts with: sb_se
+✅ Connection successful!
+Found 0 files in bucket 'uploads'.
+Attempting to upload test file...
+✅ Upload successful: test-upload-1771148877362.txt
+✅ Test file cleaned up.

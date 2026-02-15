@@ -131,6 +131,9 @@ class HttpClient {
   }
 
   bool _isPublicRequest(RequestOptions options) {
+    if (options.path.contains('/services/list/my')) {
+      return false;
+    }
     return options.method.toUpperCase() == 'GET' &&
         options.path.startsWith('/services');
   }
