@@ -42,6 +42,7 @@ class _JobListScreenState extends State<JobListScreen> {
   String? _freelancerErrorMessage;
   bool _isProcessing = false;
   AppUser? _currentUser;
+  bool _isLoadingUser = true;
   String? _userLoadError;
 
   // Freelancer Sub-tab management (only for Freelancer role)
@@ -64,7 +65,7 @@ class _JobListScreenState extends State<JobListScreen> {
     super.initState();
     _loadCurrentUser();
     _primeReviews();
-    _loadJobs();
+    // _loadJobs moved to after user load to optimize fetching
   }
 
   @override
@@ -81,15 +82,27 @@ class _JobListScreenState extends State<JobListScreen> {
   }
 
   Future<void> _loadCurrentUser() async {
+    setState(() {
+      _isLoadingUser = true;
+      _userLoadError = null;
+    });
+
     try {
       final user = await authRepository.getCurrentUser();
       if (!mounted) return;
       setState(() {
         _currentUser = user;
+        _isLoadingUser = false;
       });
+
+      // Load jobs only after we know the user role
+      if (user != null) {
+        _loadJobs();
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() {
+        _isLoadingUser = false;
         _userLoadError = AppStrings.errorLoadingProfile;
       });
       showErrorSnackBar(
@@ -100,10 +113,24 @@ class _JobListScreenState extends State<JobListScreen> {
   }
 
   Future<void> _loadJobs() async {
-    // We can optimize this to only load relevant jobs based on role later,
-    // but for now, we'll keep the logic simple and safe.
-    // If we only load client jobs for clients, we save bandwidth.
-    await Future.wait([_fetchClientJobs(), _fetchFreelancerJobs()]);
+    if (_currentUser == null) return;
+
+    final role = _currentUser!.role.toUpperCase();
+
+    // Optimize: Only fetch relevant jobs
+    final futures = <Future<void>>[];
+
+    if (role == 'CLIENT' || role == 'ADMIN') {
+      futures.add(_fetchClientJobs());
+    }
+
+    if (role == 'FREELANCER' || role == 'ADMIN') {
+      futures.add(_fetchFreelancerJobs());
+    }
+
+    if (futures.isNotEmpty) {
+      await Future.wait(futures);
+    }
   }
 
   Future<void> _primeReviews() async {
@@ -808,6 +835,41 @@ class _JobListScreenState extends State<JobListScreen> {
 
     final role = _currentUser?.role.toUpperCase();
     final isFreelancer = role == 'FREELANCER';
+
+    if (_isLoadingUser) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    // If user failed to load completely
+    if (_currentUser == null) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.grey),
+              const SizedBox(height: 16),
+              Text(
+                _userLoadError ?? 'Gagal memuatkan profil pengguna.',
+                style: const TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 16),
+              FTButton(
+                label: 'Cuba Semula',
+                onPressed: _loadCurrentUser,
+                expanded: false,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,

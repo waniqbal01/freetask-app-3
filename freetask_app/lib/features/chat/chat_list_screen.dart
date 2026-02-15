@@ -12,7 +12,7 @@ import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/notification_bell_button.dart';
 import '../auth/auth_repository.dart';
 
-final _currentUserProvider = FutureProvider<AppUser?>((ref) async {
+final _currentUserProvider = FutureProvider.autoDispose<AppUser?>((ref) async {
   try {
     return authRepository.getCurrentUser();
   } catch (_) {

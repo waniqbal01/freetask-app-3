@@ -168,7 +168,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     return FilledButton.icon(
       onPressed: () => _handleProfileMessage(user),
       icon: const Icon(Icons.chat),
-      label: const Text('Mesej Freelancer'),
+      label: const Text('Mesej'),
     );
   }
 

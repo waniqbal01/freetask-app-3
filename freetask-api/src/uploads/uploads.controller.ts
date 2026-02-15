@@ -10,11 +10,10 @@ import {
   Req,
   Res,
   UseFilters,
-  StreamableFile,
   Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
+import { memoryStorage } from 'multer';
 import { extname } from 'path';
 import { UploadsService } from './uploads.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -23,7 +22,6 @@ import { UploadsMulterExceptionFilter } from './uploads.filter';
 import {
   ApiBearerAuth,
   ApiTags,
-  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 
@@ -37,11 +35,11 @@ interface RequestWithUser extends Request {
 export class UploadsController {
   private readonly logger = new Logger(UploadsController.name);
 
-  constructor(private readonly uploadsService: UploadsService) {}
+  constructor(private readonly uploadsService: UploadsService) { }
 
   @Post()
-  @UseGuards(JwtAuthGuard) // Auth required only for upload
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // Stricter limit for uploads: 5 per minute
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @UseFilters(UploadsMulterExceptionFilter)
   @UseInterceptors(
     FileInterceptor('file', {
@@ -72,27 +70,10 @@ export class UploadsController {
 
         cb(null, true);
       },
-      storage: diskStorage({
-        destination: (_req, _file, cb) => {
-          const uploadsDir = process.env.UPLOAD_DIR || 'uploads';
-          if (!require('fs').existsSync(uploadsDir)) {
-            require('fs').mkdirSync(uploadsDir, { recursive: true });
-          }
-          cb(null, uploadsDir);
-        },
-        filename: (_req, file, cb) => {
-          const { extname } = require('path');
-          const { randomUUID } = require('crypto');
-          const fileExt = extname(file.originalname || '').toLowerCase();
-          // Simple sanitization for extension
-          const safeExt = fileExt.replace(/[^a-z0-9.]/g, '');
-          const filename = `${randomUUID()}${safeExt}`;
-          cb(null, filename);
-        },
-      }),
+      storage: memoryStorage(),
     }),
   )
-  uploadFile(
+  async uploadFile(
     @UploadedFile() file: Express.Multer.File,
     @Req() req: RequestWithUser,
   ) {
@@ -103,62 +84,35 @@ export class UploadsController {
       throw new BadRequestException('Tiada fail dihantar');
     }
 
+    const filename = await this.uploadsService.uploadFile(file);
+    const publicUrl = this.uploadsService.getPublicUrl(filename);
+
     this.logger.log(
-      `File uploaded successfully: ${file.filename} (${file.size} bytes) by user ${req.user?.userId}`,
+      `File uploaded to Supabase: ${filename} by user ${req.user?.userId}`,
     );
 
-    return this.uploadsService.buildUploadResponse(file.filename);
+    return { key: filename, url: publicUrl };
   }
 
-  // Public endpoint for serving avatars and public images (no JWT required)
-  // Only allows access to UUID-pattern image files for security
   @Get('public/:filename')
   async getPublicFile(
     @Param('filename') filename: string,
     @Res() res: Response,
   ) {
-    const {
-      stream,
-      mimeType,
-      filename: safeName,
-      asAttachment,
-    } = await this.uploadsService.getPublicFileStream(filename);
-
-    // Explicit CORS for public images to allow Flutter Web <img /> tags
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Content-Type', mimeType);
-
-    const dispositionType = asAttachment ? 'attachment' : 'inline';
-    res.setHeader(
-      'Content-Disposition',
-      `${dispositionType}; filename="${safeName}"`,
-    );
-
-    stream.pipe(res);
+    // Redirect to Supabase public URL
+    const url = this.uploadsService.getPublicUrl(filename);
+    res.redirect(url);
   }
 
-  // Protected endpoint for authenticated users
+  // Legacy endpoint support (optional, or redirect)
   @UseGuards(JwtAuthGuard)
   @Get(':filename')
-  @ApiUnauthorizedResponse({
-    description: 'Unauthorized - JWT diperlukan untuk muat turun.',
-  })
   async downloadFile(
     @Param('filename') filename: string,
-    @Res({ passthrough: true }) res: Response,
+    @Res() res: Response,
   ) {
-    const {
-      stream,
-      mimeType,
-      filename: safeName,
-      asAttachment,
-    } = await this.uploadsService.getFileStream(filename);
-    res.setHeader('Content-Type', mimeType);
-    const dispositionType = asAttachment ? 'attachment' : 'inline';
-    res.setHeader(
-      'Content-Disposition',
-      `${dispositionType}; filename="${safeName}"`,
-    );
-    return new StreamableFile(stream);
+    // Redirect to Supabase public URL (since we made bucket public)
+    const url = this.uploadsService.getPublicUrl(filename);
+    res.redirect(url);
   }
 }

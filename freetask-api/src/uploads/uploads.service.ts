@@ -8,135 +8,53 @@ import {
 import { mkdirSync, existsSync, createReadStream, statSync } from 'fs';
 import { extname, join, basename, normalize, sep } from 'path';
 import { randomUUID } from 'crypto';
+import { SupabaseClient, createClient } from '@supabase/supabase-js';
 
 @Injectable()
 export class UploadsService {
-  private readonly uploadsDir = normalize(
-    join(process.cwd(), process.env.UPLOAD_DIR ?? 'uploads'),
-  );
+  private supabase: SupabaseClient;
+  private readonly bucketName = process.env.SUPABASE_BUCKET || 'uploads';
   private readonly logger = new Logger(UploadsService.name);
 
-  ensureUploadsDir() {
-    if (!existsSync(this.uploadsDir)) {
-      try {
-        mkdirSync(this.uploadsDir, { recursive: true });
-      } catch (error) {
-        throw new InternalServerErrorException('Upload directory not writable');
-      }
-    }
-  }
+  constructor() {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_KEY;
 
-  getUploadsDir() {
-    return this.uploadsDir;
-  }
-
-  buildFileName(originalName: string) {
-    if (originalName.includes('/') || originalName.includes('\\')) {
-      throw new BadRequestException('Invalid filename.');
-    }
-
-    const fileExt = UploadsService.sanitizeExtension(extname(originalName));
-    if (!UploadsService.isAllowedExtension(fileExt)) {
-      throw new BadRequestException(
-        'Jenis fail tidak dibenarkan. Hanya gambar/PDF/DOC.',
-      );
-    }
-
-    const uuid = randomUUID();
-    return `${uuid}${fileExt}`;
-  }
-
-  async getFileStream(rawFilename: string) {
-    const safeFilename = this.sanitizeRequestedFile(rawFilename);
-    const normalizedPath = this.buildSafePath(safeFilename);
-
-    if (!existsSync(normalizedPath)) {
-      throw new NotFoundException('File not found');
-    }
-
-    const fileStat = statSync(normalizedPath);
-    if (!fileStat.isFile()) {
-      throw new NotFoundException('File not found');
-    }
-
-    const fileExt = extname(normalizedPath).toLowerCase();
-    const expectedMime = UploadsService.mimeTypeFromExtension(fileExt);
-    const sniffedMime = await this.detectMimeType(normalizedPath);
-    const isMismatch =
-      !!sniffedMime &&
-      !!expectedMime &&
-      sniffedMime.toLowerCase() !== expectedMime.toLowerCase();
-    const isSuspicious =
-      isMismatch ||
-      !UploadsService.isAllowedMimeType(sniffedMime ?? expectedMime);
-
-    if (isMismatch) {
+    if (!supabaseUrl || !supabaseKey) {
       this.logger.warn(
-        `MIME mismatch for ${safeFilename}: detected ${sniffedMime}, expected ${expectedMime}`,
+        'Supabase credentials missing. Uploads will fail until configured.',
       );
     }
 
-    const mimeType = isSuspicious
-      ? 'application/octet-stream'
-      : sniffedMime || expectedMime || 'application/octet-stream';
-
-    return {
-      stream: createReadStream(normalizedPath),
-      mimeType,
-      filename: basename(normalizedPath),
-      asAttachment: isSuspicious,
-    };
+    this.supabase = createClient(supabaseUrl ?? '', supabaseKey ?? '');
   }
 
-  /**
-   * Get file stream for public endpoint. Only allows files with UUID pattern
-   * and allowed extensions to prevent unauthorized access to private files.
-   */
-  async getPublicFileStream(rawFilename: string) {
-    if (!UploadsService.isPublicFile(rawFilename)) {
-      this.logger.warn(
-        `Blocked public access attempt for non-public file: ${rawFilename}`,
-      );
-      throw new NotFoundException('File not found or not publicly accessible');
+  async uploadFile(file: Express.Multer.File): Promise<string> {
+    const fileExt = extname(file.originalname);
+    const fileName = `${randomUUID()}${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { data, error } = await this.supabase.storage
+      .from(this.bucketName)
+      .upload(filePath, file.buffer, {
+        contentType: file.mimetype,
+        upsert: false,
+      });
+
+    if (error) {
+      this.logger.error(`Supabase upload failed: ${error.message}`);
+      throw new InternalServerErrorException('Gagal memuat naik fail.');
     }
-    return this.getFileStream(rawFilename);
+
+    return fileName;
   }
 
-  buildUploadResponse(filename: string) {
-    const relativePath = this.buildRelativePath(filename);
-    return { key: filename, url: relativePath };
-  }
+  getPublicUrl(filename: string): string {
+    const { data } = this.supabase.storage
+      .from(this.bucketName)
+      .getPublicUrl(filename);
 
-  private buildRelativePath(filename: string) {
-    // Return public path by default so frontend can load images without auth
-    return `/uploads/public/${filename}`;
-  }
-
-  private sanitizeRequestedFile(rawFilename: string) {
-    if (!rawFilename) {
-      throw new BadRequestException('Filename is required');
-    }
-
-    const decoded = decodeURIComponent(rawFilename);
-    const normalized = decoded.replace(/\\+/g, '/');
-    if (normalized.includes('..')) {
-      throw new BadRequestException('Invalid file path');
-    }
-
-    const base = basename(normalized);
-    if (!base || base === '.' || base === '..') {
-      throw new BadRequestException('Invalid file path');
-    }
-
-    return base;
-  }
-
-  private buildSafePath(filename: string) {
-    const targetPath = normalize(join(this.uploadsDir, filename));
-    if (!targetPath.startsWith(this.uploadsDir + sep)) {
-      throw new BadRequestException('Invalid file path');
-    }
-    return targetPath;
+    return data.publicUrl;
   }
 
   static isAllowedMimeType(mimeType?: string | null) {
@@ -171,27 +89,12 @@ export class UploadsService {
     return map[extension.toLowerCase()];
   }
 
-  static isLocalHost(host: string) {
-    return (
-      /^localhost(:\d+)?$/i.test(host) ||
-      /^127\.0\.0\.1(:\d+)?$/.test(host) ||
-      /^10\.0\.2\.2(:\d+)?$/.test(host) ||
-      /^192\.168\.\d+\.\d+(:\d+)?$/.test(host)
-    );
-  }
-
   static isAllowedExtension(extension: string) {
     const normalized = extension.toLowerCase();
     const allowed = ['.jpg', '.jpeg', '.png', '.gif', '.pdf', '.doc', '.docx'];
     return allowed.includes(normalized);
   }
 
-  /**
-   * Check if filename is allowed for public access.
-   * Only allows UUID-pattern filenames with image extensions to prevent
-   * unauthorized access to private documents.
-   * Enforces RFC 4122 compliance with version and variant field validation.
-   */
   static isPublicFile(filename: string): boolean {
     if (
       !filename ||
@@ -205,33 +108,5 @@ export class UploadsService {
     // Relaxed UUID pattern to avoid version/variant mismatches
     const uuidPattern = /^[0-9a-fA-F-]+\.(jpg|jpeg|png|gif)$/i;
     return uuidPattern.test(filename);
-  }
-
-  static sanitizeBaseName(originalName: string) {
-    const normalized = basename(originalName).replace(/[/\\]+/g, '');
-    const base = normalized
-      .replace(extname(normalized), '')
-      .replace(/\s+/g, '-');
-    const safe = base.replace(/[^a-zA-Z0-9-_]/g, '');
-    return safe.length === 0 ? 'file' : safe;
-  }
-
-  static sanitizeExtension(extension: string) {
-    const normalized = extension.replace(/[^a-zA-Z0-9.]/g, '');
-    if (!normalized.startsWith('.')) {
-      return normalized ? `.${normalized}` : '';
-    }
-    return normalized;
-  }
-
-  private async detectMimeType(path: string) {
-    try {
-      const { fileTypeFromFile } = await import('file-type');
-      const result = await fileTypeFromFile(path);
-      return result?.mime ?? null;
-    } catch (error) {
-      this.logger.warn(`Failed to sniff mime type for ${path}: ${error}`);
-      return null;
-    }
   }
 }

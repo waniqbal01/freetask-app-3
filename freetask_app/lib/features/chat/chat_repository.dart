@@ -20,19 +20,20 @@ import 'package:http_parser/http_parser.dart';
 
 import '../../core/websocket/socket_service.dart';
 
-final chatRepositoryProvider = Provider<ChatRepository>((Ref ref) {
+final chatRepositoryProvider = Provider.autoDispose<ChatRepository>((Ref ref) {
   final repository = ChatRepository();
   ref.onDispose(repository.dispose);
   return repository;
 });
 
-final chatThreadsProvider = StreamProvider<List<ChatThread>>((Ref ref) {
+final chatThreadsProvider =
+    StreamProvider.autoDispose<List<ChatThread>>((Ref ref) {
   final repository = ref.watch(chatRepositoryProvider);
   return repository.threadsStream;
 });
 
-final chatThreadsProviderWithQuery =
-    StreamProvider.family<List<ChatThread>, ({String? limit, String? offset})>(
+final chatThreadsProviderWithQuery = StreamProvider.autoDispose
+    .family<List<ChatThread>, ({String? limit, String? offset})>(
         (Ref ref, query) {
   final repository = ref.watch(chatRepositoryProvider);
   // If requesting the main list (first page), return the live stream
@@ -52,8 +53,8 @@ final chatThreadsProviderWithQuery =
       repository.fetchThreads(limit: query.limit, offset: query.offset));
 });
 
-final chatMessagesProvider = StreamProvider.family<List<ChatMessage>, String>(
-    (Ref ref, String conversationId) {
+final chatMessagesProvider = StreamProvider.autoDispose
+    .family<List<ChatMessage>, String>((Ref ref, String conversationId) {
   final repository = ref.watch(chatRepositoryProvider);
   return repository.streamMessages(conversationId);
 });
