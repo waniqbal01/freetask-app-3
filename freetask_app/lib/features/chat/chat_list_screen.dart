@@ -178,8 +178,10 @@ class ChatListScreen extends ConsumerWidget {
                       return Material(
                         color: Colors.white,
                         child: InkWell(
-                          onTap: () =>
-                              context.push('/chats/${thread.id}/messages'),
+                          onTap: () => context.push(
+                            '/chats/${thread.id}/messages',
+                            extra: thread,
+                          ),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 12),

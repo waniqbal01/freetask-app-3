@@ -48,7 +48,7 @@ class ServicesRepository {
   Future<List<Service>> getMyServices() async {
     try {
       final response = await _dio.get<List<dynamic>>(
-        '/services/me',
+        '/services/list/my',
         options: await _authorizedOptions(),
       );
       final data = response.data ?? <dynamic>[];

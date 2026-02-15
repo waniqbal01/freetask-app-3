@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -8,8 +9,6 @@ import 'package:intl/intl.dart';
 
 import '../../core/utils/error_utils.dart';
 import '../../core/utils/url_utils.dart';
-import '../../core/websocket/socket_service.dart';
-import '../../models/chat_enums.dart';
 import '../../widgets/chat_widgets.dart';
 import '../../widgets/scroll_to_bottom_fab.dart';
 import '../auth/auth_providers.dart';
@@ -17,9 +16,14 @@ import 'chat_models.dart';
 import 'chat_repository.dart';
 
 class ChatRoomScreen extends ConsumerStatefulWidget {
-  const ChatRoomScreen({super.key, required this.chatId});
+  const ChatRoomScreen({
+    super.key,
+    required this.chatId,
+    this.initialThread,
+  });
 
   final String chatId;
+  final ChatThread? initialThread;
 
   @override
   ConsumerState<ChatRoomScreen> createState() => _ChatRoomScreenState();
@@ -28,6 +32,9 @@ class ChatRoomScreen extends ConsumerStatefulWidget {
 class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  PlatformFile? _selectedFile;
+  FileType? _selectedFileType;
+  bool _isUploading = false;
 
   @override
   void dispose() {
@@ -47,17 +54,21 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     final thread = ref.watch(chatThreadsProvider).maybeWhen(
           data: (List<ChatThread> threads) => threads.firstWhere(
             (ChatThread element) => element.id == widget.chatId,
-            orElse: () => const ChatThread(
-              id: 'unknown',
-              title: 'Chat',
-              participantName: 'Pengguna',
-            ),
+            orElse: () =>
+                widget.initialThread ??
+                const ChatThread(
+                  id: 'unknown',
+                  title: 'Chat',
+                  participantName: 'Pengguna',
+                ),
           ),
-          orElse: () => const ChatThread(
-            id: 'unknown',
-            title: 'Chat',
-            participantName: 'Pengguna',
-          ),
+          orElse: () =>
+              widget.initialThread ??
+              const ChatThread(
+                id: 'unknown',
+                title: 'Chat',
+                participantName: 'Pengguna',
+              ),
         );
 
     final currentUserAsync = ref.watch(currentUserProvider);
@@ -144,15 +155,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
       ),
       body: Column(
         children: <Widget>[
-          // Connection status banner
-          StreamBuilder<ConnectionStatus>(
-            stream: SocketService.instance.connectionStream,
-            initialData: SocketService.instance.currentStatus,
-            builder: (context, snapshot) {
-              return ConnectionStatusBanner(
-                  status: snapshot.data ?? ConnectionStatus.disconnected);
-            },
-          ),
+          // Connection status banner removed
           Expanded(
             child: asyncMessages.when(
               data: (List<ChatMessage> messages) {
@@ -248,10 +251,13 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
           ),
           _MessageComposer(
             controller: _controller,
-            onSendText: _handleSendText,
-            onSendImage: _handleSendImage,
-            onSendFile: _handleSendFile,
-            enabled: !hasMessageError,
+            onSend: _handleSendMessage,
+            onFileSelected: _handleFileSelection,
+            selectedFile: _selectedFile,
+            selectedFileType: _selectedFileType,
+            onClearFile: _clearSelectedFile,
+            isUploading: _isUploading,
+            enabled: !hasMessageError && !_isUploading,
           ),
         ],
       ),
@@ -261,71 +267,105 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     );
   }
 
-  Future<void> _handleSendText(String text) async {
-    if (text.trim().isEmpty) {
+  Future<void> _handleSendMessage() async {
+    if (_isUploading) return;
+
+    final text = _controller.text.trim();
+    if (text.isEmpty && _selectedFile == null) {
       return;
     }
-    final trimmed = text.trim();
+
+    setState(() {
+      _isUploading = true;
+    });
+
     try {
-      await ref.read(chatRepositoryProvider).sendMessage(
-            conversationId: widget.chatId,
-            text: trimmed,
-          );
+      String? attachmentUrl;
+      String type = 'text';
+
+      if (_selectedFile != null) {
+        attachmentUrl = await ref
+            .read(chatRepositoryProvider)
+            .uploadChatImage(_selectedFile!);
+
+        if (_selectedFileType == FileType.image) {
+          type = 'image';
+          // For images, we can send text as caption in the same message
+          await ref.read(chatRepositoryProvider).sendMessage(
+                conversationId: widget.chatId,
+                text: text,
+                type: type,
+                attachmentUrl: attachmentUrl,
+              );
+        } else {
+          type = 'file';
+          // For files, use valid filename as text
+          await ref.read(chatRepositoryProvider).sendMessage(
+                conversationId: widget.chatId,
+                text: _selectedFile!.name,
+                type: type,
+                attachmentUrl: attachmentUrl,
+              );
+
+          // If there's a caption for the file, send it as a separate message
+          if (text.isNotEmpty) {
+            await ref.read(chatRepositoryProvider).sendMessage(
+                  conversationId: widget.chatId,
+                  text: text,
+                  type: 'text',
+                );
+          }
+        }
+      } else {
+        // Text only message
+        await ref.read(chatRepositoryProvider).sendMessage(
+              conversationId: widget.chatId,
+              text: text,
+              type: 'text',
+            );
+      }
+
       _controller.clear();
+      setState(() {
+        _selectedFile = null;
+        _selectedFileType = null;
+      });
     } on DioException catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       _showSnackBar(resolveDioErrorMessage(error));
     } catch (_) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       _showSnackBar('Ralat menghantar mesej.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+      }
     }
   }
 
-  Future<void> _handleSendImage(PlatformFile file) async {
-    try {
-      final url = await ref.read(chatRepositoryProvider).uploadChatImage(file);
-
-      await ref.read(chatRepositoryProvider).sendMessage(
-            conversationId: widget.chatId,
-            text: '', // Empty text for image message
-            type: 'image',
-            attachmentUrl: url,
-          );
-    } on DioException catch (error) {
-      if (!mounted) return;
-      _showSnackBar(resolveDioErrorMessage(error));
-    } catch (_) {
-      if (!mounted) return;
-      _showSnackBar('Gagal menghantar gambar.');
-    }
+  void _handleFileSelection(PlatformFile file, FileType type) {
+    setState(() {
+      _selectedFile = file;
+      _selectedFileType = type;
+    });
   }
 
-  Future<void> _handleSendFile(PlatformFile file) async {
-    try {
-      final url = await ref.read(chatRepositoryProvider).uploadChatImage(file);
-      final extension = file.extension?.toLowerCase() ?? '';
-      final type = ['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(extension)
-          ? 'image'
-          : 'file';
-
-      await ref.read(chatRepositoryProvider).sendMessage(
-            conversationId: widget.chatId,
-            text: file.name, // Filename as text for file type
-            type: type,
-            attachmentUrl: url,
-          );
-    } on DioException catch (error) {
-      if (!mounted) return;
-      _showSnackBar(resolveDioErrorMessage(error));
-    } catch (_) {
-      if (!mounted) return;
-      _showSnackBar('Gagal menghantar fail.');
-    }
+  void _clearSelectedFile() {
+    setState(() {
+      _selectedFile = null;
+      _selectedFileType = null;
+    });
   }
+
+  // ... (keep _isFirstMessageOfDay and other helpers)
+
+  // ... inside build method, replace _MessageComposer instantiation
+  // This needs to be done carefully as it's inside the build method.
+  // I will use a separate replace call for the build method or include it here if the range allows.
+  // The range 335-364 covers _handleSendImage and _handleSendFile.
+  // I will just update these two methods first.
 
   bool _isFirstMessageOfDay(List<ChatMessage> messages, int index) {
     if (index == 0) return true;
@@ -532,16 +572,22 @@ class _MessageBubble extends StatelessWidget {
 class _MessageComposer extends StatefulWidget {
   const _MessageComposer({
     required this.controller,
-    required this.onSendText,
-    required this.onSendImage,
-    required this.onSendFile,
+    required this.onSend,
+    required this.onFileSelected,
+    this.selectedFile,
+    this.selectedFileType,
+    required this.onClearFile,
+    this.isUploading = false,
     this.enabled = true,
   });
 
   final TextEditingController controller;
-  final ValueChanged<String> onSendText;
-  final ValueChanged<PlatformFile> onSendImage;
-  final ValueChanged<PlatformFile> onSendFile;
+  final VoidCallback onSend;
+  final Function(PlatformFile, FileType) onFileSelected;
+  final PlatformFile? selectedFile;
+  final FileType? selectedFileType;
+  final VoidCallback onClearFile;
+  final bool isUploading;
   final bool enabled;
 
   @override
@@ -549,7 +595,6 @@ class _MessageComposer extends StatefulWidget {
 }
 
 class _MessageComposerState extends State<_MessageComposer> {
-  // ... (keep build method)
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -557,45 +602,113 @@ class _MessageComposerState extends State<_MessageComposer> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         color: Colors.white,
-        child: Row(
-          children: <Widget>[
-            IconButton(
-              icon: const Icon(Icons.add_circle,
-                  color: Color(0xFF2196F3)), // FreeTask blue
-              onPressed: widget.enabled ? _showAttachmentMenu : null,
-            ),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          children: [
+            if (widget.selectedFile != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade300),
                 ),
-                child: TextField(
-                  controller: widget.controller,
-                  readOnly: !widget.enabled,
-                  maxLines: null, // Allow multiline
-                  textInputAction: TextInputAction.send,
-                  decoration: InputDecoration(
-                    hintText: 'Mesej',
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(
+                  children: [
+                    if (widget.selectedFileType == FileType.image)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: kIsWeb
+                            ? Image.memory(
+                                widget.selectedFile!.bytes!,
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                              )
+                            : Image.file(
+                                File(widget.selectedFile!.path!),
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                              ),
+                      )
+                    else
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.indigo.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.insert_drive_file,
+                            color: Colors.indigo),
+                      ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        widget.selectedFile!.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.grey),
+                      onPressed: widget.onClearFile,
+                    ),
+                  ],
+                ),
+              ),
+            Row(
+              children: <Widget>[
+                IconButton(
+                  icon: const Icon(Icons.add_circle,
+                      color: Color(0xFF2196F3)), // FreeTask blue
+                  onPressed: widget.enabled ? _showAttachmentMenu : null,
+                ),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: TextField(
+                      controller: widget.controller,
+                      readOnly: !widget.enabled,
+                      maxLines: null, // Allow multiline
+                      textInputAction: TextInputAction.send,
+                      decoration: InputDecoration(
+                        hintText: 'Mesej',
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                      onSubmitted:
+                          widget.enabled ? (_) => widget.onSend() : null,
+                    ),
                   ),
-                  onSubmitted: widget.enabled ? widget.onSendText : null,
                 ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            CircleAvatar(
-              backgroundColor: const Color(0xFF2196F3), // FreeTask blue
-              radius: 22,
-              child: IconButton(
-                icon: const Icon(Icons.send, color: Colors.white, size: 20),
-                onPressed: widget.enabled
-                    ? () => widget.onSendText(widget.controller.text)
-                    : null,
-              ),
+                const SizedBox(width: 8),
+                CircleAvatar(
+                  backgroundColor: const Color(0xFF2196F3), // FreeTask blue
+                  radius: 22,
+                  child: IconButton(
+                    icon: widget.isUploading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Icon(Icons.send, color: Colors.white, size: 20),
+                    onPressed: widget.enabled ? widget.onSend : null,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -654,11 +767,7 @@ class _MessageComposerState extends State<_MessageComposer> {
 
     if (result != null && result.files.isNotEmpty) {
       final file = result.files.single;
-      if (type == FileType.image) {
-        widget.onSendImage(file);
-      } else {
-        widget.onSendFile(file);
-      }
+      widget.onFileSelected(file, type);
     }
   }
 }

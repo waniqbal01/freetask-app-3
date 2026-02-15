@@ -51,7 +51,7 @@ export class ServicesController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('me')
+  @Get('list/my')
   findMyServices(@GetUser('userId') userId: number) {
     return this.servicesService.findMyServices(userId);
   }

@@ -27,6 +27,7 @@ import '../features/withdrawals/withdrawal_screen.dart';
 import '../models/service.dart';
 
 import '../models/job.dart';
+import '../features/chat/chat_models.dart';
 import '../features/auth/auth_repository.dart';
 import 'notifications/notification_service.dart';
 import 'storage/storage.dart';
@@ -206,7 +207,8 @@ final appRouter = GoRouter(
       path: '/chats/:jobId/messages',
       builder: (BuildContext context, GoRouterState state) {
         final chatId = state.pathParameters['jobId'] ?? 'unknown';
-        return ChatRoomScreen(chatId: chatId);
+        final extra = state.extra as ChatThread?;
+        return ChatRoomScreen(chatId: chatId, initialThread: extra);
       },
     ),
     GoRoute(
