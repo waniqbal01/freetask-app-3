@@ -13,6 +13,7 @@ import { Logger, UseGuards } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { WsJwtGuard } from './ws-jwt.guard';
 import { ChatsService } from '../chats/chats.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 interface AuthenticatedSocket extends Socket {
   userId: number;
@@ -39,10 +40,19 @@ export class ChatGateway
   constructor(
     private readonly chatsService: ChatsService,
     private readonly jwtService: JwtService,
+    private readonly prisma: PrismaService,
   ) { }
 
   afterInit(server: Server) {
     this.logger.log('WebSocket Gateway initialized');
+    // Reset online status on init (in case of crash)
+    this.resetOnlineStatus();
+  }
+
+  private async resetOnlineStatus() {
+    await this.prisma.user.updateMany({
+      data: { isOnline: false },
+    });
   }
 
   async handleConnection(client: AuthenticatedSocket) {
@@ -83,6 +93,11 @@ export class ChatGateway
       // Track user socket
       if (!this.userSockets.has(userId)) {
         this.userSockets.set(userId, new Set());
+        // First socket for this user -> Mark as Online in DB
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: { isOnline: true, lastSeen: null }, // clear lastSeen while online
+        });
       }
       this.userSockets.get(userId)!.add(client.id);
       this.socketUsers.set(client.id, userId);
@@ -113,6 +128,13 @@ export class ChatGateway
 
         // User is fully offline now
         const lastSeenTime = new Date();
+        // Update DB
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: { isOnline: false, lastSeen: lastSeenTime },
+        });
+
+        // Update Memory Cache
         this.lastSeen.set(userId, lastSeenTime);
 
         this.server.emit('user_offline', {
@@ -267,15 +289,29 @@ export class ChatGateway
   }
 
   // Check if user is online
-  isUserOnline(userId: number): boolean {
-    return (
-      this.userSockets.has(userId) && this.userSockets.get(userId)!.size > 0
-    );
+  async isUserOnline(userId: number): Promise<boolean> {
+    if (this.userSockets.has(userId) && this.userSockets.get(userId)!.size > 0) {
+      return true;
+    }
+    // Fallback to DB check
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { isOnline: true },
+    });
+    return user?.isOnline ?? false;
   }
 
   // Get last seen time
-  getUserLastSeen(userId: number): Date | null {
-    return this.lastSeen.get(userId) || null;
+  async getUserLastSeen(userId: number): Promise<Date | null> {
+    const cached = this.lastSeen.get(userId);
+    if (cached) return cached;
+
+    // Fallback to DB
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { lastSeen: true },
+    });
+    return user?.lastSeen ?? null;
   }
 
   private extractToken(client: Socket): string | null {

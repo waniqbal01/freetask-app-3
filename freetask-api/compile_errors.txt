@@ -1,0 +1,202 @@
+src/chats/chats.service.spec.ts(5,1): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/chats/chats.service.spec.ts(17,15): error TS2503: Cannot find namespace 'jest'.
+src/chats/chats.service.spec.ts(22,3): error TS2304: Cannot find name 'beforeEach'.
+src/chats/chats.service.spec.ts(25,19): error TS2304: Cannot find name 'jest'.
+src/chats/chats.service.spec.ts(26,21): error TS2304: Cannot find name 'jest'.
+src/chats/chats.service.spec.ts(27,17): error TS2304: Cannot find name 'jest'.
+src/chats/chats.service.spec.ts(30,19): error TS2304: Cannot find name 'jest'.
+src/chats/chats.service.spec.ts(31,17): error TS2304: Cannot find name 'jest'.
+src/chats/chats.service.spec.ts(33,21): error TS2304: Cannot find name 'jest'.
+src/chats/chats.service.spec.ts(34,21): error TS2503: Cannot find namespace 'jest'.
+src/chats/chats.service.spec.ts(45,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/chats/chats.service.spec.ts(46,31): error TS2503: Cannot find namespace 'jest'.
+src/chats/chats.service.spec.ts(48,11): error TS2304: Cannot find name 'expect'.
+src/chats/chats.service.spec.ts(55,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/chats/chats.service.spec.ts(56,31): error TS2503: Cannot find namespace 'jest'.
+src/chats/chats.service.spec.ts(57,35): error TS2503: Cannot find namespace 'jest'.
+src/chats/chats.service.spec.ts(70,5): error TS2304: Cannot find name 'expect'.
+src/chats/chats.service.spec.ts(72,26): error TS2304: Cannot find name 'expect'.
+src/chats/chats.service.spec.ts(76,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/chats/chats.service.spec.ts(89,29): error TS2503: Cannot find namespace 'jest'.
+src/chats/chats.service.spec.ts(101,31): error TS2503: Cannot find namespace 'jest'.
+src/chats/chats.service.spec.ts(105,35): error TS2503: Cannot find namespace 'jest'.
+src/chats/chats.service.spec.ts(118,5): error TS2304: Cannot find name 'expect'.
+src/chats/chats.service.spec.ts(119,5): error TS2304: Cannot find name 'expect'.
+src/chats/chats.service.spec.ts(120,5): error TS2304: Cannot find name 'expect'.
+src/chats/chats.service.spec.ts(132,5): error TS2304: Cannot find name 'expect'.
+src/chats/chats.service.spec.ts(133,5): error TS2304: Cannot find name 'expect'.
+src/chats/chats.service.spec.ts(136,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/chats/chats.service.spec.ts(137,29): error TS2503: Cannot find namespace 'jest'.
+src/chats/chats.service.spec.ts(144,5): error TS2304: Cannot find name 'expect'.
+src/chats/chats.service.spec.ts(164,5): error TS2304: Cannot find name 'expect'.
+src/chats/chats.service.spec.ts(167,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/chats/chats.service.spec.ts(170,31): error TS2503: Cannot find namespace 'jest'.
+src/chats/chats.service.spec.ts(171,37): error TS2503: Cannot find namespace 'jest'.
+src/chats/chats.service.spec.ts(200,5): error TS2304: Cannot find name 'expect'.
+src/chats/chats.service.spec.ts(207,5): error TS2304: Cannot find name 'expect'.
+src/chats/chats.service.spec.ts(208,5): error TS2304: Cannot find name 'expect'.
+src/config/cors.spec.ts(4,1): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/config/cors.spec.ts(7,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/config/cors.spec.ts(12,5): error TS2304: Cannot find name 'expect'.
+src/config/cors.spec.ts(15,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/config/cors.spec.ts(16,21): error TS2304: Cannot find name 'jest'.
+src/config/cors.spec.ts(23,5): error TS2304: Cannot find name 'expect'.
+src/config/cors.spec.ts(24,5): error TS2304: Cannot find name 'expect'.
+src/config/cors.spec.ts(27,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/config/cors.spec.ts(28,22): error TS2304: Cannot find name 'jest'.
+src/config/cors.spec.ts(30,5): error TS2304: Cannot find name 'expect'.
+src/config/cors.spec.ts(35,5): error TS2304: Cannot find name 'expect'.
+src/escrow/escrow.service.spec.ts(5,1): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/escrow/escrow.service.spec.ts(12,3): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/escrow/escrow.service.spec.ts(18,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/escrow/escrow.service.spec.ts(19,7): error TS2304: Cannot find name 'expect'.
+src/escrow/escrow.service.spec.ts(22,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/escrow/escrow.service.spec.ts(23,7): error TS2304: Cannot find name 'expect'.
+src/escrow/escrow.service.spec.ts(29,3): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/escrow/escrow.service.spec.ts(30,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/escrow/escrow.service.spec.ts(33,9): error TS2304: Cannot find name 'expect'.
+src/escrow/escrow.service.spec.ts(39,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/escrow/escrow.service.spec.ts(44,7): error TS2304: Cannot find name 'expect'.
+src/escrow/escrow.service.spec.ts(49,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/escrow/escrow.service.spec.ts(50,7): error TS2304: Cannot find name 'expect'.
+src/escrow/escrow.service.spec.ts(59,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/escrow/escrow.service.spec.ts(60,7): error TS2304: Cannot find name 'expect'.
+src/jobs/dto/create-job.dto.spec.ts(6,1): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/jobs/dto/create-job.dto.spec.ts(7,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/jobs/dto/create-job.dto.spec.ts(17,5): error TS2304: Cannot find name 'expect'.
+src/jobs/dto/create-job.dto.spec.ts(20,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/jobs/dto/create-job.dto.spec.ts(30,5): error TS2304: Cannot find name 'expect'.
+src/jobs/dto/create-job.dto.spec.ts(31,5): error TS2304: Cannot find name 'expect'.
+src/jobs/jobs.service.spec.ts(24,1): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/jobs/jobs.service.spec.ts(25,15): error TS2503: Cannot find namespace 'jest'.
+src/jobs/jobs.service.spec.ts(26,27): error TS2503: Cannot find namespace 'jest'.
+src/jobs/jobs.service.spec.ts(28,22): error TS2503: Cannot find namespace 'jest'.
+src/jobs/jobs.service.spec.ts(30,20): error TS2503: Cannot find namespace 'jest'.
+src/jobs/jobs.service.spec.ts(31,23): error TS2503: Cannot find namespace 'jest'.
+src/jobs/jobs.service.spec.ts(33,3): error TS2304: Cannot find name 'beforeEach'.
+src/jobs/jobs.service.spec.ts(34,19): error TS2304: Cannot find name 'jest'.
+src/jobs/jobs.service.spec.ts(35,22): error TS2304: Cannot find name 'jest'.
+src/jobs/jobs.service.spec.ts(38,21): error TS2304: Cannot find name 'jest'.
+src/jobs/jobs.service.spec.ts(39,17): error TS2304: Cannot find name 'jest'.
+src/jobs/jobs.service.spec.ts(41,29): error TS2304: Cannot find name 'jest'.
+src/jobs/jobs.service.spec.ts(42,21): error TS2304: Cannot find name 'jest'.
+src/jobs/jobs.service.spec.ts(51,21): error TS2503: Cannot find namespace 'jest'.
+src/jobs/jobs.service.spec.ts(52,29): error TS2503: Cannot find namespace 'jest'.
+src/jobs/jobs.service.spec.ts(56,24): error TS2304: Cannot find name 'jest'.
+src/jobs/jobs.service.spec.ts(57,21): error TS2503: Cannot find namespace 'jest'.
+src/jobs/jobs.service.spec.ts(59,15): error TS2554: Expected 6 arguments, but got 2.
+src/jobs/jobs.service.spec.ts(65,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/jobs/jobs.service.spec.ts(66,31): error TS2503: Cannot find namespace 'jest'.
+src/jobs/jobs.service.spec.ts(68,11): error TS2304: Cannot find name 'expect'.
+src/jobs/jobs.service.spec.ts(78,5): error TS2304: Cannot find name 'expect'.
+src/jobs/jobs.service.spec.ts(81,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/jobs/jobs.service.spec.ts(82,31): error TS2503: Cannot find namespace 'jest'.
+src/jobs/jobs.service.spec.ts(85,25): error TS2339: Property 'ACCEPTED' does not exist on type '{ INQUIRY: "INQUIRY"; PENDING: "PENDING"; AWAITING_PAYMENT: "AWAITING_PAYMENT"; IN_PROGRESS: "IN_PROGRESS"; SUBMITTED: "SUBMITTED"; IN_REVIEW: "IN_REVIEW"; IN_REVISION: "IN_REVISION"; ... 7 more ...; CANCELED: "CANCELED"; }'.
+src/jobs/jobs.service.spec.ts(92,27): error TS2339: Property 'ACCEPTED' does not exist on type '{ INQUIRY: "INQUIRY"; PENDING: "PENDING"; AWAITING_PAYMENT: "AWAITING_PAYMENT"; IN_PROGRESS: "IN_PROGRESS"; SUBMITTED: "SUBMITTED"; IN_REVIEW: "IN_REVIEW"; IN_REVISION: "IN_REVISION"; ... 7 more ...; CANCELED: "CANCELED"; }'.
+src/jobs/jobs.service.spec.ts(95,5): error TS2304: Cannot find name 'expect'.
+src/jobs/jobs.service.spec.ts(96,7): error TS2304: Cannot find name 'expect'.
+src/jobs/jobs.service.spec.ts(98,35): error TS2339: Property 'ACCEPTED' does not exist on type '{ INQUIRY: "INQUIRY"; PENDING: "PENDING"; AWAITING_PAYMENT: "AWAITING_PAYMENT"; IN_PROGRESS: "IN_PROGRESS"; SUBMITTED: "SUBMITTED"; IN_REVIEW: "IN_REVIEW"; IN_REVISION: "IN_REVISION"; ... 7 more ...; CANCELED: "CANCELED"; }'.
+src/jobs/jobs.service.spec.ts(101,5): error TS2304: Cannot find name 'expect'.
+src/jobs/jobs.service.spec.ts(101,42): error TS2339: Property 'ACCEPTED' does not exist on type '{ INQUIRY: "INQUIRY"; PENDING: "PENDING"; AWAITING_PAYMENT: "AWAITING_PAYMENT"; IN_PROGRESS: "IN_PROGRESS"; SUBMITTED: "SUBMITTED"; IN_REVIEW: "IN_REVIEW"; IN_REVISION: "IN_REVISION"; ... 7 more ...; CANCELED: "CANCELED"; }'.
+src/jobs/jobs.service.spec.ts(104,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/jobs/jobs.service.spec.ts(105,31): error TS2503: Cannot find namespace 'jest'.
+src/jobs/jobs.service.spec.ts(117,5): error TS2304: Cannot find name 'expect'.
+src/jobs/jobs.service.spec.ts(118,7): error TS2304: Cannot find name 'expect'.
+src/jobs/jobs.service.spec.ts(123,5): error TS2304: Cannot find name 'expect'.
+src/jobs/jobs.service.spec.ts(126,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/jobs/jobs.service.spec.ts(127,31): error TS2503: Cannot find namespace 'jest'.
+src/jobs/jobs.service.spec.ts(132,11): error TS2304: Cannot find name 'expect'.
+src/jobs/jobs.service.spec.ts(138,29): error TS2339: Property 'ACCEPTED' does not exist on type '{ INQUIRY: "INQUIRY"; PENDING: "PENDING"; AWAITING_PAYMENT: "AWAITING_PAYMENT"; IN_PROGRESS: "IN_PROGRESS"; SUBMITTED: "SUBMITTED"; IN_REVIEW: "IN_REVIEW"; IN_REVISION: "IN_REVISION"; ... 7 more ...; CANCELED: "CANCELED"; }'.
+src/jobs/jobs.service.spec.ts(144,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/jobs/jobs.service.spec.ts(145,31): error TS2503: Cannot find namespace 'jest'.
+src/jobs/jobs.service.spec.ts(147,11): error TS2304: Cannot find name 'expect'.
+src/jobs/jobs.service.spec.ts(150,11): error TS2304: Cannot find name 'expect'.
+src/jobs/jobs.service.spec.ts(153,11): error TS2304: Cannot find name 'expect'.
+src/jobs/jobs.service.spec.ts(158,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/jobs/jobs.service.spec.ts(159,31): error TS2503: Cannot find namespace 'jest'.
+src/jobs/jobs.service.spec.ts(161,11): error TS2304: Cannot find name 'expect'.
+src/jobs/jobs.service.spec.ts(165,11): error TS2304: Cannot find name 'expect'.
+src/jobs/jobs.service.spec.ts(172,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/jobs/jobs.service.spec.ts(173,31): error TS2503: Cannot find namespace 'jest'.
+src/jobs/jobs.service.spec.ts(193,5): error TS2304: Cannot find name 'expect'.
+src/jobs/jobs.service.spec.ts(194,7): error TS2304: Cannot find name 'expect'.
+src/jobs/jobs.service.spec.ts(195,7): error TS2304: Cannot find name 'expect'.
+src/jobs/jobs.service.spec.ts(196,7): error TS2304: Cannot find name 'expect'.
+src/jobs/jobs.service.spec.ts(200,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/jobs/jobs.service.spec.ts(201,31): error TS2503: Cannot find namespace 'jest'.
+src/jobs/jobs.service.spec.ts(214,5): error TS2304: Cannot find name 'expect'.
+src/jobs/jobs.service.spec.ts(215,7): error TS2304: Cannot find name 'expect'.
+src/jobs/jobs.service.spec.ts(216,7): error TS2304: Cannot find name 'expect'.
+src/jobs/jobs.service.spec.ts(217,7): error TS2304: Cannot find name 'expect'.
+src/reviews/reviews.controller.spec.ts(1,37): error TS2307: Cannot find module '@nestjs/testing' or its corresponding type declarations.
+src/reviews/reviews.controller.spec.ts(7,1): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/reviews/reviews.controller.spec.ts(12,13): error TS2304: Cannot find name 'jest'.
+src/reviews/reviews.controller.spec.ts(13,15): error TS2304: Cannot find name 'jest'.
+src/reviews/reviews.controller.spec.ts(14,15): error TS2304: Cannot find name 'jest'.
+src/reviews/reviews.controller.spec.ts(17,3): error TS2304: Cannot find name 'beforeEach'.
+src/reviews/reviews.controller.spec.ts(32,3): error TS2304: Cannot find name 'afterEach'.
+src/reviews/reviews.controller.spec.ts(33,5): error TS2304: Cannot find name 'jest'.
+src/reviews/reviews.controller.spec.ts(36,3): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/reviews/reviews.controller.spec.ts(45,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/reviews/reviews.controller.spec.ts(56,7): error TS2304: Cannot find name 'expect'.
+src/reviews/reviews.controller.spec.ts(57,7): error TS2304: Cannot find name 'expect'.
+src/reviews/reviews.controller.spec.ts(60,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/reviews/reviews.controller.spec.ts(69,13): error TS2304: Cannot find name 'expect'.
+src/reviews/reviews.controller.spec.ts(72,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/reviews/reviews.controller.spec.ts(83,13): error TS2304: Cannot find name 'expect'.
+src/reviews/reviews.controller.spec.ts(86,13): error TS2304: Cannot find name 'expect'.
+src/reviews/reviews.controller.spec.ts(91,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/reviews/reviews.controller.spec.ts(102,13): error TS2304: Cannot find name 'expect'.
+src/reviews/reviews.controller.spec.ts(105,13): error TS2304: Cannot find name 'expect'.
+src/reviews/reviews.controller.spec.ts(110,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/reviews/reviews.controller.spec.ts(115,13): error TS2304: Cannot find name 'expect'.
+src/reviews/reviews.controller.spec.ts(118,13): error TS2304: Cannot find name 'expect'.
+src/reviews/reviews.controller.spec.ts(123,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/reviews/reviews.controller.spec.ts(128,13): error TS2304: Cannot find name 'expect'.
+src/reviews/reviews.controller.spec.ts(133,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/reviews/reviews.controller.spec.ts(145,13): error TS2304: Cannot find name 'expect'.
+src/reviews/reviews.controller.spec.ts(148,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/reviews/reviews.controller.spec.ts(160,13): error TS2304: Cannot find name 'expect'.
+src/reviews/reviews.controller.spec.ts(164,3): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/reviews/reviews.controller.spec.ts(165,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/reviews/reviews.controller.spec.ts(169,39): error TS2339: Property 'find' does not exist on type 'ReviewsController'.
+src/reviews/reviews.controller.spec.ts(171,7): error TS2304: Cannot find name 'expect'.
+src/reviews/reviews.controller.spec.ts(172,7): error TS2304: Cannot find name 'expect'.
+src/reviews/reviews.controller.spec.ts(176,3): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/reviews/reviews.controller.spec.ts(177,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/reviews/reviews.controller.spec.ts(184,7): error TS2304: Cannot find name 'expect'.
+src/reviews/reviews.controller.spec.ts(185,7): error TS2304: Cannot find name 'expect'.
+src/services/services.service.spec.ts(4,1): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/services/services.service.spec.ts(8,3): error TS2304: Cannot find name 'beforeEach'.
+src/services/services.service.spec.ts(11,19): error TS2304: Cannot find name 'jest'.
+src/services/services.service.spec.ts(18,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/services/services.service.spec.ts(19,33): error TS2503: Cannot find namespace 'jest'.
+src/services/services.service.spec.ts(26,5): error TS2304: Cannot find name 'expect'.
+src/services/services.service.spec.ts(31,5): error TS2304: Cannot find name 'expect'.
+src/uploads/uploads.controller.spec.ts(1,37): error TS2307: Cannot find module '@nestjs/testing' or its corresponding type declarations.
+src/uploads/uploads.controller.spec.ts(7,26): error TS2307: Cannot find module 'supertest' or its corresponding type declarations.
+src/uploads/uploads.controller.spec.ts(25,1): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/uploads/uploads.controller.spec.ts(29,3): error TS2304: Cannot find name 'beforeAll'.
+src/uploads/uploads.controller.spec.ts(50,3): error TS2304: Cannot find name 'afterAll'.
+src/uploads/uploads.controller.spec.ts(56,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/uploads/uploads.controller.spec.ts(60,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/uploads/uploads.controller.spec.ts(71,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/uploads/uploads.controller.spec.ts(82,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/uploads/uploads.controller.spec.ts(89,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/uploads/uploads.controller.spec.ts(91,13): error TS2339: Property 'ensureUploadsDir' does not exist on type 'UploadsService'.
+src/uploads/uploads.controller.spec.ts(102,3): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/uploads/uploads.controller.spec.ts(103,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/uploads/uploads.controller.spec.ts(105,15): error TS2339: Property 'ensureUploadsDir' does not exist on type 'UploadsService'.
+src/uploads/uploads.controller.spec.ts(116,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/uploads/uploads.controller.spec.ts(118,15): error TS2339: Property 'ensureUploadsDir' does not exist on type 'UploadsService'.
+src/uploads/uploads.controller.spec.ts(129,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/uploads/uploads.controller.spec.ts(131,15): error TS2339: Property 'ensureUploadsDir' does not exist on type 'UploadsService'.
+src/uploads/uploads.controller.spec.ts(142,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/uploads/uploads.controller.spec.ts(148,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/uploads/uploads.controller.spec.ts(150,15): error TS2339: Property 'ensureUploadsDir' does not exist on type 'UploadsService'.
+src/uploads/uploads.controller.spec.ts(162,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/uploads/uploads.controller.spec.ts(164,15): error TS2339: Property 'ensureUploadsDir' does not exist on type 'UploadsService'.
+src/uploads/uploads.controller.spec.ts(176,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/uploads/uploads.controller.spec.ts(178,15): error TS2339: Property 'ensureUploadsDir' does not exist on type 'UploadsService'.
+src/uploads/uploads.controller.spec.ts(190,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/uploads/uploads.controller.spec.ts(192,15): error TS2339: Property 'ensureUploadsDir' does not exist on type 'UploadsService'.

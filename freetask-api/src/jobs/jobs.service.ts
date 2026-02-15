@@ -6,6 +6,7 @@ import {
   NotFoundException,
   Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JobStatus, Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateJobDto } from './dto/create-job.dto';
@@ -34,6 +35,7 @@ export class JobsService {
     // Actually, creating a circular ref: JobsModule imports PaymentsModule?
     // Let's use ModuleRef or forwardRef if needed. If PaymentsService uses JobsService? No, PaymentsService uses Prisma directly. Safe.
     private readonly paymentsService: PaymentsService,
+    private readonly configService: ConfigService,
   ) { }
 
   async create(userId: number, role: UserRole, dto: CreateJobDto) {
@@ -714,8 +716,14 @@ export class JobsService {
         existingJob.status !== JobStatus.COMPLETED
       ) {
         const amount = new Prisma.Decimal(existingJob.amount);
-        const freelancerShare = amount.mul(0.9);
-        const platformShare = amount.mul(0.1);
+
+        // Fee Calculation with Config Default to 0.1 (10%)
+        const feePercent = this.configService.get<number>(
+          'PLATFORM_FEE_PERCENT',
+          0.1,
+        );
+        const platformShare = amount.mul(feePercent);
+        const freelancerShare = amount.sub(platformShare);
 
         // Update Job with calculated splits for Audit
         await tx.job.update({
