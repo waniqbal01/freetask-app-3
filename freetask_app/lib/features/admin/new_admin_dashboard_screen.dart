@@ -504,15 +504,31 @@ class _ServicesTabState extends State<_ServicesTab>
   }
 
   Future<void> _approveService(int serviceId) async {
+    // Optimistic Update
+    final int index = _services.indexWhere((s) => s['id'] == serviceId);
+    Map<String, dynamic>? removedService;
+
+    if (index != -1) {
+      setState(() {
+        removedService = _services[index];
+        _services.removeAt(index);
+      });
+    }
+
     final response = await widget.adminRepo.approveService(serviceId);
 
     if (response.isSuccess) {
       if (mounted) {
         showSuccessSnackBar(context, 'Service approved');
       }
-      _loadServices();
+      // Optional: Refresh in background to ensure sync
+      // _loadServices();
     } else {
-      if (mounted) {
+      // Revert if failed
+      if (mounted && removedService != null) {
+        setState(() {
+          _services.insert(index, removedService!);
+        });
         showErrorSnackBar(
             context, response.error ?? 'Failed to approve service');
       }
@@ -548,6 +564,17 @@ class _ServicesTabState extends State<_ServicesTab>
     );
 
     if (confirmed == true && reasonController.text.isNotEmpty) {
+      // Optimistic Update
+      final int index = _services.indexWhere((s) => s['id'] == serviceId);
+      Map<String, dynamic>? removedService;
+
+      if (index != -1) {
+        setState(() {
+          removedService = _services[index];
+          _services.removeAt(index);
+        });
+      }
+
       final response = await widget.adminRepo.rejectService(
         serviceId: serviceId,
         reason: reasonController.text,
@@ -557,9 +584,14 @@ class _ServicesTabState extends State<_ServicesTab>
         if (mounted) {
           showSuccessSnackBar(context, 'Service rejected');
         }
-        _loadServices();
+        // Optional: Refresh in background
+        // _loadServices();
       } else {
-        if (mounted) {
+        // Revert if failed
+        if (mounted && removedService != null) {
+          setState(() {
+            _services.insert(index, removedService!);
+          });
           showErrorSnackBar(
               context, response.error ?? 'Failed to reject service');
         }

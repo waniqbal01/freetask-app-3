@@ -11,6 +11,7 @@ class Service {
     this.thumbnailUrl,
     this.deliveryTime,
     this.isActive = true,
+    this.approvalStatus = 'PENDING',
     this.hasPriceIssue = false,
   });
 
@@ -33,6 +34,7 @@ class Service {
       thumbnailUrl: json['thumbnailUrl']?.toString(),
       deliveryTime: json['deliveryTime']?.toString(),
       isActive: json['isActive'] ?? true,
+      approvalStatus: json['approvalStatus']?.toString() ?? 'PENDING',
     );
   }
 
@@ -46,10 +48,12 @@ class Service {
   final String? thumbnailUrl;
   final String? deliveryTime;
   final bool isActive;
+  final String approvalStatus;
   final double price;
   final bool hasPriceIssue;
 
   bool get isPriceUnavailable => hasPriceIssue || price <= 0;
+  bool get isPending => approvalStatus == 'PENDING';
 
   static ({double value, bool hadError}) _parsePrice(dynamic price) {
     if (price is num) {

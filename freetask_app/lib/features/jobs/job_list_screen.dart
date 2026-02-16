@@ -17,6 +17,7 @@ import '../chat/chat_repository.dart';
 import '../reviews/review_dialog.dart';
 import '../reviews/reviews_repository.dart';
 import 'jobs_repository.dart';
+import 'job_actions.dart';
 import 'widgets/job_card_skeleton.dart';
 import 'widgets/job_status_badge.dart';
 import '../../widgets/app_bottom_nav.dart';
@@ -233,11 +234,29 @@ class _JobListScreenState extends State<JobListScreen> {
 
   Future<void> _handleAction(
     Future<Job?> Function() action,
-    String successMessage,
-  ) async {
-    if (_isProcessing) return;
+    String successMessage, {
+    required String jobId,
+    required JobAction jobAction,
+  }) async {
+    // Optimistic Update Logic
+    final previousState = <Job>[..._freelancerJobs];
+    final jobIndex = _freelancerJobs.indexWhere((j) => j.id == jobId);
+
+    if (jobIndex == -1) return;
+
+    final job = _freelancerJobs[jobIndex];
+
+    // Optimistically update UI
     setState(() {
-      _isProcessing = true;
+      if (jobAction == JobAction.reject) {
+        // Remove strictly for rejection
+        _freelancerJobs.removeAt(jobIndex);
+      } else if (jobAction == JobAction.accept) {
+        // For accept, move to "In Progress" or "Accepted" visually
+        // We'll update the status manually for now
+        // Note: The backend returns the updated job, but we want instant feedback
+        _freelancerJobs[jobIndex] = job.copyWith(status: JobStatus.accepted);
+      }
     });
 
     try {
@@ -245,45 +264,43 @@ class _JobListScreenState extends State<JobListScreen> {
 
       if (!mounted) return;
 
-      setState(() {
-        _isProcessing = false;
-      });
-
       if (result != null) {
-        await _loadJobs();
-        if (!mounted) return;
+        // If success, we might want to refresh to get exact server state,
+        // but for now, the optimistic capability is enough for "speed".
+        // To be safe, we can silent-refresh in background:
+        _fetchFreelancerJobs().then((_) {});
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(successMessage)),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(AppStrings.errorActionFailed),
-          ),
-        );
+        throw Exception('Action returned null');
       }
     } on JobStatusConflict catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
+      // Revert state
       setState(() {
-        _isProcessing = false;
+        _freelancerJobs
+          ..clear()
+          ..addAll(previousState);
       });
       showErrorSnackBar(context, error.message);
     } on DioException catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
+      // Revert state
       setState(() {
-        _isProcessing = false;
+        _freelancerJobs
+          ..clear()
+          ..addAll(previousState);
       });
       showErrorSnackBar(context, resolveDioErrorMessage(error));
     } catch (_) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
+      // Revert state
       setState(() {
-        _isProcessing = false;
+        _freelancerJobs
+          ..clear()
+          ..addAll(previousState);
       });
       showErrorSnackBar(context, AppStrings.errorGeneric);
     }
@@ -292,6 +309,12 @@ class _JobListScreenState extends State<JobListScreen> {
   Future<void> _openChat(Job job) async {
     final currentUserId = _currentUser?.id;
     if (currentUserId == null) return;
+
+    // Use linked conversation if available
+    if (job.conversationId != null && job.conversationId!.isNotEmpty) {
+      context.push('/chats/${job.conversationId}/messages');
+      return;
+    }
 
     // Determine other user ID
     final otherUserId =
@@ -304,9 +327,6 @@ class _JobListScreenState extends State<JobListScreen> {
       return;
     }
 
-    // Show loading indicator if needed, or just handle it silently/with UI feedback
-    // Ideally we should have a loading state for this action, but for now we'll use _isProcessing
-    // slightly risky if multiple actions overlap, but okay for this scope.
     if (_isProcessing) return;
     setState(() {
       _isProcessing = true;
@@ -314,6 +334,8 @@ class _JobListScreenState extends State<JobListScreen> {
 
     try {
       final chatRepo = ChatRepository();
+      // This might create a DUPLICATE conversation if one exists but isn't linked in Job yet.
+      // Ideally, backend should handle "get or create" safely.
       final thread =
           await chatRepo.createConversation(otherUserId: otherUserId);
 
@@ -658,6 +680,8 @@ class _JobListScreenState extends State<JobListScreen> {
               await _handleAction(
                 () => jobsRepository.rejectJob(job.id),
                 AppStrings.successJobRejected,
+                jobId: job.id,
+                jobAction: JobAction.reject,
               );
             },
             expanded: false,
@@ -670,6 +694,8 @@ class _JobListScreenState extends State<JobListScreen> {
             onPressed: () => _handleAction(
               () => jobsRepository.acceptJob(job.id),
               AppStrings.successJobAccepted,
+              jobId: job.id,
+              jobAction: JobAction.accept,
             ),
             expanded: false,
             size: FTButtonSize.small,
@@ -690,6 +716,8 @@ class _JobListScreenState extends State<JobListScreen> {
           onPressed: () => _handleAction(
             () => jobsRepository.startJob(job.id),
             AppStrings.successJobStarted,
+            jobId: job.id,
+            jobAction: JobAction.start,
           ),
           expanded: false,
           size: FTButtonSize.small,

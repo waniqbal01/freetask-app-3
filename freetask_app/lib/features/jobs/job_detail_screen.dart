@@ -217,11 +217,18 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   Future<void> _handleAction(
     Future<Job?> Function() action,
-    String successMessage,
-  ) async {
+    String successMessage, {
+    JobStatus? optimisticStatus,
+  }) async {
     if (_isProcessing) return;
+
+    final previousJob = _job;
+
     setState(() {
       _isProcessing = true;
+      if (optimisticStatus != null && _job != null) {
+        _job = _job!.copyWith(status: optimisticStatus);
+      }
     });
 
     try {
@@ -237,12 +244,24 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       }
     } on JobStatusConflict catch (error) {
       if (!mounted) return;
+      // Revert
+      setState(() {
+        _job = previousJob;
+      });
       showErrorSnackBar(context, error.message);
     } on DioException catch (error) {
       if (!mounted) return;
+      // Revert
+      setState(() {
+        _job = previousJob;
+      });
       showErrorSnackBar(context, resolveDioErrorMessage(error));
     } catch (error) {
       if (!mounted) return;
+      // Revert
+      setState(() {
+        _job = previousJob;
+      });
       showErrorSnackBar(context, 'Ralat melaksanakan tindakan: $error');
     } finally {
       if (mounted) {
@@ -250,7 +269,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           _isProcessing = false;
         });
       }
-      await _fetchJob();
+      // We can skip full fetch if we trust the return value, but let's do it seamlessly
+      // await _fetchJob();
+      // Changed: Don't await _fetchJob() to block UI, let it happen in background if needed
+      _fetchJob().then((_) {});
     }
   }
 
@@ -259,6 +281,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     required Future<Job?> Function() action,
     required String successMessage,
     String blockedMessage = 'Status semasa tidak membenarkan tindakan ini.',
+    JobStatus? optimisticStatus,
   }) async {
     if (!allowed) {
       if (!mounted) return;
@@ -266,7 +289,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       return;
     }
 
-    await _handleAction(action, successMessage);
+    await _handleAction(action, successMessage,
+        optimisticStatus: optimisticStatus);
   }
 
   JobStatusVisual _statusVisual(JobStatus status) {
@@ -671,6 +695,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             action: () => jobsRepository.acceptJob(job.id),
             successMessage:
                 'Job diterima. Anda boleh mulakan apabila bersedia.',
+            optimisticStatus: JobStatus.accepted,
           ),
         );
       }
@@ -682,6 +707,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             allowed: true,
             action: () => jobsRepository.startJob(job.id),
             successMessage: 'Job dimulakan! Status kini In Progress.',
+            optimisticStatus: JobStatus.inProgress,
           ),
         );
       }
@@ -750,6 +776,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             allowed: true,
             action: () => jobsRepository.confirmJob(job.id),
             successMessage: 'Job diterima dan selesai!',
+            optimisticStatus: JobStatus.completed,
           ),
           secondaryLabel: 'Minta Semakan',
           secondaryOnPressed: () {
