@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -10,6 +11,7 @@ import '../../widgets/notification_bell_button.dart';
 import '../auth/auth_repository.dart';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import '../../services/upload_service.dart';
 import '../../core/utils/url_utils.dart';
 import 'users_repository.dart';
@@ -152,7 +154,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       } else if (platformFile.path != null) {
         // Mobile/desktop upload using file path
-        uploadResult = await uploadService.uploadFile(platformFile.path!);
+        File fileToUpload = File(platformFile.path!);
+
+        try {
+          // Compress image
+          final targetPath = platformFile.path!
+              .replaceFirst(RegExp(r'\.[^.]+$'), '_compressed.jpg');
+
+          final compressedFile = await FlutterImageCompress.compressAndGetFile(
+            platformFile.path!,
+            targetPath,
+            quality: 75,
+            minWidth: 1024,
+            minHeight: 1024,
+          );
+
+          if (compressedFile != null) {
+            fileToUpload = File(compressedFile.path);
+          }
+        } catch (e) {
+          debugPrint('Compression failed, using original file: $e');
+        }
+
+        uploadResult = await uploadService.uploadFile(fileToUpload.path);
       } else {
         throw Exception('Unable to access file data');
       }

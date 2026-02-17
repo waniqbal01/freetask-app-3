@@ -21,8 +21,8 @@ class UploadService {
   static Dio _createDio() {
     return Dio(BaseOptions(
       baseUrl: Env.defaultApiBaseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 20),
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 60),
     ));
   }
 
@@ -169,9 +169,7 @@ class UploadService {
 
   String _normalizePath(String url) {
     if (url.startsWith('http')) {
-      final parsed = Uri.tryParse(url);
-      final path = parsed?.path ?? url;
-      return path.startsWith('/') ? path : '/$path';
+      return url;
     }
     return url.startsWith('/') ? url : '/$url';
   }

@@ -1301,19 +1301,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               ),
             if (job.isDisputed) const SizedBox(height: 12),
 
-            // Chat Button
-            ElevatedButton.icon(
-              onPressed: () {
-                GoRouter.of(context).go('/chats/${job.id}/messages');
-              },
-              icon: const Icon(Icons.chat_bubble_outline),
-              label: const Text('Buka Chat'),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-              ),
-            ),
-            const SizedBox(height: 12),
-
             // Dispute Button (IN_PROGRESS only)
             if (job.status == JobStatus.inProgress && !job.isDisputed)
               ElevatedButton.icon(
