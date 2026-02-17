@@ -6,6 +6,7 @@ class ChatThread {
     required this.title,
     required this.participantName,
     this.participantId,
+    this.participantAvatarUrl,
     this.lastMessage,
     this.lastAt,
     this.status = 'ACTIVE',
@@ -23,6 +24,8 @@ class ChatThread {
           '',
       participantId: json['participantId']?.toString() ??
           json['participant_id']?.toString(),
+      participantAvatarUrl: json['participantAvatarUrl']?.toString() ??
+          json['participant_avatar_url']?.toString(),
       lastMessage:
           json['lastMessage']?.toString() ?? json['last_message']?.toString(),
       lastAt: DateTime.tryParse(
@@ -44,6 +47,7 @@ class ChatThread {
   final String title;
   final String participantName;
   final String? participantId;
+  final String? participantAvatarUrl;
   final String? lastMessage;
   final DateTime? lastAt;
   final String status;
@@ -54,6 +58,7 @@ class ChatThread {
     String? title,
     String? participantName,
     String? participantId,
+    String? participantAvatarUrl,
     String? lastMessage,
     DateTime? lastAt,
     String? status,
@@ -64,6 +69,7 @@ class ChatThread {
       title: title ?? this.title,
       participantName: participantName ?? this.participantName,
       participantId: participantId ?? this.participantId,
+      participantAvatarUrl: participantAvatarUrl ?? this.participantAvatarUrl,
       lastMessage: lastMessage ?? this.lastMessage,
       lastAt: lastAt ?? this.lastAt,
       status: status ?? this.status,

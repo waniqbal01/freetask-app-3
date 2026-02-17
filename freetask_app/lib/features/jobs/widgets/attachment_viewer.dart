@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/utils/url_utils.dart';
 import '../../../services/upload_service.dart';
 
 /// Widget to display file attachments with preview and download capability
@@ -119,29 +120,25 @@ class AttachmentViewer extends StatelessWidget {
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(8),
                         ),
-                        child: FutureBuilder<String>(
-                          future: uploadService.resolveAuthorizedUrl(url),
-                          builder: (context, snapshot) {
-                            if (snapshot.hasData) {
-                              return Image.network(
-                                snapshot.data!,
-                                width: 120,
-                                height: 120,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    width: 120,
-                                    height: 120,
-                                    color: fileColor.withOpacity(0.2),
-                                    child: Icon(
-                                      Icons.broken_image,
-                                      color: fileColor,
-                                      size: 40,
-                                    ),
-                                  );
-                                },
-                              );
-                            }
+                        child: Image.network(
+                          UrlUtils.resolveImageUrl(url),
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              width: 120,
+                              height: 120,
+                              color: fileColor.withOpacity(0.2),
+                              child: Icon(
+                                Icons.broken_image,
+                                color: fileColor,
+                                size: 40,
+                              ),
+                            );
+                          },
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
                             return Container(
                               width: 120,
                               height: 120,

@@ -55,6 +55,7 @@ class _JobListScreenState extends State<JobListScreen> {
     'accepted',
     'in_progress',
     'in_review',
+    'in_revision',
     'disputed',
     'payout_processing',
     'payout_hold',

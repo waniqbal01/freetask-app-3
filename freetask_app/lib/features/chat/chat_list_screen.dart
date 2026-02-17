@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/utils/error_utils.dart';
+import '../../core/utils/url_utils.dart';
 import '../../models/user.dart';
 import 'chat_models.dart';
 import 'chat_repository.dart';
@@ -205,17 +206,32 @@ class ChatListScreen extends ConsumerWidget {
                                   child: CircleAvatar(
                                     radius: 26,
                                     backgroundColor: Colors.grey.shade200,
-                                    child: Text(
-                                      thread.participantName.isNotEmpty
-                                          ? thread.participantName[0]
-                                              .toUpperCase()
-                                          : '?',
-                                      style: TextStyle(
-                                        color: statusColor,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 20,
-                                      ),
-                                    ),
+                                    backgroundImage: (thread
+                                                    .participantAvatarUrl !=
+                                                null &&
+                                            thread.participantAvatarUrl!
+                                                .isNotEmpty)
+                                        ? NetworkImage(
+                                            UrlUtils.resolveImageUrl(
+                                                thread.participantAvatarUrl),
+                                          )
+                                        : null,
+                                    child: (thread.participantAvatarUrl !=
+                                                null &&
+                                            thread.participantAvatarUrl!
+                                                .isNotEmpty)
+                                        ? null
+                                        : Text(
+                                            thread.participantName.isNotEmpty
+                                                ? thread.participantName[0]
+                                                    .toUpperCase()
+                                                : '?',
+                                            style: TextStyle(
+                                              color: statusColor,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 20,
+                                            ),
+                                          ),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -744,15 +760,24 @@ class _ChatSearchDelegate extends SearchDelegate<String> {
             return ListTile(
               leading: CircleAvatar(
                 backgroundColor: const Color(0xFF2196F3).withOpacity(0.2),
-                child: Text(
-                  thread.participantName.isNotEmpty
-                      ? thread.participantName[0].toUpperCase()
-                      : '?',
-                  style: const TextStyle(
-                    color: Color(0xFF2196F3),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                backgroundImage: (thread.participantAvatarUrl != null &&
+                        thread.participantAvatarUrl!.isNotEmpty)
+                    ? NetworkImage(
+                        UrlUtils.resolveImageUrl(thread.participantAvatarUrl),
+                      )
+                    : null,
+                child: (thread.participantAvatarUrl != null &&
+                        thread.participantAvatarUrl!.isNotEmpty)
+                    ? null
+                    : Text(
+                        thread.participantName.isNotEmpty
+                            ? thread.participantName[0].toUpperCase()
+                            : '?',
+                        style: const TextStyle(
+                          color: Color(0xFF2196F3),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
               title: Text(thread.participantName),
               subtitle: Text(thread.title),

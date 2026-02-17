@@ -12,7 +12,7 @@ import { ChatThreadDto } from './dto/chat-thread.dto';
 
 @Injectable()
 export class ChatsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async listThreads(
     userId: number,
@@ -46,6 +46,7 @@ export class ChatsService {
         convo.participants[0];
       const participantName = otherParticipant?.name || 'Unknown User';
       const participantId = otherParticipant?.id || 0;
+      const participantAvatarUrl = otherParticipant?.avatarUrl || null;
 
       // Unread count: We can implement a more efficient query later
       // For now, let's keep it 0 or basic check if needed
@@ -57,6 +58,7 @@ export class ChatsService {
         jobTitle: 'Conversation',
         participantName,
         participantId,
+        participantAvatarUrl,
         lastMessage:
           lastMsg?.content ?? (lastMsg?.attachmentUrl ? 'Attachment' : null),
         lastAt: lastMsg?.createdAt ?? convo.updatedAt,
@@ -202,6 +204,7 @@ export class ChatsService {
       jobTitle: 'Conversation',
       participantName: otherParticipant?.name || 'Unknown',
       participantId: otherParticipant?.id || 0,
+      participantAvatarUrl: otherParticipant?.avatarUrl || null,
       lastMessage: conversation.messages[0]?.content ?? null,
       lastAt: conversation.updatedAt,
       jobStatus: 'ACTIVE' as any,

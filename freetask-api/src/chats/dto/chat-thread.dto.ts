@@ -5,6 +5,7 @@ export interface ChatThreadDto {
   jobTitle: string;
   participantName: string;
   participantId: number;
+  participantAvatarUrl: string | null;
   lastMessage: string | null;
   lastAt: Date;
   jobStatus: JobStatus;
