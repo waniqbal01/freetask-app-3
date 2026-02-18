@@ -23,7 +23,7 @@ import { JobStatus, WithdrawalStatus } from '@prisma/client';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(private readonly adminService: AdminService) { }
 
   // Analytics
   @Get('analytics')

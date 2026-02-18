@@ -22,7 +22,7 @@ export class AdminService {
     private prisma: PrismaService,
     private billplzService: BillplzService,
     private paymentsService: PaymentsService,
-  ) {}
+  ) { }
 
   async getAnalytics() {
     const [
