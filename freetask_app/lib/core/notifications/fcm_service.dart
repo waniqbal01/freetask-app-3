@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -32,6 +33,11 @@ class FCMService {
   static const _channelName = 'FreeTask Chat';
 
   Future<void> initialize() async {
+    // FCM not supported on web
+    if (kIsWeb) {
+      debugPrint('[FCM] Skipping FCM init on web platform');
+      return;
+    }
     try {
       // Request permission
       final settings = await _messaging.requestPermission(
@@ -145,6 +151,8 @@ class FCMService {
 
   /// Call after user logs in to register this device for push notifications.
   Future<void> refreshToken() async {
+    // FCM token not available on web
+    if (kIsWeb) return;
     try {
       final token = await _messaging.getToken();
       if (token != null && token != _fcmToken) {
@@ -167,6 +175,7 @@ class FCMService {
 
   /// Call on logout to stop push notifications for this device.
   Future<void> unregisterToken() async {
+    if (kIsWeb) return;
     try {
       if (_fcmToken != null) {
         await NotificationsRepository().deleteToken(_fcmToken!);

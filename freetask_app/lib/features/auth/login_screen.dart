@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_strings.dart';
 import '../../core/utils/error_utils.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/section_card.dart';
@@ -63,45 +64,43 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (isConnectionError && mounted) {
-        // SMART WAKE-UP LOGIC (Optimized for Cold Start)
+        // SMART WAKE-UP LOGIC (3-zone timing)
+        final wakeUpStart = DateTime.now();
         setState(() {
-          _errorMessage =
-              'Server sedang diaktifkan. Sila tunggu sebentar (30-60 saat)...';
+          _errorMessage = AppStrings.serverConnecting;
         });
 
-        // Retry loop (Max 12 attempts * (6s delay + 30s timeout) = ~72s max wait)
+        // Retry loop (Max 12 attempts, 6s each = ~72s max)
         bool wokeUp = false;
         debugPrint('[LoginWakeUp] Starting retry loop (max 12 attempts)...');
 
         for (int i = 0; i < 12; i++) {
           if (!mounted) return;
 
-          // Wait 6 seconds before retrying
           await Future.delayed(const Duration(seconds: 6));
 
-          // Update progress messages based on attempt number
+          // 3-zone messaging based on elapsed time (not attempt count)
           if (mounted) {
+            final elapsed = DateTime.now().difference(wakeUpStart).inSeconds;
             String progressMsg;
-            if (i < 4) {
-              progressMsg = 'Server sedang bangun (${i + 1}/12)...';
-            } else if (i < 8) {
-              progressMsg = 'Masih dalam proses (${i + 1}/12)...';
+            if (elapsed < 15) {
+              progressMsg = AppStrings.serverConnecting;
+            } else if (elapsed < 30) {
+              progressMsg = AppStrings.serverWarmingUp;
             } else {
-              progressMsg = 'Hampir siap (${i + 1}/12)...';
+              // Beyond 30s — shift to muted warning tone
+              progressMsg = AppStrings.serverAlmostReady;
             }
             setState(() {
               _errorMessage = progressMsg;
             });
           }
 
-          // Log attempt
           debugPrint('[LoginWakeUp] Attempt ${i + 1}/12 - checking server...');
 
-          // Check if server is up
           final isUp = await HttpClient().wakeUpServer();
           if (isUp) {
-            debugPrint(
-                '[LoginWakeUp] ✓ Server is online after ${i + 1} attempts');
+            debugPrint('[LoginWakeUp] ✓ Server online after ${i + 1} attempts');
             wokeUp = true;
             break;
           }
@@ -109,21 +108,21 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (wokeUp && mounted) {
           setState(() {
-            _errorMessage = 'Server online! Sedang log masuk...';
+            _errorMessage = AppStrings.serverOnline;
           });
           try {
             await _performLogin(email, password);
-            return; // Success handled inside _performLogin
+            return;
           } catch (retryError) {
             if (mounted) _handleLoginError(retryError);
             return;
           }
         } else if (mounted) {
+          // Server truly unreachable — show clear error
           setState(() {
-            _errorMessage =
-                'Gagal menghubungi server. Sila pastikan internet anda stabil dan cuba lagi.';
+            _errorMessage = AppStrings.serverUnreachable;
           });
-          showErrorSnackBar(context, _errorMessage!);
+          showErrorSnackBar(context, AppStrings.serverUnreachable);
           return;
         }
       }
@@ -141,7 +140,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _performLogin(String email, String password) async {
+    final t0 = DateTime.now();
     final success = await authRepository.login(email, password);
+    debugPrint(
+        '[PERF] Login: ${DateTime.now().difference(t0).inMilliseconds}ms');
 
     if (success && mounted) {
       final user = authRepository.currentUser;

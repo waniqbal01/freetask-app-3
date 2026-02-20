@@ -236,6 +236,48 @@ class AppStrings {
   static const String noAdditionalInfo = 'Tiada maklumat tambahan.';
 
   // ============================================================================
+  // Server Cold-Start Messages
+  // ============================================================================
+  static const String serverConnecting = 'Sedang menghubungi server... ☕';
+  static const String serverWarmingUp =
+      'Server sedang disiapkan, sila tunggu...';
+  static const String serverAlmostReady = 'Hampir siap!';
+  static const String serverOnline = 'Server online! Sedang log masuk...';
+  static const String serverUnreachable =
+      'Pelayan tidak dapat dihubungi. Sila periksa sambungan internet anda.';
+
+  // ============================================================================
+  // Avatar / Profile
+  // ============================================================================
+  static const String avatarFieldLabel = 'Gambar Profil (pilihan)';
+  static const String avatarUploadPending =
+      'Gambar profil akan dimuat naik selepas pendaftaran.';
+  static const String avatarUploadSuccess =
+      'Gambar profil berjaya dikemaskini!';
+
+  // ============================================================================
+  // Hire Confirmation
+  // ============================================================================
+  static const String hireConfirmTitle = 'Ringkasan Tempahan';
+  static const String hireConfirmServiceFee = 'Harga Servis';
+  static const String hireConfirmPlatformFee = 'Caj Platform';
+  static const String hireConfirmTotal = 'Jumlah Bayar';
+  static const String hireConfirmBtn = 'Teruskan Hire';
+
+  // ============================================================================
+  // Freelancer Trust
+  // ============================================================================
+  static const String freelancerBadgeNew = 'Baru';
+  static const String freelancerBadgeVerified = 'Terverifikasi';
+  static const String freelancerJobsCompleted = 'job selesai';
+  static const String emptyFreelancerActivateCta = 'Aktifkan Status Anda';
+  static const String emptyFreelancerMsg =
+      'Belum ada job. Pastikan status anda aktif supaya boleh ditemui client.';
+  static const String emptyClientMsg =
+      'Belum ada job. Explore marketplace untuk hire freelancer.';
+  static const String emptyClientCta = 'Explore Services';
+
+  // ============================================================================
   // What's Next? Guidance
   // ============================================================================
   static const String whatsNextTitle = 'Apa Seterusnya?';

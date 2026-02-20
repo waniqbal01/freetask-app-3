@@ -64,17 +64,13 @@ class ServiceCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      Row(
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
                         children: [
                           _CategoryChip(label: service.category),
-                          if (service.isPending) ...[
-                            const SizedBox(width: 8),
-                            const _PendingChip(),
-                          ],
-                          if (service.isRejected) ...[
-                            const SizedBox(width: 8),
-                            const _RejectedChip(),
-                          ],
+                          if (service.isPending) const _PendingChip(),
+                          if (service.isRejected) const _RejectedChip(),
                         ],
                       ),
                       if (service.isRejected &&

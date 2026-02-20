@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mime/mime.dart';
 
+import '../../core/constants/app_strings.dart';
 import '../../core/notifications/notification_service.dart';
 import '../../core/utils/error_utils.dart';
 import '../../services/upload_service.dart';
@@ -39,6 +40,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool _isSubmitting = false;
   bool _isUploadingAvatar = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   String? _errorMessage;
   String? _selectedAvatarPath;
   String? _uploadedAvatarUrl;
@@ -198,9 +201,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     if (mounted) {
-      showErrorSnackBar(
+      showInfoSnackBar(
         context,
-        'Avatar akan dimuat naik selepas pendaftaran.',
+        AppStrings.avatarUploadPending,
       );
     }
   }
@@ -222,9 +225,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _uploadedAvatarUrl = uploadResult.url;
       });
       if (mounted) {
-        showErrorSnackBar(
+        showSuccessSnackBar(
           context,
-          'Avatar berjaya dimuat naik dan dikemaskini.',
+          AppStrings.avatarUploadSuccess,
         );
       }
     } on UnauthenticatedUploadException catch (error) {
@@ -372,10 +375,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             const SizedBox(height: AppSpacing.s16),
                             TextFormField(
                               controller: _passwordController,
-                              obscureText: true,
-                              decoration: const InputDecoration(
+                              obscureText: _obscurePassword,
+                              decoration: InputDecoration(
                                 labelText: 'Kata laluan',
-                                prefixIcon: Icon(Icons.lock_outline),
+                                prefixIcon: const Icon(Icons.lock_outline),
+                                suffixIcon: IconButton(
+                                  icon: Icon(_obscurePassword
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined),
+                                  onPressed: () => setState(() =>
+                                      _obscurePassword = !_obscurePassword),
+                                ),
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
@@ -390,10 +400,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             const SizedBox(height: AppSpacing.s16),
                             TextFormField(
                               controller: _confirmPasswordController,
-                              obscureText: true,
-                              decoration: const InputDecoration(
+                              obscureText: _obscureConfirmPassword,
+                              decoration: InputDecoration(
                                 labelText: 'Sahkan kata laluan',
-                                prefixIcon: Icon(Icons.lock_person_outlined),
+                                prefixIcon:
+                                    const Icon(Icons.lock_person_outlined),
+                                suffixIcon: IconButton(
+                                  icon: Icon(_obscureConfirmPassword
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined),
+                                  onPressed: () => setState(() =>
+                                      _obscureConfirmPassword =
+                                          !_obscureConfirmPassword),
+                                ),
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
@@ -418,7 +437,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 _handlePickAvatar();
                               },
                               decoration: InputDecoration(
-                                labelText: 'Avatar (URL)',
+                                labelText: AppStrings.avatarFieldLabel,
                                 prefixIcon: const Icon(Icons.image_outlined),
                                 suffixIcon: _isUploadingAvatar
                                     ? const Padding(

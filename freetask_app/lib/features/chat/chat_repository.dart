@@ -66,15 +66,20 @@ class ChatRepository {
     _logoutSubscription = authRepository.onLogout.listen((_) => dispose());
     _socketSubscription =
         SocketService.instance.newMessageStream.listen(_onNewMessage);
-    // Initial fetch of threads on startup? Or lazy?
-    // Let's lazy fetch when threadsStream is listened to?
-    // StreamController.broadcast onListen can trigger fetch.
+    // Pre-cache the auth token to avoid repeated async storage reads
+    _preCacheToken();
   }
 
   final AppStorage _storage;
   final Dio _dio;
   StreamSubscription? _logoutSubscription;
   StreamSubscription? _socketSubscription;
+  String? _cachedToken; // In-memory token cache
+
+  /// Pre-load token into memory to avoid repeated async storage reads
+  Future<void> _preCacheToken() async {
+    _cachedToken = await _storage.read(AuthRepository.tokenStorageKey);
+  }
 
   /// Tracks which conversation is currently open on screen.
   /// Used to suppress unread badge increment and in-app notifications
@@ -89,9 +94,16 @@ class ChatRepository {
   final _threadsController = StreamController<List<ChatThread>>.broadcast();
 
   Stream<List<ChatThread>> get threadsStream {
-    if (_threads.isEmpty) {
-      fetchThreads(); // Trigger initial fetch
+    // Emit cached data immediately so UI shows instantly
+    if (_threads.isNotEmpty) {
+      Future.microtask(() {
+        if (!_threadsController.isClosed) {
+          _threadsController.add(List<ChatThread>.unmodifiable(_threads));
+        }
+      });
     }
+    // Always refresh in background
+    fetchThreads();
     return _threadsController.stream;
   }
 
@@ -182,13 +194,13 @@ class ChatRepository {
   Future<void> _onListenToConversation(String conversationId) async {
     _isInitialLoading[conversationId] = true;
 
-    // Connect to specific room
-    // Ensure socket is connected
+    // Run socket connect AND HTTP message load in parallel — don't wait for socket
     final baseUrl = await HttpClient().currentBaseUrl();
-    await SocketService.instance.connect(baseUrl);
-    SocketService.instance.joinRoom(conversationId);
+    unawaited(SocketService.instance.connect(baseUrl).then((_) {
+      SocketService.instance.joinRoom(conversationId);
+    }));
 
-    // Initial load via HTTP
+    // Load messages via HTTP immediately (don't wait for socket)
     await _loadMessages(conversationId)
         .catchError((Object error, StackTrace stackTrace) {
       _notifyStreamError(error);
@@ -395,6 +407,7 @@ class ChatRepository {
   void dispose() {
     _logoutSubscription?.cancel();
     _socketSubscription?.cancel();
+    _cachedToken = null; // Clear cached token on logout
 
     for (final controller in _controllers.values) {
       controller.close();
@@ -540,7 +553,12 @@ class ChatRepository {
   }
 
   Future<Options> _authorizedOptions() async {
-    final token = await _storage.read(AuthRepository.tokenStorageKey);
+    // Use cached token first to avoid repeated async storage reads
+    var token = _cachedToken;
+    if (token == null || token.isEmpty) {
+      token = await _storage.read(AuthRepository.tokenStorageKey);
+      _cachedToken = token;
+    }
     if (token == null || token.isEmpty) {
       await _handleMissingToken();
       return Options();

@@ -61,12 +61,15 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
       _errorMessage = null;
     });
 
+    final t0 = DateTime.now();
     try {
       final services = await servicesRepository.getServices(
         q: _searchController.text,
         category: _selectedCategory == 'Semua' ? null : _selectedCategory,
         sortBy: _selectedSortOption,
       );
+      debugPrint(
+          '[PERF] LoadServices: ${DateTime.now().difference(t0).inMilliseconds}ms');
 
       if (!mounted) {
         return;
@@ -145,217 +148,269 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
               return Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 720),
-                  child: CustomScrollView(
-                    slivers: <Widget>[
-                      SliverToBoxAdapter(
-                        child: Stack(
-                          children: [
-                            // 1. Background Gradient Container
-                            Container(
-                              width: double.infinity,
-                              height: 180,
-                              padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFF2196F3),
-                                    Color(0xFF1565C0),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: const BorderRadius.vertical(
-                                  bottom: Radius.circular(32),
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.primary
-                                        .withValues(alpha: 0.3),
-                                    blurRadius: 20,
-                                    offset: const Offset(0, 10),
+                  child: RefreshIndicator(
+                    onRefresh: _fetchServices,
+                    color: AppColors.primary,
+                    child: CustomScrollView(
+                      slivers: <Widget>[
+                        SliverToBoxAdapter(
+                          child: Stack(
+                            children: [
+                              // 1. Background Gradient Container
+                              Container(
+                                width: double.infinity,
+                                height: 180,
+                                padding:
+                                    const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color(0xFF2196F3),
+                                      Color(0xFF1565C0),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
                                   ),
-                                ],
-                              ),
-                              child: SafeArea(
-                                bottom: false,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Top Bar: Logo/Brand & Notification
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 6,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white
-                                                .withValues(alpha: 0.15),
-                                            borderRadius:
-                                                BorderRadius.circular(20),
-                                            border: Border.all(
-                                              color: Colors.white
-                                                  .withValues(alpha: 0.2),
-                                            ),
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              const Icon(
-                                                Icons
-                                                    .store_mall_directory_outlined,
-                                                color: Colors.white,
-                                                size: 18,
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                'Marketplace',
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .labelLarge
-                                                    ?.copyWith(
-                                                      color: Colors.white,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        if (_currentUser != null)
-                                          Container(
-                                            decoration: BoxDecoration(
-                                              color: Colors.white
-                                                  .withValues(alpha: 0.15),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: const NotificationBellButton(
-                                                color: Colors.white),
-                                          ),
-                                      ],
+                                  borderRadius: const BorderRadius.vertical(
+                                    bottom: Radius.circular(32),
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.primary
+                                          .withValues(alpha: 0.3),
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 10),
                                     ),
                                   ],
                                 ),
-                              ),
-                            ),
-                            // 2. Overlapping Search Card
-                            Container(
-                              margin: const EdgeInsets.only(
-                                  top: 100, left: 20, right: 20, bottom: 20),
-                              child: _SearchAndFilterCard(
-                                searchController: _searchController,
-                                onSearchChanged: _onSearchChanged,
-                                categories: _categories,
-                                selectedCategory: _selectedCategory,
-                                onCategorySelected: (String value) {
-                                  setState(() => _selectedCategory = value);
-                                  _fetchServices();
-                                },
-                                selectedSortOption: _selectedSortOption,
-                                onSortOptionSelected: (String? value) {
-                                  setState(() => _selectedSortOption = value);
-                                  _fetchServices();
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (_isLoading)
-                        SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          sliver: SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (BuildContext context, int index) {
-                                if (index.isOdd) {
-                                  return const SizedBox(height: 12);
-                                }
-                                return const ServiceCardSkeleton();
-                              },
-                              childCount: (6 * 2) - 1,
-                            ),
-                          ),
-                        )
-                      else if (_errorMessage != null)
-                        SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: <Widget>[
-                                Icon(
-                                  Icons.error_outline,
-                                  size: 42,
-                                  color: Theme.of(context).colorScheme.error,
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  _errorMessage!,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.error,
+                                child: SafeArea(
+                                  bottom: false,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Top Bar: Logo/Brand & Notification
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 6,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white
+                                                  .withValues(alpha: 0.15),
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                              border: Border.all(
+                                                color: Colors.white
+                                                    .withValues(alpha: 0.2),
+                                              ),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                const Icon(
+                                                  Icons
+                                                      .store_mall_directory_outlined,
+                                                  color: Colors.white,
+                                                  size: 18,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  'Marketplace',
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .labelLarge
+                                                      ?.copyWith(
+                                                        color: Colors.white,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          // Bell + Profile always together on the right
+                                          Row(
+                                            children: [
+                                              Container(
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.15),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child:
+                                                    const NotificationBellButton(
+                                                        color: Colors.white),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              GestureDetector(
+                                                onTap: () =>
+                                                    context.push('/profile'),
+                                                child: CircleAvatar(
+                                                  radius: 18,
+                                                  backgroundColor: Colors.white
+                                                      .withValues(alpha: 0.2),
+                                                  child: Builder(
+                                                    builder: (ctx) {
+                                                      final n =
+                                                          (_currentUser?.name ??
+                                                                  '')
+                                                              .trim();
+                                                      final initials = n
+                                                              .isNotEmpty
+                                                          ? n
+                                                              .split(' ')
+                                                              .map((w) => w[0])
+                                                              .take(2)
+                                                              .join()
+                                                              .toUpperCase()
+                                                          : '?';
+                                                      return Text(
+                                                        initials,
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 12,
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                        ),
+                                                      );
+                                                    },
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(height: 12),
-                                FTButton(
-                                  label: 'Cuba Lagi',
-                                  onPressed: _fetchServices,
-                                  expanded: false,
+                              ),
+                              // 2. Overlapping Search Card
+                              Container(
+                                margin: const EdgeInsets.only(
+                                    top: 100, left: 20, right: 20, bottom: 20),
+                                child: _SearchAndFilterCard(
+                                  searchController: _searchController,
+                                  onSearchChanged: _onSearchChanged,
+                                  categories: _categories,
+                                  selectedCategory: _selectedCategory,
+                                  onCategorySelected: (String value) {
+                                    setState(() => _selectedCategory = value);
+                                    _fetchServices();
+                                  },
+                                  selectedSortOption: _selectedSortOption,
+                                  onSortOptionSelected: (String? value) {
+                                    setState(() => _selectedSortOption = value);
+                                    _fetchServices();
+                                  },
                                 ),
-                              ],
-                            ),
-                          ),
-                        )
-                      else if (_services.isEmpty)
-                        SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                const Icon(Icons.store_mall_directory_outlined,
-                                    size: 52, color: Colors.grey),
-                                const SizedBox(height: 12),
-                                const Text(
-                                  'Tiada servis ditemui',
-                                  style: AppTextStyles.titleMedium,
-                                ),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  'Tiada servis ditemui untuk carian ini.',
-                                  textAlign: TextAlign.center,
-                                  style: AppTextStyles.bodySmall,
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      else
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                          sliver: SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (BuildContext context, int index) {
-                                if (index.isOdd) {
-                                  return const SizedBox(height: 12);
-                                }
-                                final service = _services[index ~/ 2];
-                                return ServiceCard(
-                                  service: service,
-                                  onTap: () =>
-                                      context.push('/service/${service.id}'),
-                                );
-                              },
-                              childCount: (_services.length * 2) - 1,
-                            ),
+                              ),
+                            ],
                           ),
                         ),
-                    ],
+                        if (_isLoading)
+                          SliverPadding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            sliver: SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (BuildContext context, int index) {
+                                  if (index.isOdd) {
+                                    return const SizedBox(height: 12);
+                                  }
+                                  return const ServiceCardSkeleton();
+                                },
+                                childCount: (6 * 2) - 1,
+                              ),
+                            ),
+                          )
+                        else if (_errorMessage != null)
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 24),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: <Widget>[
+                                  Icon(
+                                    Icons.error_outline,
+                                    size: 42,
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    _errorMessage!,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color:
+                                          Theme.of(context).colorScheme.error,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  FTButton(
+                                    label: 'Cuba Lagi',
+                                    onPressed: _fetchServices,
+                                    expanded: false,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else if (_services.isEmpty)
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 24),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  const Icon(
+                                      Icons.store_mall_directory_outlined,
+                                      size: 52,
+                                      color: Colors.grey),
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                    'Tiada servis ditemui',
+                                    style: AppTextStyles.titleMedium,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'Tiada servis ditemui untuk carian ini.',
+                                    textAlign: TextAlign.center,
+                                    style: AppTextStyles.bodySmall,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                            sliver: SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (BuildContext context, int index) {
+                                  if (index.isOdd) {
+                                    return const SizedBox(height: 12);
+                                  }
+                                  final service = _services[index ~/ 2];
+                                  return ServiceCard(
+                                    service: service,
+                                    onTap: () =>
+                                        context.push('/service/${service.id}'),
+                                  );
+                                },
+                                childCount: (_services.length * 2) - 1,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               );

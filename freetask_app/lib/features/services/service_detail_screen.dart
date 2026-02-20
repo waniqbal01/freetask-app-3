@@ -1,9 +1,8 @@
-import 'dart:math';
-
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_strings.dart';
 import '../../core/widgets/ft_button.dart';
 import '../../core/widgets/loading_overlay.dart';
 import '../../models/service.dart';
@@ -85,27 +84,114 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   }
 
   Future<void> _handleHire(Service service) async {
-    setState(() {
-      _isHireLoading = true;
-    });
+    if (service.isPriceUnavailable) {
+      // Skip confirmation — direct to checkout for price-issue flow
+      setState(() => _isHireLoading = true);
+      try {
+        await context.push('/job-checkout', extra: <String, dynamic>{
+          'serviceId': service.id,
+          'title': service.title,
+          'description': service.description,
+          'serviceDescription': service.description,
+          'price': service.price,
+          'priceIssue': true,
+        });
+      } finally {
+        if (mounted) setState(() => _isHireLoading = false);
+      }
+      return;
+    }
 
+    // Hire Confirmation Bottom Sheet
+    final platformFeeRate = 0.02;
+    final platformFee = service.price * platformFeeRate;
+    final total = service.price + platformFee;
+
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              AppStrings.hireConfirmTitle,
+              style: AppTextStyles.headlineSmall,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              service.title,
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.neutral500),
+            ),
+            const SizedBox(height: 20),
+            _PriceRow(
+              label: AppStrings.hireConfirmServiceFee,
+              value: 'RM${service.price.toStringAsFixed(2)}',
+            ),
+            const SizedBox(height: 10),
+            _PriceRow(
+              label:
+                  '${AppStrings.hireConfirmPlatformFee} (${(platformFeeRate * 100).toStringAsFixed(0)}%)',
+              value: 'RM${platformFee.toStringAsFixed(2)}',
+              isLight: true,
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Divider(),
+            ),
+            _PriceRow(
+              label: AppStrings.hireConfirmTotal,
+              value: 'RM${total.toStringAsFixed(2)}',
+              isBold: true,
+            ),
+            const SizedBox(height: 24),
+            FTButton(
+              label: AppStrings.hireConfirmBtn,
+              onPressed: () => Navigator.pop(sheetCtx, true),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => Navigator.pop(sheetCtx, false),
+              child: const Text('Batal'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isHireLoading = true);
     final jobDraft = <String, dynamic>{
       'serviceId': service.id,
       'title': service.title,
       'description': service.description,
       'serviceDescription': service.description,
       'price': service.price,
-      'priceIssue': service.hasPriceIssue || service.isPriceUnavailable,
+      'priceIssue': false,
     };
-
     try {
       await context.push('/job-checkout', extra: jobDraft);
     } finally {
-      if (mounted) {
-        setState(() {
-          _isHireLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isHireLoading = false);
     }
   }
 
@@ -303,7 +389,11 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                     style: AppTextStyles.bodyMedium,
                   ),
                   AppSpacing.vertical24,
-                  _FreelancerProfile(freelancerId: service.freelancerId),
+                  _FreelancerProfile(
+                    freelancerId: service.freelancerId,
+                    name: service.freelancerName,
+                    avatarUrl: service.freelancerAvatarUrl,
+                  ),
                 ],
               ),
             ),
@@ -514,70 +604,136 @@ class _ServiceBanner extends StatelessWidget {
   }
 }
 
-class _FreelancerProfile extends StatelessWidget {
-  const _FreelancerProfile({required this.freelancerId});
+class _PriceRow extends StatelessWidget {
+  const _PriceRow({
+    required this.label,
+    required this.value,
+    this.isBold = false,
+    this.isLight = false,
+  });
 
-  final String freelancerId;
+  final String label;
+  final String value;
+  final bool isBold;
+  final bool isLight;
 
   @override
   Widget build(BuildContext context) {
-    final initials = freelancerId.isNotEmpty
-        ? freelancerId.substring(0, min(2, freelancerId.length)).toUpperCase()
-        : 'FR';
+    final color = isLight ? AppColors.neutral400 : AppColors.neutral500;
+    final weight = isBold ? FontWeight.w700 : FontWeight.w500;
+    final style =
+        AppTextStyles.bodyMedium.copyWith(color: color, fontWeight: weight);
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.s16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: AppRadius.largeRadius,
-        boxShadow: AppShadows.card,
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-            child: Text(
-              initials,
-              style: AppTextStyles.headlineSmall
-                  .copyWith(color: AppColors.primary),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: style),
+        Text(value, style: style),
+      ],
+    );
+  }
+}
+
+class _FreelancerProfile extends StatelessWidget {
+  const _FreelancerProfile({
+    required this.freelancerId,
+    this.name,
+    this.avatarUrl,
+  });
+
+  final String freelancerId;
+  final String? name;
+  final String? avatarUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final displayName =
+        (name != null && name!.isNotEmpty) ? name! : 'Freelancer';
+    final initials = displayName
+        .trim()
+        .split(' ')
+        .map((w) => w[0])
+        .take(2)
+        .join()
+        .toUpperCase();
+
+    return GestureDetector(
+      onTap: () {
+        if (freelancerId.isNotEmpty) {
+          GoRouter.of(context).push('/users/$freelancerId');
+        }
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppSpacing.s16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: AppRadius.largeRadius,
+          boxShadow: AppShadows.card,
+        ),
+        child: Row(
+          children: [
+            if (avatarUrl != null && avatarUrl!.isNotEmpty)
+              ClipOval(
+                child: Image.network(
+                  avatarUrl!,
+                  width: 56,
+                  height: 56,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => CircleAvatar(
+                    radius: 28,
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                    child: Text(initials,
+                        style: AppTextStyles.headlineSmall
+                            .copyWith(color: AppColors.primary)),
+                  ),
+                ),
+              )
+            else
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                child: Text(
+                  initials,
+                  style: AppTextStyles.headlineSmall
+                      .copyWith(color: AppColors.primary),
+                ),
+              ),
+            const SizedBox(width: AppSpacing.s16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Kepakaran Oleh',
+                    style: AppTextStyles.labelSmall
+                        .copyWith(color: AppColors.neutral400),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    displayName,
+                    style: AppTextStyles.bodyMedium
+                        .copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 6),
+                  const Row(
+                    children: [
+                      Icon(Icons.verified_rounded,
+                          color: AppColors.secondary, size: 16),
+                      SizedBox(width: 4),
+                      Text(
+                        'Lihat profil →',
+                        style: AppTextStyles.bodySmall,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: AppSpacing.s16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Profil Freelancer',
-                  style: AppTextStyles.labelSmall
-                      .copyWith(color: AppColors.neutral400),
-                ),
-                AppSpacing.vertical8,
-                Text(
-                  'ID: $freelancerId',
-                  style: AppTextStyles.bodyMedium
-                      .copyWith(color: AppColors.neutral500),
-                ),
-                AppSpacing.vertical8,
-                const Row(
-                  children: [
-                    Icon(Icons.verified_rounded,
-                        color: AppColors.secondary, size: 18),
-                    SizedBox(width: AppSpacing.s8),
-                    Text(
-                      'Ready to collaborate',
-                      style: AppTextStyles.bodySmall,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const Icon(Icons.arrow_forward_ios,
-              size: 16, color: AppColors.neutral300),
-        ],
+            const Icon(Icons.arrow_forward_ios,
+                size: 16, color: AppColors.neutral300),
+          ],
+        ),
       ),
     );
   }

@@ -109,6 +109,42 @@ String resolveDioErrorMessage(
 
 void showErrorSnackBar(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(message)),
+    SnackBar(
+      content: Text(message),
+      backgroundColor: Colors.red.shade700,
+    ),
+  );
+}
+
+void showInfoSnackBar(BuildContext context, String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Row(
+        children: [
+          const Icon(Icons.info_outline_rounded, color: Colors.white, size: 18),
+          const SizedBox(width: 8),
+          Expanded(child: Text(message)),
+        ],
+      ),
+      backgroundColor: Colors.blueGrey.shade700,
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
+}
+
+void showSuccessSnackBar(BuildContext context, String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Row(
+        children: [
+          const Icon(Icons.check_circle_outline_rounded,
+              color: Colors.white, size: 18),
+          const SizedBox(width: 8),
+          Expanded(child: Text(message)),
+        ],
+      ),
+      backgroundColor: Colors.green.shade700,
+      behavior: SnackBarBehavior.floating,
+    ),
   );
 }

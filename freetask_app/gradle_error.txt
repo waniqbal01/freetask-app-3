@@ -1,0 +1,142 @@
+﻿Caching disabled for task ':connectivity_plus:mergeReleaseAssets' because:
+  Build cache is disabled
+  Simple merging task
+Skipping task ':connectivity_plus:mergeReleaseAssets' as it is up-to-date.
+work action resolve mergeReleaseAssets (project :connectivity_plus) (Thread[#62,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :file_picker:mergeReleaseShaders (Thread[#62,Execution worker Thread 3,5,main]) started.
+:file_picker:mergeReleaseShaders (Thread[#62,Execution worker Thread 3,5,main]) started.
+
+> Task :file_picker:mergeReleaseShaders UP-TO-DATE
+Caching disabled for task ':file_picker:mergeReleaseShaders' because:
+  Build cache is disabled
+  Simple merging task
+Skipping task ':file_picker:mergeReleaseShaders' as it is up-to-date.
+Resolve mutations for :file_picker:compileReleaseShaders (Thread[#62,Execution worker Thread 3,5,main]) started.
+:file_picker:compileReleaseShaders (Thread[#62,Execution worker Thread 3,5,main]) started.
+
+> Task :file_picker:compileReleaseShaders NO-SOURCE
+Skipping task ':file_picker:compileReleaseShaders' as it has no source files and no previous output files.
+Resolve mutations for :file_picker:generateReleaseAssets (Thread[#62,Execution worker Thread 3,5,main]) started.
+:file_picker:generateReleaseAssets (Thread[#62,Execution worker Thread 3,5,main]) started.
+
+> Task :file_picker:generateReleaseAssets UP-TO-DATE
+Skipping task ':file_picker:generateReleaseAssets' as it has no actions.
+Resolve mutations for :file_picker:mergeReleaseAssets (Thread[#59,included builds,5,main]) started.
+:file_picker:mergeReleaseAssets (Thread[#59,included builds,5,main]) started.
+
+> Task :file_picker:mergeReleaseAssets UP-TO-DATE
+Caching disabled for task ':file_picker:mergeReleaseAssets' because:
+  Build cache is disabled
+  Simple merging task
+Skipping task ':file_picker:mergeReleaseAssets' as it is up-to-date.
+work action resolve mergeReleaseAssets (project :file_picker) (Thread[#62,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :firebase_core:mergeReleaseShaders (Thread[#62,Execution worker Thread 3,5,main]) started.
+:firebase_core:mergeReleaseShaders (Thread[#62,Execution worker Thread 3,5,main]) started.
+
+> Task :firebase_core:mergeReleaseShaders UP-TO-DATE
+Caching disabled for task ':firebase_core:mergeReleaseShaders' because:
+  Build cache is disabled
+  Simple merging task
+Skipping task ':firebase_core:mergeReleaseShaders' as it is up-to-date.
+Resolve mutations for :firebase_core:compileReleaseShaders (Thread[#62,Execution worker Thread 3,5,main]) started.
+:firebase_core:compileReleaseShaders (Thread[#62,Execution worker Thread 3,5,main]) started.
+
+> Task :firebase_core:compileReleaseShaders NO-SOURCE
+Skipping task ':firebase_core:compileReleaseShaders' as it has no source files and no previous output files.
+Resolve mutations for :firebase_core:generateReleaseAssets (Thread[#62,Execution worker Thread 3,5,main]) started.
+:firebase_core:generateReleaseAssets (Thread[#62,Execution worker Thread 3,5,main]) started.
+
+> Task :firebase_core:generateReleaseAssets UP-TO-DATE
+Skipping task ':firebase_core:generateReleaseAssets' as it has no actions.
+Resolve mutations for :firebase_core:mergeReleaseAssets (Thread[#62,Execution worker Thread 3,5,main]) started.
+:firebase_core:mergeReleaseAssets (Thread[#62,Execution worker Thread 3,5,main]) started.
+
+> Task :app:checkReleaseAarMetadata FAILED
+Caching disabled for task ':app:checkReleaseAarMetadata' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Task ':app:checkReleaseAarMetadata' is not up-to-date because:
+  Input property 'aarMetadataFiles' file C:\Users\USER\freetask-app-3\freetask_app\build\flutter_local_notifications\intermediates\aar_metadata\release\writeReleaseAarMetadata\aar-metadata.properties has been added.
+  Input property 'aarMetadataFiles' file C:\Users\USER\gradle_cache\caches\8.12\transforms\ef4c4ded647e4b9b8a93cd78566d06cd\transformed\jetified-firebase-components-18.0.0\META-INF\com\android\build\gradle\aar-metadata.properties has been removed.
+  Input property 'aarMetadataFiles' file C:\Users\USER\freetask-app-3\freetask_app\build\flutter_local_notifications\intermediates\aar_metadata\release\writeReleaseAarMetadata\aar-metadata.properties has been removed.
+
+> Task :firebase_core:mergeReleaseAssets
+Caching disabled for task ':firebase_core:mergeReleaseAssets' because:
+  Build cache is disabled
+  Simple merging task
+Task ':firebase_core:mergeReleaseAssets' is not up-to-date because:
+  Output property 'outputDir' file C:\Users\USER\freetask-app-3\freetask_app\build\firebase_core\intermediates\assets\release\mergeReleaseAssets has been removed.
+The input changes require a full rebuild for incremental task ':firebase_core:mergeReleaseAssets'.
+
+[Incubating] Problems report is available at: file:///C:/Users/USER/freetask-app-3/freetask_app/build/reports/problems/problems-report.html
+.\gradlew : 
+At line:1 char:1
++ .\gradlew 
+assembleRelease 
+--info 2>&1 | 
+Select-Object -Last 
+100 | Out ...
++ ~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+    + CategoryInfo    
+          : NotSpeci  
+  fied: (:String) [   
+ ], RemoteExceptio    
+n
+    + FullyQualifiedE 
+   rrorId : NativeCo  
+  mmandError
+ 
+FAILURE: Build failed 
+with an exception.
+
+* What went wrong:
+Execution failed for 
+task ':app:checkReleas
+eAarMetadata'.
+> A failure occurred 
+while executing com.an
+droid.build.gradle.int
+ernal.tasks.CheckAarMe
+tadataWorkAction
+   > An issue was 
+found when checking 
+AAR metadata:
+     
+       1.  Dependency 
+':flutter_local_notifi
+cations' requires 
+desugar_jdk_libs 
+version to be
+           2.1.4 or 
+above for :app, which 
+is currently 2.0.4
+     
+           See https:/
+/d.android.com/studio/
+build/library-desugari
+ng for more
+           details.
+
+* Try:
+> Run with 
+--stacktrace option 
+to get the stack 
+trace.
+> Run with --debug 
+option to get more 
+log output.
+> Run with --scan to 
+get full insights.
+> Get more help at htt
+ps://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.12/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 4m 8s
+208 actionable tasks: 10 executed, 198 up-to-date
+Watched directory hierarchies: [C:\Users\USER\flutter\packages\flutter_tools\gradle]

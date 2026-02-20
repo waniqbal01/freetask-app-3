@@ -557,11 +557,6 @@ class _JobListScreenState extends State<JobListScreen> {
                 ],
               ),
               const SizedBox(height: 8),
-              Text(
-                '${AppStrings.serviceIdLabel}: ${job.serviceId}',
-                style: textTheme.bodySmall,
-              ),
-              const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
@@ -826,12 +821,19 @@ class _JobListScreenState extends State<JobListScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.assignment_outlined,
-                  size: 48, color: Colors.grey),
-              const SizedBox(height: 12),
+              Icon(
+                isClientView
+                    ? Icons.shopping_bag_outlined
+                    : Icons.work_outline_rounded,
+                size: 56,
+                color: AppColors.neutral300,
+              ),
+              const SizedBox(height: 16),
               Text(
                 title,
-                style: const TextStyle(fontSize: 16),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
@@ -839,7 +841,19 @@ class _JobListScreenState extends State<JobListScreen> {
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: AppColors.neutral500),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
+              if (isClientView)
+                FTButton(
+                  label: AppStrings.emptyClientCta,
+                  onPressed: () => context.go('/home'),
+                  expanded: false,
+                )
+              else
+                FTButton(
+                  label: AppStrings.emptyFreelancerActivateCta,
+                  onPressed: () => context.push('/profile'),
+                  expanded: false,
+                ),
             ],
           ),
         ),
@@ -1134,7 +1148,7 @@ class _JobsHeader extends StatelessWidget {
         if (isFreelancer)
           Container(
             margin:
-                const EdgeInsets.only(top: 100, left: 16, right: 16, bottom: 0),
+                const EdgeInsets.only(top: 130, left: 16, right: 16, bottom: 0),
             constraints: const BoxConstraints(minHeight: 100),
             decoration: const BoxDecoration(
               color: Colors.white,
