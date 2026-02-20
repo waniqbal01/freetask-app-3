@@ -5,10 +5,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/utils/error_utils.dart';
 import '../../core/utils/url_utils.dart';
+import '../../core/utils/time_utils.dart';
 import '../../widgets/chat_widgets.dart';
 import '../../widgets/scroll_to_bottom_fab.dart';
 import '../auth/auth_providers.dart';
@@ -37,7 +37,19 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
   bool _isUploading = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Notify repository that this chat is now active.
+    // This clears unread badge and marks messages as read via socket.
+    // addPostFrameCallback ensures UI is rendered before we mark as read.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(chatRepositoryProvider).enterChat(widget.chatId);
+    });
+  }
+
+  @override
   void dispose() {
+    ref.read(chatRepositoryProvider).leaveChat(widget.chatId);
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -370,18 +382,8 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
   bool _isFirstMessageOfDay(List<ChatMessage> messages, int index) {
     if (index == 0) return true;
     final current = messages[index];
-    final previous =
-        messages[index - 1]; // Previous in list is chronologically older? Wait.
-    // List is likely sorted Chronologically if index 0 is oldest?
-    // Repo sorts: a.timestamp.compareTo(b.timestamp).
-    // So 0 is Oldest.
-    // Check Date of current vs message BEFORE it (index - 1).
-
-    final prevDate = DateTime(previous.timestamp.year, previous.timestamp.month,
-        previous.timestamp.day);
-    final currDate = DateTime(
-        current.timestamp.year, current.timestamp.month, current.timestamp.day);
-    return prevDate != currDate;
+    final previous = messages[index - 1];
+    return TimeUtils.isDifferentDay(previous.timestamp, current.timestamp);
   }
 
   Future<void> _handleLoadMore() async {
@@ -426,18 +428,7 @@ class _DateHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final date = DateTime(timestamp.year, timestamp.month, timestamp.day);
-
-    String label;
-    if (date == today) {
-      label = 'Hari Ini';
-    } else if (date == today.subtract(const Duration(days: 1))) {
-      label = 'Semalam';
-    } else {
-      label = DateFormat('dd/MM/yyyy').format(timestamp);
-    }
+    final label = TimeUtils.formatDateHeader(timestamp);
 
     return Center(
       child: Container(
@@ -551,7 +542,7 @@ class _MessageBubble extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  DateFormat('hh:mm a').format(message.timestamp),
+                  TimeUtils.formatTime(message.timestamp),
                   style: TextStyle(
                       fontSize: 11,
                       color: isMe ? Colors.blue.shade800 : Colors.black54),

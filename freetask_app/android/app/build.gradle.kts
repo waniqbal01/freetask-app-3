@@ -43,8 +43,8 @@ android {
     }
 
     defaultConfig {
-        // Production Application ID - matches Firebase
-        applicationId = "com.freetask.app"
+        // Production Application ID - matches Firebase (com.freetask.apps)
+        applicationId = "com.freetask.apps"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

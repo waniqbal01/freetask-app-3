@@ -540,30 +540,55 @@ class _ServicesTabState extends State<_ServicesTab>
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reject Service'),
-        content: TextField(
-          controller: reasonController,
-          decoration: const InputDecoration(
-            labelText: 'Rejection Reason',
-            hintText: 'Enter reason for rejection',
-          ),
-          maxLines: 3,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Reject', style: TextStyle(color: Colors.red)),
-          ),
-        ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final hasText = reasonController.text.trim().isNotEmpty;
+          return AlertDialog(
+            title: const Text('Tolak Servis'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Komen penolakan adalah wajib. Freelancer akan dapat membaca komen ini.',
+                  style: TextStyle(fontSize: 13, color: Colors.grey),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: reasonController,
+                  decoration: const InputDecoration(
+                    labelText: 'Sebab Penolakan *',
+                    hintText:
+                        'Contoh: Gambar tidak sesuai, harga terlalu tinggi...',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                  onChanged: (_) => setDialogState(() {}),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Batal'),
+              ),
+              TextButton(
+                onPressed: hasText ? () => Navigator.pop(context, true) : null,
+                child: Text(
+                  'Tolak',
+                  style: TextStyle(
+                    color: hasText ? Colors.red : Colors.grey,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
 
-    if (confirmed == true && reasonController.text.isNotEmpty) {
+    if (confirmed == true && reasonController.text.trim().isNotEmpty) {
       // Optimistic Update
       final int index = _services.indexWhere((s) => s['id'] == serviceId);
       Map<String, dynamic>? removedService;

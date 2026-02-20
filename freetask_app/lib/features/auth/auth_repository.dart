@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
 
+import '../../core/notifications/fcm_service.dart';
 import '../../core/storage/storage.dart';
 import '../../models/user.dart';
 import '../../services/http_client.dart';
@@ -43,6 +44,8 @@ class AuthRepository {
       if (userJson is Map<String, dynamic>) {
         _cachedUser = AppUser.fromJson(userJson);
       }
+      // Register FCM token with backend so push notifications reach this device
+      fcmService.refreshToken().ignore();
       return true;
     } on DioException catch (error) {
       if (error.response?.statusCode == 401) {
@@ -141,6 +144,8 @@ class AuthRepository {
   Future<void> logout() async {
     final token = await _storage.read(tokenStorageKey);
     try {
+      // Unregister FCM token so this device stops receiving push notifications
+      await fcmService.unregisterToken();
       if (token != null && token.isNotEmpty) {
         await _dio.post<void>(
           '/auth/logout',

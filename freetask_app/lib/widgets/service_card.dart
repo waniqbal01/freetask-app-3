@@ -71,8 +71,18 @@ class ServiceCard extends StatelessWidget {
                             const SizedBox(width: 8),
                             const _PendingChip(),
                           ],
+                          if (service.isRejected) ...[
+                            const SizedBox(width: 8),
+                            const _RejectedChip(),
+                          ],
                         ],
                       ),
+                      if (service.isRejected &&
+                          service.rejectionReason != null &&
+                          service.rejectionReason!.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        _RejectionBanner(reason: service.rejectionReason!),
+                      ],
                       const SizedBox(height: 8),
                       Text(
                         service.description,
@@ -314,6 +324,73 @@ class _PendingChip extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
                 ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RejectedChip extends StatelessWidget {
+  const _RejectedChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.red.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.shade300, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.cancel_outlined, size: 12, color: Colors.red.shade700),
+          const SizedBox(width: 4),
+          Text(
+            'DITOLAK',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Colors.red.shade800,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RejectionBanner extends StatelessWidget {
+  const _RejectionBanner({required this.reason});
+
+  final String reason;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.red.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.shade200, width: 1),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline_rounded,
+              size: 14, color: Colors.red.shade700),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              'Sebab penolakan: $reason',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.red.shade800,
+                    fontWeight: FontWeight.w500,
+                  ),
+            ),
           ),
         ],
       ),

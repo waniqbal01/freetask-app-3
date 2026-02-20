@@ -93,6 +93,11 @@ class UploadService {
   }
 
   Future<String> resolveAuthorizedUrl(String url) async {
+    // If it's already an absolute URL (e.g. Supabase or external), return it directly
+    if (url.startsWith('http')) {
+      return url;
+    }
+
     final normalizedPath = _normalizePath(url);
     final base = await HttpClient().currentBaseUrl();
     return _joinBaseAndPath(base, normalizedPath);

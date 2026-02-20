@@ -265,7 +265,38 @@ export class ChatGateway
         client.userId,
       );
 
-      // Notify other participant about read receipts
+      // Find the conversation to get the other participant's ID
+      const conversation = await this.prisma.conversation.findUnique({
+        where: { id: data.conversationId },
+        include: { participants: { select: { id: true } } },
+      });
+
+      if (conversation) {
+        const readPayload = {
+          conversationId: data.conversationId,
+          readByUserId: client.userId,
+          markedCount: result.count,
+        };
+
+        // 1. Notify the OTHER participant (the message sender) so they see blue ticks
+        const otherParticipant = conversation.participants.find(
+          (p) => p.id !== client.userId,
+        );
+        if (otherParticipant) {
+          this.emitToUser(otherParticipant.id, 'chat_read_update', readPayload);
+        }
+
+        // 2. Notify all OTHER devices of the current user for multi-device unread sync
+        const mySocketIds = this.userSockets.get(client.userId);
+        if (mySocketIds) {
+          mySocketIds.forEach((socketId) => {
+            if (socketId !== client.id) {
+              this.server.to(socketId).emit('chat_read_update', readPayload);
+            }
+          });
+        }
+      }
+
       return { event: 'chat_marked_read', data: { markedCount: result.count } };
     } catch (error) {
       this.logger.error(`Failed to mark chat read: ${error.message}`);

@@ -21,6 +21,8 @@ class SocketService {
       StreamController<Map<String, dynamic>>.broadcast();
   final _typingController = StreamController<Map<String, dynamic>>.broadcast();
   final _presenceController = StreamController<PresenceStatus>.broadcast();
+  final _chatReadUpdateController =
+      StreamController<Map<String, dynamic>>.broadcast();
 
   // Streams
   Stream<ConnectionStatus> get connectionStream =>
@@ -30,6 +32,10 @@ class SocketService {
       _messageStatusController.stream;
   Stream<Map<String, dynamic>> get typingStream => _typingController.stream;
   Stream<PresenceStatus> get presenceStream => _presenceController.stream;
+
+  /// Emitted when a chat is marked read. Payload: {conversationId, readByUserId, markedCount}
+  Stream<Map<String, dynamic>> get chatReadUpdateStream =>
+      _chatReadUpdateController.stream;
 
   ConnectionStatus _currentStatus = ConnectionStatus.disconnected;
   ConnectionStatus get currentStatus => _currentStatus;
@@ -190,6 +196,12 @@ class SocketService {
         debugPrint('SocketService: Error parsing user_offline: $e');
       }
     });
+
+    // Read receipt update — emitted when someone reads your messages
+    _socket!.on('chat_read_update', (data) {
+      debugPrint('SocketService: chat_read_update: $data');
+      _chatReadUpdateController.add(data as Map<String, dynamic>);
+    });
   }
 
   /// Send heartbeat to keep connection alive
@@ -273,6 +285,7 @@ class SocketService {
     _messageStatusController.close();
     _typingController.close();
     _presenceController.close();
+    _chatReadUpdateController.close();
   }
 
   // Convenience methods for chat operations

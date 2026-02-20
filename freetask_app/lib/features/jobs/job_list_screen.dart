@@ -60,6 +60,10 @@ class _JobListScreenState extends State<JobListScreen> {
     'payout_processing',
     'payout_hold',
     'payout_failed',
+    'completed',
+    'cancelled',
+    'rejected',
+    'paid_out',
   ];
 
   @override

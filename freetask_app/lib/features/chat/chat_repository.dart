@@ -76,6 +76,11 @@ class ChatRepository {
   StreamSubscription? _logoutSubscription;
   StreamSubscription? _socketSubscription;
 
+  /// Tracks which conversation is currently open on screen.
+  /// Used to suppress unread badge increment and in-app notifications
+  /// when user is actively viewing that chat.
+  String? _activeConversationId;
+
   List<ChatThread> _threads = <ChatThread>[];
   final Map<String, List<ChatMessage>> _messages =
       <String, List<ChatMessage>>{};
@@ -191,6 +196,39 @@ class ChatRepository {
     });
   }
 
+  /// Call when user navigates INTO a chat room.
+  /// Marks the conversation as read immediately.
+  void enterChat(String conversationId) {
+    _activeConversationId = conversationId;
+    // Mark all messages as read after first frame is rendered
+    markChatAsRead(conversationId);
+  }
+
+  /// Call when user navigates OUT of a chat room.
+  void leaveChat(String conversationId) {
+    if (_activeConversationId == conversationId) {
+      _activeConversationId = null;
+    }
+  }
+
+  /// Emit socket event to mark all messages in a conversation as read.
+  /// Also resets the local unread count so the badge disappears.
+  void markChatAsRead(String conversationId) {
+    final conversationIntId = int.tryParse(conversationId);
+    if (conversationIntId != null) {
+      SocketService.instance.emit('mark_chat_read', {
+        'conversationId': conversationIntId,
+      });
+    }
+    // Reset unread count locally so badge clears immediately
+    final index = _threads.indexWhere((t) => t.id == conversationId);
+    if (index != -1) {
+      final updated = _threads[index].copyWith(unreadCount: 0);
+      _threads[index] = updated;
+      _threadsController.add(List<ChatThread>.unmodifiable(_threads));
+    }
+  }
+
   void _onCancelConversation(String conversationId) {
     SocketService.instance.leaveRoom(conversationId);
     // We don't remove the controller immediately as it might be re-listened to
@@ -205,7 +243,7 @@ class ChatRepository {
     if (conversationId.isNotEmpty) {
       final currentMessages = _messages[conversationId] ?? <ChatMessage>[];
 
-      // Check if message already exists
+      // Check if message already exists (dedup)
       if (!currentMessages.any((m) => m.id == message.id)) {
         final updatedMessages = <ChatMessage>[message, ...currentMessages];
         updatedMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
@@ -213,29 +251,33 @@ class ChatRepository {
         _emit(conversationId);
       }
 
-      // Update threads list
+      // Update threads list (shows red badge in chat list)
       _updateThreadForMessage(message);
     }
   }
 
   void _updateThreadForMessage(ChatMessage message) {
     final conversationId = message.jobId;
-    // Find existing thread
     final index = _threads.indexWhere((t) => t.id == conversationId);
 
     ChatThread? thread;
     if (index != -1) {
       thread = _threads[index];
 
-      // Calculate unread count
-      // If I am sender, unread count shouldn't increase.
-      // message has senderId.
       final myId = authRepository.currentUser?.id;
       final isMe = myId != null && myId.toString() == message.senderId;
 
+      // Increment unread count only if:
+      // 1. Message is from other person (not me)
+      // 2. User is NOT currently viewing this specific chat
       int newUnread = thread.unreadCount;
-      if (!isMe) {
+      final isViewingThisChat = _activeConversationId == conversationId;
+      if (!isMe && !isViewingThisChat) {
         newUnread += 1;
+        // Auto-mark as read if user is in the chat
+      } else if (!isMe && isViewingThisChat) {
+        // User is viewing: mark as read immediately
+        markChatAsRead(conversationId);
       }
 
       thread = thread.copyWith(
@@ -247,12 +289,7 @@ class ChatRepository {
 
       _threads.removeAt(index);
     } else {
-      // Thread not in list. Should we fetch it?
-      // Ideally yes, but for now we might construct a partial thread or ignore?
-      // If we ignore, it won't appear until refresh.
-      // Let's ignore for now to avoid complex fetch logic here,
-      // or we could fetch the specific conversation.
-      // But _onNewMessage is async/void, be careful with errors.
+      // Thread not in list, skip silently
       return;
     }
 

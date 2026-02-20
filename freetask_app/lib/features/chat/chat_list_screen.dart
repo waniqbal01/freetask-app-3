@@ -2,10 +2,10 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/utils/error_utils.dart';
 import '../../core/utils/url_utils.dart';
+import '../../core/utils/time_utils.dart';
 import '../../models/user.dart';
 import 'chat_models.dart';
 import 'chat_repository.dart';
@@ -29,22 +29,7 @@ class ChatListScreen extends ConsumerWidget {
 
   String _formatTimestamp(DateTime? timestamp) {
     if (timestamp == null) return '—';
-
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
-    final messageDate =
-        DateTime(timestamp.year, timestamp.month, timestamp.day);
-
-    if (messageDate == today) {
-      return DateFormat('h:mm a').format(timestamp.toLocal());
-    } else if (messageDate == yesterday) {
-      return 'Yesterday';
-    } else if (now.difference(timestamp).inDays < 7) {
-      return DateFormat('EEE').format(timestamp); // Mon, Tue, etc.
-    } else {
-      return DateFormat('dd/MM/yy').format(timestamp);
-    }
+    return TimeUtils.formatChatListTime(timestamp);
   }
 
   @override
@@ -320,7 +305,7 @@ class ChatListScreen extends ConsumerWidget {
                                               ),
                                             ),
                                           ),
-                                          // Unread badge
+                                          // Unread badge (red circle like WhatsApp)
                                           if (thread.unreadCount > 0) ...[
                                             const SizedBox(width: 6),
                                             Container(
@@ -330,7 +315,7 @@ class ChatListScreen extends ConsumerWidget {
                                                       vertical: 2),
                                               decoration: const BoxDecoration(
                                                 color: Color(
-                                                    0xFF25D366), // WhatsApp green
+                                                    0xFFE53935), // Red badge
                                                 shape: BoxShape.circle,
                                               ),
                                               constraints: const BoxConstraints(

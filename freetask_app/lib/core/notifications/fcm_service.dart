@@ -3,11 +3,21 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-// Top-level function for background message handling
+import '../router.dart';
+import '../../services/notifications_repository.dart';
+
+// Top-level background handler — MUST be outside class
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  debugPrint('Handling background message: ${message.messageId}');
+  debugPrint('[FCM] Background message: ${message.messageId}');
+}
+
+// Top-level background notification tap handler — MUST be outside class
+@pragma('vm:entry-point')
+void _onBackgroundNotificationTap(NotificationResponse response) {
+  // Navigation not possible from background — handled on app resume
+  debugPrint('[FCM] Background notification tapped: ${response.payload}');
 }
 
 class FCMService {
@@ -16,79 +26,157 @@ class FCMService {
       FlutterLocalNotificationsPlugin();
 
   String? _fcmToken;
+  String? get fcmToken => _fcmToken;
+
+  static const _channelId = 'freetask_chat_channel';
+  static const _channelName = 'FreeTask Chat';
 
   Future<void> initialize() async {
     try {
       // Request permission
-      NotificationSettings settings = await _messaging.requestPermission(
+      final settings = await _messaging.requestPermission(
         alert: true,
         badge: true,
         sound: true,
       );
 
-      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-        debugPrint('User granted permission');
-      } else {
-        debugPrint('User declined or has not accepted permission');
+      if (settings.authorizationStatus == AuthorizationStatus.denied) {
+        debugPrint('[FCM] Permission denied');
         return;
       }
 
-      // Get token
-      _fcmToken = await _messaging.getToken();
-      debugPrint('FCM Token: $_fcmToken');
+      // Setup local notifications (for when app is in foreground)
+      await _initLocalNotifications();
 
-      // Initialize local notifications
-      const AndroidInitializationSettings initializationSettingsAndroid =
-          AndroidInitializationSettings('@mipmap/ic_launcher');
+      // Set background message handler
+      FirebaseMessaging.onBackgroundMessage(
+          _firebaseMessagingBackgroundHandler);
 
-      // Note: adjust 'DarwinInitializationSettings' for iOS if needed
-      final InitializationSettings initializationSettings =
-          InitializationSettings(
-        android: initializationSettingsAndroid,
-      );
-
-      await _localNotifications.initialize(initializationSettings);
-
-      // Listen to foreground messages
+      // Foreground messages — FCM won't show heads-up, so we show locally
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        debugPrint('Got a message whilst in the foreground!');
-        debugPrint('Message data: ${message.data}');
-
         if (message.notification != null) {
-          debugPrint(
-              'Message also contained a notification: ${message.notification}');
-          _showNotification(message);
+          _showLocalNotification(message);
         }
       });
 
-      // Set background handler
-      FirebaseMessaging.onBackgroundMessage(
-          _firebaseMessagingBackgroundHandler);
+      // App was in BACKGROUND — user tapped notification
+      FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTap);
+
+      // App was KILLED — user tapped notification to open app
+      final initialMessage = await _messaging.getInitialMessage();
+      if (initialMessage != null) {
+        Future.delayed(const Duration(milliseconds: 800), () {
+          _handleNotificationTap(initialMessage);
+        });
+      }
+
+      // Get and register token
+      await refreshToken();
+
+      // Listen for token refreshes
+      _messaging.onTokenRefresh.listen((newToken) {
+        _fcmToken = newToken;
+        _registerTokenWithBackend(newToken);
+      });
     } catch (e) {
-      debugPrint('Error initializing FCM: $e');
+      debugPrint('[FCM] Init error: $e');
     }
   }
 
-  Future<void> _showNotification(RemoteMessage message) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-      'high_importance_channel', // id
-      'High Importance Notifications', // title
-      importance: Importance.max,
-      priority: Priority.high,
+  Future<void> _initLocalNotifications() async {
+    const androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    await _localNotifications.initialize(
+      settings: const InitializationSettings(android: androidSettings),
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        final payload = response.payload;
+        if (payload != null) {
+          _navigateToChat(payload);
+        }
+      },
+      onDidReceiveBackgroundNotificationResponse: _onBackgroundNotificationTap,
     );
-    const NotificationDetails platformChannelSpecifics =
-        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    // Create Android notification channel
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(
+          const AndroidNotificationChannel(
+            _channelId,
+            _channelName,
+            importance: Importance.high,
+            playSound: true,
+          ),
+        );
+  }
+
+  Future<void> _showLocalNotification(RemoteMessage message) async {
+    final notification = message.notification;
+    if (notification == null) return;
 
     await _localNotifications.show(
-      message.hashCode,
-      message.notification?.title,
-      message.notification?.body,
-      platformChannelSpecifics,
+      id: notification.hashCode,
+      title: notification.title ?? 'FreeTask',
+      body: notification.body ?? 'Mesej baru',
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId,
+          _channelName,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      ),
+      payload: message.data['conversationId']?.toString(),
     );
   }
 
-  String? get fcmToken => _fcmToken;
+  void _handleNotificationTap(RemoteMessage message) {
+    final conversationId = message.data['conversationId'];
+    if (conversationId != null) {
+      _navigateToChat(conversationId.toString());
+    }
+  }
+
+  void _navigateToChat(String conversationId) {
+    appRouter.push('/chats/$conversationId/messages');
+  }
+
+  /// Call after user logs in to register this device for push notifications.
+  Future<void> refreshToken() async {
+    try {
+      final token = await _messaging.getToken();
+      if (token != null && token != _fcmToken) {
+        _fcmToken = token;
+        await _registerTokenWithBackend(token);
+      }
+    } catch (e) {
+      debugPrint('[FCM] Error getting token: $e');
+    }
+  }
+
+  Future<void> _registerTokenWithBackend(String token) async {
+    try {
+      await NotificationsRepository().registerToken(token, platform: 'android');
+      debugPrint('[FCM] Token registered with backend');
+    } catch (e) {
+      debugPrint('[FCM] Error registering token: $e');
+    }
+  }
+
+  /// Call on logout to stop push notifications for this device.
+  Future<void> unregisterToken() async {
+    try {
+      if (_fcmToken != null) {
+        await NotificationsRepository().deleteToken(_fcmToken!);
+        _fcmToken = null;
+        debugPrint('[FCM] Token unregistered');
+      }
+    } catch (e) {
+      debugPrint('[FCM] Error unregistering token: $e');
+    }
+  }
 }
 
 final fcmService = FCMService();
