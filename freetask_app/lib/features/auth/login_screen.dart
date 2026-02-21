@@ -172,10 +172,16 @@ class _LoginScreenState extends State<LoginScreen> {
     if (error is DioException) {
       final message = resolveDioErrorMessage(error);
       setState(() {
-        _errorMessage = error.response?.statusCode == 401 ||
-                message.toLowerCase().contains('unauthorized')
-            ? 'Email atau kata laluan tidak sah. Sila cuba lagi.'
-            : message;
+        if (error.response?.statusCode == 429 ||
+            message.toLowerCase().contains('too many requests')) {
+          _errorMessage =
+              'Had percubaan log masuk dicapai. Sila tunggu 5 minit sebelum cuba lagi.';
+        } else {
+          _errorMessage = error.response?.statusCode == 401 ||
+                  message.toLowerCase().contains('unauthorized')
+              ? 'Email atau kata laluan tidak sah. Sila cuba lagi.'
+              : message;
+        }
       });
       if (_errorMessage != null) showErrorSnackBar(context, _errorMessage!);
     } else {

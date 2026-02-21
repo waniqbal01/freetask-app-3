@@ -391,11 +391,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 if (value == null || value.isEmpty) {
                                   return 'Kata laluan diperlukan';
                                 }
-                                if (value.length < 6) {
-                                  return 'Kata laluan perlu sekurang-kurangnya 6 aksara';
+                                if (value.length < 8 || value.length > 32) {
+                                  return 'Kata laluan perlu 8 hingga 32 aksara';
+                                }
+                                if (!RegExp(r'(?=.*[a-z])').hasMatch(value)) {
+                                  return 'Mesti mempunyai huruf kecil';
+                                }
+                                if (!RegExp(r'(?=.*[A-Z])').hasMatch(value)) {
+                                  return 'Mesti mempunyai huruf besar';
+                                }
+                                if (!RegExp(r'(?=.*\d)').hasMatch(value)) {
+                                  return 'Mesti mempunyai nombor';
+                                }
+                                if (!RegExp(r'(?=.*[\W_])').hasMatch(value)) {
+                                  return 'Mesti mempunyai simbol';
                                 }
                                 return null;
                               },
+                            ),
+                            const SizedBox(height: AppSpacing.s4),
+                            Text(
+                              'Min 8 aksara, huruf besar, huruf kecil, nombor & simbol.',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: AppColors.neutral500,
+                                  ),
                             ),
                             const SizedBox(height: AppSpacing.s16),
                             TextFormField(

@@ -21,7 +21,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   private readonly logger = new Logger(AuthService.name);
 
@@ -49,6 +49,13 @@ export class AuthService {
     });
     if (existing) {
       throw new ConflictException('Email already in use');
+    }
+
+    if (dto.password.toLowerCase() === email) {
+      throw new BadRequestException('Kata laluan tidak boleh sama dengan email');
+    }
+    if (dto.password.toLowerCase() === dto.name.toLowerCase()) {
+      throw new BadRequestException('Kata laluan tidak boleh sama dengan nama');
     }
 
     const avatarUrl = dto.avatarUrl;

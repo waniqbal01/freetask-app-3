@@ -32,6 +32,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late TextEditingController _editController;
   bool _isSavingField = false;
 
+  // Visibility state for sensitive fields
+  final Set<String> _visibleFields = {};
+  bool _isObscureText = true; // For editing mode
+
   @override
   void initState() {
     super.initState();
@@ -65,6 +69,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() {
       _editingField = field;
       _editController.text = currentValue;
+      _isObscureText = true; // Reset obscure state when starting edit
     });
   }
 
@@ -435,6 +440,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             value: user.bankAccount ?? 'Belum ditetapkan',
             icon: Icons.account_balance_wallet,
             inputType: TextInputType.number,
+            isSensitive: true,
             onSave: (val) => usersRepository.updateProfile(bankAccount: val),
           ),
           _buildProfileItem(
@@ -442,6 +448,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             label: 'Nama Pemegang Akaun',
             value: user.bankHolderName ?? 'Belum ditetapkan',
             icon: Icons.person_outline,
+            isSensitive: true,
             onSave: (val) => usersRepository.updateProfile(bankHolderName: val),
           ),
           if (user.bankVerified)
@@ -570,8 +577,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required Future<void> Function(String) onSave,
     TextInputType inputType = TextInputType.text,
     int maxLines = 1,
+    bool isSensitive = false,
   }) {
     final isEditing = _editingField == fieldKey;
+    final isVisible = _visibleFields.contains(fieldKey);
+
+    String displayValue = value;
+    if (isSensitive && !isVisible && value != 'Belum ditetapkan') {
+      // Simple masking logic: show last 4 digits if it's a number, or just show asterisks
+      if (value.length > 4) {
+        displayValue =
+            '${"*" * (value.length - 4)}${value.substring(value.length - 4)}';
+      } else {
+        displayValue = "*" * value.length;
+      }
+    }
 
     return Column(
       children: [
@@ -589,13 +609,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Expanded(
                   child: TextField(
                     controller: _editController,
+                    obscureText: isSensitive ? _isObscureText : false,
                     decoration: InputDecoration(
                       labelText: label,
                       border: const OutlineInputBorder(),
                       isDense: true,
+                      suffixIcon: isSensitive
+                          ? IconButton(
+                              icon: Icon(
+                                _isObscureText
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                                size: 20,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _isObscureText = !_isObscureText;
+                                });
+                              },
+                            )
+                          : null,
                     ),
                     keyboardType: inputType,
-                    maxLines: maxLines,
+                    maxLines: isSensitive ? 1 : maxLines,
                     autofocus: true,
                   ),
                 ),
@@ -622,14 +658,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
             title: Text(label,
                 style: TextStyle(fontSize: 12, color: Colors.grey[600])),
             subtitle: Text(
-              value,
+              displayValue,
               style: const TextStyle(fontSize: 16, color: Colors.black87),
             ),
-            trailing: IconButton(
-              icon: const Icon(Icons.edit, size: 20),
-              color: Theme.of(context).primaryColor,
-              onPressed: () => _startEditing(
-                  fieldKey, value == 'Belum ditetapkan' ? '' : value),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isSensitive && value != 'Belum ditetapkan')
+                  IconButton(
+                    icon: Icon(
+                      isVisible ? Icons.visibility : Icons.visibility_off,
+                      size: 20,
+                      color: Colors.grey[600],
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        if (isVisible) {
+                          _visibleFields.remove(fieldKey);
+                        } else {
+                          _visibleFields.add(fieldKey);
+                        }
+                      });
+                    },
+                  ),
+                IconButton(
+                  icon: const Icon(Icons.edit, size: 20),
+                  color: Theme.of(context).primaryColor,
+                  onPressed: () => _startEditing(
+                      fieldKey, value == 'Belum ditetapkan' ? '' : value),
+                ),
+              ],
             ),
           ),
         const Divider(height: 1),

@@ -5,6 +5,8 @@ import { JwtExceptionFilter } from './common/filters/jwt-exception.filter';
 import { TransformDecimalInterceptor } from './common/interceptors/transform-decimal.interceptor';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { getAllowedOrigins, normalizeOrigin } from './config/cors';
+import helmet from 'helmet';
+import { SanitizeInputInterceptor } from './common/interceptors/sanitize-input.interceptor';
 
 import { NestExpressApplication } from '@nestjs/platform-express';
 
@@ -131,7 +133,10 @@ async function bootstrap() {
     // Global Filters & Interceptors
     // ------------------------------
     app.useGlobalFilters(new JwtExceptionFilter());
-    app.useGlobalInterceptors(new TransformDecimalInterceptor());
+    app.useGlobalInterceptors(
+      new TransformDecimalInterceptor(),
+      new SanitizeInputInterceptor(),
+    );
 
     // ------------------------------
     // Global Validation Pipes
@@ -143,6 +148,11 @@ async function bootstrap() {
         transformOptions: { enableImplicitConversion: true },
       }),
     );
+
+    // ------------------------------
+    // Helmet Security Headers
+    // ------------------------------
+    app.use(helmet());
 
     // ------------------------------
     // Swagger documentation (Dev/Test only)

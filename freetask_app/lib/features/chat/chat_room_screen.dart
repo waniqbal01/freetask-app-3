@@ -586,6 +586,19 @@ class _MessageComposer extends StatefulWidget {
 }
 
 class _MessageComposerState extends State<_MessageComposer> {
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _sendAndDismiss() {
+    _focusNode.unfocus();
+    widget.onSend();
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -666,6 +679,7 @@ class _MessageComposerState extends State<_MessageComposer> {
                     ),
                     child: TextField(
                       controller: widget.controller,
+                      focusNode: _focusNode,
                       readOnly: !widget.enabled,
                       maxLines: null, // Allow multiline
                       textInputAction: TextInputAction.send,
@@ -677,7 +691,7 @@ class _MessageComposerState extends State<_MessageComposer> {
                             const EdgeInsets.symmetric(vertical: 10),
                       ),
                       onSubmitted:
-                          widget.enabled ? (_) => widget.onSend() : null,
+                          widget.enabled ? (_) => _sendAndDismiss() : null,
                     ),
                   ),
                 ),
@@ -696,7 +710,7 @@ class _MessageComposerState extends State<_MessageComposer> {
                             ),
                           )
                         : const Icon(Icons.send, color: Colors.white, size: 20),
-                    onPressed: widget.enabled ? widget.onSend : null,
+                    onPressed: widget.enabled ? _sendAndDismiss : null,
                   ),
                 ),
               ],

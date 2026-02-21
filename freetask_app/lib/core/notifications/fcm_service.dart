@@ -22,7 +22,7 @@ void _onBackgroundNotificationTap(NotificationResponse response) {
 }
 
 class FCMService {
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  FirebaseMessaging? _messaging;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
 
@@ -39,8 +39,10 @@ class FCMService {
       return;
     }
     try {
+      _messaging = FirebaseMessaging.instance;
+
       // Request permission
-      final settings = await _messaging.requestPermission(
+      final settings = await _messaging!.requestPermission(
         alert: true,
         badge: true,
         sound: true,
@@ -69,7 +71,7 @@ class FCMService {
       FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTap);
 
       // App was KILLED — user tapped notification to open app
-      final initialMessage = await _messaging.getInitialMessage();
+      final initialMessage = await _messaging!.getInitialMessage();
       if (initialMessage != null) {
         Future.delayed(const Duration(milliseconds: 800), () {
           _handleNotificationTap(initialMessage);
@@ -80,7 +82,7 @@ class FCMService {
       await refreshToken();
 
       // Listen for token refreshes
-      _messaging.onTokenRefresh.listen((newToken) {
+      _messaging!.onTokenRefresh.listen((newToken) {
         _fcmToken = newToken;
         _registerTokenWithBackend(newToken);
       });
@@ -154,7 +156,8 @@ class FCMService {
     // FCM token not available on web
     if (kIsWeb) return;
     try {
-      final token = await _messaging.getToken();
+      _messaging ??= FirebaseMessaging.instance;
+      final token = await _messaging!.getToken();
       if (token != null && token != _fcmToken) {
         _fcmToken = token;
         await _registerTokenWithBackend(token);

@@ -10,7 +10,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 @UseGuards(ThrottlerGuard)
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Post('register')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
@@ -19,7 +19,7 @@ export class AuthController {
   }
 
   @Post('login')
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle({ default: { limit: 5, ttl: 300000 } })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }

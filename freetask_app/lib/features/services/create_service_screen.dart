@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart'; // For kIsWeb
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/utils/error_utils.dart';
@@ -92,10 +93,11 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
       }
 
       // 2. Create Service
+      final parsedPrice = double.parse(_priceController.text);
       await servicesRepository.createService(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
-        price: double.parse(_priceController.text),
+        price: double.parse(parsedPrice.toStringAsFixed(2)),
         category: _selectedCategory!,
         thumbnailUrl: thumbnailUrl,
       );
@@ -290,7 +292,6 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
               const SizedBox(height: 16),
 
               // Price
-              // Price
               TextFormField(
                 controller: _priceController,
                 decoration: const InputDecoration(
@@ -300,6 +301,9 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                 ),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+                ],
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Sila masukkan harga';

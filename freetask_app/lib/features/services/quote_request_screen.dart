@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/widgets/ft_button.dart';
@@ -117,7 +118,11 @@ class _QuoteRequestScreenState extends State<QuoteRequestScreen> {
               const SizedBox(height: 24),
               TextFormField(
                 controller: _budgetController,
-                keyboardType: TextInputType.number,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+                ],
                 decoration: const InputDecoration(
                   labelText: 'Bajet Anggaran (RM)',
                   prefixIcon: Icon(Icons.attach_money),

@@ -7,6 +7,8 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
+  MaxLength,
   MinLength,
 } from 'class-validator';
 
@@ -15,7 +17,11 @@ export class RegisterDto {
   email: string;
 
   @IsNotEmpty()
-  @MinLength(6)
+  @MinLength(8)
+  @MaxLength(32)
+  @Matches(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_])/, {
+    message: 'Kata laluan mesti mengandungi huruf besar, huruf kecil, nombor dan simbol',
+  })
   password: string;
 
   @IsNotEmpty()
