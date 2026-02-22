@@ -236,6 +236,8 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                                           Row(
                                             children: [
                                               Container(
+                                                width: 40,
+                                                height: 40,
                                                 decoration: BoxDecoration(
                                                   color: Colors.white
                                                       .withValues(alpha: 0.15),
@@ -250,7 +252,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                                                 onTap: () =>
                                                     context.push('/profile'),
                                                 child: CircleAvatar(
-                                                  radius: 18,
+                                                  radius: 20,
                                                   backgroundColor: Colors.white
                                                       .withValues(alpha: 0.2),
                                                   child: Builder(

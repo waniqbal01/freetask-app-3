@@ -9,10 +9,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { ChatMessageDto } from './dto/chat-message.dto';
 import { ChatThreadDto } from './dto/chat-thread.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ChatsService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) { }
 
   async listThreads(
     userId: number,
@@ -147,6 +151,37 @@ export class ChatsService {
     });
 
     const msg = message as any;
+
+    try {
+      // Find the other participant to send notification
+      const convo = await this.prisma.conversation.findUnique({
+        where: { id: conversationId },
+        include: { participants: { select: { id: true, name: true } } }
+      });
+      if (convo) {
+        const otherParticipant = convo.participants.find(p => p.id !== userId);
+        if (otherParticipant) {
+          const senderName = msg.sender.name || 'Mesej Baru';
+          let previewText = msg.content;
+          if (msg.type === 'image') previewText = '📷 Menghantar gambar';
+          else if (msg.type === 'file') previewText = '📎 Menghantar lampiran';
+          else if (msg.content && msg.content.length > 50) previewText = msg.content.substring(0, 50) + '...';
+
+          await this.notificationsService.sendNotification({
+            userId: otherParticipant.id,
+            title: senderName,
+            body: previewText || 'Menghantar mesej baru',
+            type: 'CHAT_MESSAGE',
+            data: {
+              conversationId: conversationId.toString(),
+            }
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Failed to send push notification', err);
+    }
+
     return {
       id: msg.id,
       jobId: msg.conversationId,

@@ -68,7 +68,8 @@ class ServiceCard extends StatelessWidget {
                         spacing: 6,
                         runSpacing: 4,
                         children: [
-                          _CategoryChip(label: service.category),
+                          _CategoryChip(
+                              label: service.category.replaceAll('&amp;', '&')),
                           if (service.isPending) const _PendingChip(),
                           if (service.isRejected) const _RejectedChip(),
                         ],

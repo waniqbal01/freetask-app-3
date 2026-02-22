@@ -10,7 +10,7 @@ import {
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async registerToken(userId: number, dto: RegisterTokenDto) {
     // Check if token already exists
@@ -137,15 +137,15 @@ export class NotificationsService {
             },
             data: dto.data
               ? {
-                  ...dto.data,
-                  click_action: 'FLUTTER_NOTIFICATION_CLICK',
-                }
+                ...dto.data,
+                click_action: 'FLUTTER_NOTIFICATION_CLICK',
+              }
               : undefined,
             android: {
               priority: 'high',
               notification: {
                 sound: 'default',
-                channelId: 'default_channel',
+                channelId: 'freetask_chat_channel',
               },
             },
             apns: {
