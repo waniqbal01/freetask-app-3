@@ -95,6 +95,19 @@ class ChatMessage {
   });
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
+    String textContent =
+        json['content']?.toString() ?? json['text']?.toString() ?? '';
+    String? parsedReplyToId = json['replyToId']?.toString();
+
+    // Fallback: extract replyToId from text if encoded by frontend backend-workaround
+    if (textContent.startsWith('__REPLY:')) {
+      final endIdx = textContent.indexOf('__\n');
+      if (endIdx != -1) {
+        parsedReplyToId = textContent.substring(8, endIdx);
+        textContent = textContent.substring(endIdx + 3);
+      }
+    }
+
     return ChatMessage(
       id: json['id']?.toString() ?? '',
       jobId: json['jobId']?.toString() ?? json['job_id']?.toString() ?? '',
@@ -103,7 +116,7 @@ class ChatMessage {
       senderName: json['senderName']?.toString() ??
           json['sender_name']?.toString() ??
           '',
-      text: json['content']?.toString() ?? json['text']?.toString() ?? '',
+      text: textContent,
       timestamp: DateTime.tryParse(
             json['createdAt']?.toString() ??
                 json['timestamp']?.toString() ??
@@ -112,14 +125,18 @@ class ChatMessage {
           DateTime.now(),
       type: json['type'] as String? ?? 'text',
       attachmentUrl: json['attachmentUrl'] as String?,
-      status: _parseMessageStatus(json['status']?.toString()),
+      status: json['readAt'] != null
+          ? MessageStatus.read
+          : (json['deliveredAt'] != null
+              ? MessageStatus.delivered
+              : _parseMessageStatus(json['status']?.toString())),
       deliveredAt: json['deliveredAt'] != null
           ? DateTime.tryParse(json['deliveredAt'].toString())
           : null,
       readAt: json['readAt'] != null
           ? DateTime.tryParse(json['readAt'].toString())
           : null,
-      replyToId: json['replyToId']?.toString(),
+      replyToId: parsedReplyToId,
     );
   }
 

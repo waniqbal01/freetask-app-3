@@ -12,6 +12,7 @@ import 'services_repository.dart';
 import '../../core/utils/error_utils.dart';
 import '../auth/auth_repository.dart';
 import '../jobs/jobs_repository.dart';
+import 'package:geolocator/geolocator.dart';
 
 class ServiceDetailScreen extends StatefulWidget {
   const ServiceDetailScreen({required this.serviceId, super.key});
@@ -28,6 +29,8 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   bool _isHireLoading = false;
   String? _errorMessage;
   AppUser? _currentUser;
+  double? _clientLat;
+  double? _clientLng;
 
   @override
   void initState() {
@@ -36,13 +39,48 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     _loadCurrentUser();
   }
 
+  double? get _calculatedDistance {
+    if (_clientLat != null &&
+        _clientLng != null &&
+        _service?.freelancerLatitude != null &&
+        _service?.freelancerLongitude != null) {
+      final distanceInMeters = Geolocator.distanceBetween(
+        _clientLat!,
+        _clientLng!,
+        _service!.freelancerLatitude!,
+        _service!.freelancerLongitude!,
+      );
+      return distanceInMeters / 1000;
+    }
+    return null;
+  }
+
   Future<void> _loadCurrentUser() async {
     try {
       final user = await authRepository.getCurrentUser();
       if (!mounted) return;
       setState(() {
         _currentUser = user;
+        _clientLat = user?.latitude;
+        _clientLng = user?.longitude;
       });
+
+      if (_clientLat == null || _clientLng == null) {
+        try {
+          final permission = await Geolocator.checkPermission();
+          if (permission == LocationPermission.always ||
+              permission == LocationPermission.whileInUse) {
+            final position = await Geolocator.getCurrentPosition(
+                desiredAccuracy: LocationAccuracy.low);
+            if (mounted) {
+              setState(() {
+                _clientLat = position.latitude;
+                _clientLng = position.longitude;
+              });
+            }
+          }
+        } catch (_) {}
+      }
     } catch (_) {
       // User might not be logged in, that's okay
     }
@@ -323,10 +361,46 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                     style: AppTextStyles.headlineMedium,
                   ),
                   AppSpacing.vertical8,
-                  Chip(
-                    label: Text(service.category),
-                    backgroundColor: theme.colorScheme.surface,
-                    shape: const StadiumBorder(),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Chip(
+                        label: Text(service.category),
+                        backgroundColor: theme.colorScheme.surface,
+                        shape: const StadiumBorder(),
+                      ),
+                      if (_calculatedDistance != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                                color: Colors.blue.shade200, width: 1),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.location_on,
+                                  size: 14, color: Colors.blue.shade700),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${_calculatedDistance!.toStringAsFixed(1)} km',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: Colors.blue.shade800,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
                   AppSpacing.vertical16,
                   Container(
@@ -393,6 +467,8 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                     freelancerId: service.freelancerId,
                     name: service.freelancerName,
                     avatarUrl: service.freelancerAvatarUrl,
+                    state: service.freelancerState,
+                    district: service.freelancerDistrict,
                   ),
                 ],
               ),
@@ -441,7 +517,26 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
         builder: (BuildContext context) {
           final service = _service;
           if (service == null || _isLoading) return const SizedBox.shrink();
-          final disableHire = service.isPriceUnavailable;
+
+          bool isOutOfRange = false;
+          String? coverageMessage;
+
+          final dist = _calculatedDistance;
+          final radius = service.freelancerCoverageRadius;
+
+          if (dist != null && radius != null && dist > radius) {
+            if (service.freelancerAcceptsOutstation) {
+              coverageMessage =
+                  'Nota: Anda berada ${dist.toStringAsFixed(1)}km dari lokasi freelancer (luar radius $radius km). Cas tambahan mungkin dikenakan.';
+            } else {
+              isOutOfRange = true;
+              coverageMessage =
+                  'Maaf, lokasi anda (${dist.toStringAsFixed(1)}km) berada di luar radius liputan freelancer ini ($radius km).';
+            }
+          }
+
+          final priceIssue = service.isPriceUnavailable;
+          final disableHire = priceIssue || isOutOfRange;
 
           return SafeArea(
             top: false,
@@ -456,7 +551,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (disableHire) ...[
+                  if (priceIssue) ...[
                     Container(
                       padding: const EdgeInsets.all(AppSpacing.s12),
                       decoration: BoxDecoration(
@@ -489,11 +584,51 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                       ),
                     ),
                   ],
+                  if (coverageMessage != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.s12),
+                      decoration: BoxDecoration(
+                        color: isOutOfRange
+                            ? Colors.red.shade50
+                            : Colors.orange.shade50,
+                        borderRadius: AppRadius.mediumRadius,
+                        border: Border.all(
+                            color: isOutOfRange
+                                ? Colors.red.shade200
+                                : Colors.orange.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                              isOutOfRange
+                                  ? Icons.block
+                                  : Icons.warning_amber_rounded,
+                              color: isOutOfRange
+                                  ? Colors.red.shade700
+                                  : Colors.orange.shade700,
+                              size: 20),
+                          const SizedBox(width: AppSpacing.s8),
+                          Expanded(
+                            child: Text(
+                              coverageMessage,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                  color: isOutOfRange
+                                      ? Colors.red.shade800
+                                      : Colors.orange.shade800),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s12),
+                  ],
                   if (disableHire) ...[
                     FTButton(
-                      label: 'Minta sebut harga',
+                      label:
+                          priceIssue ? 'Minta sebut harga' : 'Di Luar Kawasan',
                       isLoading: _isHireLoading,
-                      onPressed: () => _handleHire(service),
+                      onPressed:
+                          priceIssue ? () => _handleHire(service) : () {},
                     ),
                     const SizedBox(height: AppSpacing.s8),
                     OutlinedButton.icon(
@@ -639,11 +774,15 @@ class _FreelancerProfile extends StatelessWidget {
     required this.freelancerId,
     this.name,
     this.avatarUrl,
+    this.state,
+    this.district,
   });
 
   final String freelancerId;
   final String? name;
   final String? avatarUrl;
+  final String? state;
+  final String? district;
 
   @override
   Widget build(BuildContext context) {
@@ -715,6 +854,26 @@ class _FreelancerProfile extends StatelessWidget {
                     style: AppTextStyles.bodyMedium
                         .copyWith(fontWeight: FontWeight.w700),
                   ),
+                  if (state != null && state!.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.location_city,
+                            color: Colors.grey.shade500, size: 14),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            district != null && district!.isNotEmpty
+                                ? '$district, $state'
+                                : state!,
+                            style: AppTextStyles.bodySmall
+                                .copyWith(color: Colors.grey.shade700),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 6),
                   const Row(
                     children: [

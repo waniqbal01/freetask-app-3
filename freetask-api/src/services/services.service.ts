@@ -48,7 +48,12 @@ export class ServicesService {
     q?: string,
     category?: string,
     freelancerId?: number,
-    sortBy?: 'popular' | 'newest' | 'cheapest' | 'expensive',
+    sortBy?: 'popular' | 'newest' | 'cheapest' | 'expensive' | 'nearest',
+    state?: string,
+    district?: string,
+    lat?: number,
+    lng?: number,
+    maxDistance?: number,
     limit?: number,
     offset?: number,
   ) {
@@ -74,9 +79,27 @@ export class ServicesService {
       orderBy = { price: 'asc' };
     } else if (sortBy === 'expensive') {
       orderBy = { price: 'desc' };
-    } else {
-      // Default sorting by createdAt descending
+    } else if (sortBy !== 'nearest') {
+      // Default sorting by createdAt descending (unless nearest, Handled after query)
       orderBy = { createdAt: 'desc' };
+    }
+
+    // Bounding Box Logic for 'Near Me'
+    let latMin: number | undefined;
+    let latMax: number | undefined;
+    let lngMin: number | undefined;
+    let lngMax: number | undefined;
+
+    if (lat !== undefined && lng !== undefined && maxDistance !== undefined) {
+      // Approximate 1 degree of latitude = 111 km
+      const latDelta = maxDistance / 111;
+      latMin = lat - latDelta;
+      latMax = lat + latDelta;
+
+      // Approximate 1 degree of longitude = 111 km * cos(latitude)
+      const lngDelta = maxDistance / (111 * Math.cos(lat * (Math.PI / 180)));
+      lngMin = lng - lngDelta;
+      lngMax = lng + lngDelta;
     }
 
     const services = await this.prisma.service.findMany({
@@ -93,10 +116,31 @@ export class ServicesService {
           : {}),
         ...(category ? { category } : {}),
         ...(freelancerId ? { freelancerId } : {}),
+        freelancer: {
+          ...(state ? { state } : {}),
+          ...(district ? { district } : {}),
+          // Apply bounding box if coordinates are provided
+          ...(latMin !== undefined && latMax !== undefined
+            ? { latitude: { gte: latMin, lte: latMax } }
+            : {}),
+          ...(lngMin !== undefined && lngMax !== undefined
+            ? { longitude: { gte: lngMin, lte: lngMax } }
+            : {}),
+        },
       },
       include: {
         freelancer: {
-          select: { id: true, name: true, avatarUrl: true },
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+            state: true,
+            district: true,
+            latitude: true,
+            longitude: true,
+            coverageRadius: true,
+            acceptsOutstation: true,
+          },
         },
         // Use _count instead of loading all job records
         _count: {
@@ -107,12 +151,53 @@ export class ServicesService {
           },
         },
       },
-      orderBy,
-      take,
-      skip,
+      // Apply DB-level sorting only if not sorting by nearest 
+      // (Nearest requires Haversine calculation in memory for MVP)
+      ...((sortBy !== 'nearest' && orderBy) ? { orderBy } : {}),
+      // We process take/skip after Haversine sorting if sortBy === 'nearest'
+      ...((sortBy !== 'nearest') ? { take, skip } : {}),
     });
 
-    return services.map((service) => this.serializeService(service));
+    // Post-process to calculate distance and serialize
+    let processedServices = services.map((service) => {
+      const serialized = this.serializeService(service);
+      let distance: number | undefined;
+
+      if (lat !== undefined && lng !== undefined && service.freelancer.latitude && service.freelancer.longitude) {
+        // Haversine Formula
+        const toRad = (value: number) => (value * Math.PI) / 180;
+        const R = 6371; // km
+        const dLat = toRad(service.freelancer.latitude - lat);
+        const dLon = toRad(service.freelancer.longitude - lng);
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(toRad(lat)) *
+          Math.cos(toRad(service.freelancer.latitude)) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        distance = R * c;
+      }
+
+      return {
+        ...serialized,
+        distance,
+      };
+    });
+
+    if (sortBy === 'nearest' && lat !== undefined && lng !== undefined) {
+      // Sort by distance ascending, handling undefined distances (pushing them to the end)
+      processedServices.sort((a, b) => {
+        if (a.distance === undefined) return 1;
+        if (b.distance === undefined) return -1;
+        return a.distance - b.distance;
+      });
+
+      // Apply pagination in-memory for 'nearest'
+      processedServices = processedServices.slice(skip, skip + take);
+    }
+
+    return processedServices;
   }
 
   async findMyServices(userId: number) {
@@ -143,7 +228,18 @@ export class ServicesService {
       where: { id },
       include: {
         freelancer: {
-          select: { id: true, name: true, email: true, avatarUrl: true },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatarUrl: true,
+            state: true,
+            district: true,
+            latitude: true,
+            longitude: true,
+            coverageRadius: true,
+            acceptsOutstation: true,
+          },
         },
       },
     });

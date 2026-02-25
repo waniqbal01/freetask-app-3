@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import 'core/router.dart';
@@ -14,6 +15,14 @@ class App extends StatelessWidget {
       theme: AppTheme.lightTheme,
       routerConfig: appRouter,
       scaffoldMessengerKey: notificationService.messengerKey,
+      scrollBehavior: const MaterialScrollBehavior().copyWith(
+        dragDevices: {
+          PointerDeviceKind.mouse,
+          PointerDeviceKind.touch,
+          PointerDeviceKind.stylus,
+          PointerDeviceKind.unknown,
+        },
+      ),
       builder: (context, child) {
         // Set context for overlay notifications
         WidgetsBinding.instance.addPostFrameCallback((_) {

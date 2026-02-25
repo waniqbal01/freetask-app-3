@@ -72,4 +72,24 @@ class TimeUtils {
     final myB = toMalaysiaTime(b);
     return myA.year != myB.year || myA.month != myB.month || myA.day != myB.day;
   }
+
+  /// Format last seen time for chat presence
+  static String formatLastSeen(DateTime dateTime) {
+    final myTime = toMalaysiaTime(dateTime);
+    final now = toMalaysiaTime(DateTime.now());
+
+    final difference = now.difference(myTime);
+
+    if (difference.inMinutes < 1) {
+      return 'Baru sahaja';
+    } else if (difference.inHours < 1) {
+      return '${difference.inMinutes} min lepas';
+    } else if (difference.inDays < 1 && now.day == myTime.day) {
+      return '${difference.inHours} jam lepas';
+    } else if (difference.inDays < 2) {
+      return 'Semalam ${DateFormat('h:mm a').format(myTime)}';
+    } else {
+      return DateFormat('dd/MM/yy h:mm a').format(myTime);
+    }
+  }
 }

@@ -92,6 +92,12 @@ model User {
   withdrawals          Withdrawal[]
   processedWithdrawals Withdrawal[]    @relation("ProcessedWithdrawals")
   phoneNumber          String?
+  state                String?
+  district             String?
+  latitude             Float?
+  longitude            Float?
+  coverageRadius       Int?
+  acceptsOutstation    Boolean         @default(false)
   location             String?
   portfolioItems       PortfolioItem[]
   isAvailable          Boolean         @default(true)

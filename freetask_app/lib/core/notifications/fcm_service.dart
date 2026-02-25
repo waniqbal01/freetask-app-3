@@ -6,12 +6,23 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../router.dart';
 import '../../services/notifications_repository.dart';
+import 'notification_service.dart';
+import 'notification_overlay.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 // Top-level background handler — MUST be outside class
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
   debugPrint('[FCM] Background message: ${message.messageId}');
+
+  // MUST initialize local notifications in the background isolate
+  await fcmService._initLocalNotifications();
+
+  // If data-only message in background, show local notification manually
+  if (message.notification == null && message.data.isNotEmpty) {
+    fcmService._showLocalNotification(message);
+  }
 }
 
 // Top-level background notification tap handler — MUST be outside class
@@ -56,6 +67,16 @@ class FCMService {
       // Setup local notifications (for when app is in foreground)
       await _initLocalNotifications();
 
+      // Explicitly request notification permissions (Android 13+)
+      if (await Permission.notification.isDenied) {
+        await Permission.notification.request();
+      }
+
+      // Request ignoring battery optimizations for reliable background delivery
+      if (await Permission.ignoreBatteryOptimizations.isDenied) {
+        await Permission.ignoreBatteryOptimizations.request();
+      }
+
       // Set background message handler
       FirebaseMessaging.onBackgroundMessage(
           _firebaseMessagingBackgroundHandler);
@@ -63,7 +84,23 @@ class FCMService {
       // Foreground messages — FCM won't show heads-up, so we show locally
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         if (message.notification != null) {
-          _showLocalNotification(message);
+          // Show elegant in-app overlay for 10/10 UX instead of system tray when open
+          notificationService.pushLocal(
+            message.notification!.title ?? 'FreeTask',
+            message.notification!.body ?? 'Mesej baru',
+            type: NotificationType.info,
+            duration: const Duration(seconds: 4),
+          );
+        } else if (message.data.isNotEmpty) {
+          // Fallback if no notification object but data exists
+          final title = message.data['title'] ?? 'FreeTask';
+          final body = message.data['body'] ?? 'Mesej baru';
+          notificationService.pushLocal(
+            title.toString(),
+            body.toString(),
+            type: NotificationType.info,
+            duration: const Duration(seconds: 4),
+          );
         }
       });
 
@@ -121,29 +158,58 @@ class FCMService {
   }
 
   Future<void> _showLocalNotification(RemoteMessage message) async {
-    final notification = message.notification;
-    if (notification == null) return;
+    final title = message.notification?.title ??
+        message.data['title']?.toString() ??
+        'FreeTask';
+    String body = message.notification?.body ??
+        message.data['body']?.toString() ??
+        'Mesej baru';
+
+    if (body.startsWith('__REPLY:')) {
+      final endIdx = body.indexOf('__\n');
+      if (endIdx != -1) {
+        body = body.substring(endIdx + 3);
+      }
+    }
 
     await _localNotifications.show(
-      id: notification.hashCode,
-      title: notification.title ?? 'FreeTask',
-      body: notification.body ?? 'Mesej baru',
+      id: DateTime.now().millisecond,
+      title: title,
+      body: body,
       notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
           _channelId,
           _channelName,
           importance: Importance.high,
           priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
         ),
       ),
-      payload: message.data['conversationId']?.toString(),
+      payload: message.data['route']?.toString() ??
+          message.data['conversationId']?.toString(),
     );
   }
 
   void _handleNotificationTap(RemoteMessage message) {
+    // 1. If payload explicitly defines a route:
+    final route = message.data['route'];
+    if (route != null && route.toString().isNotEmpty) {
+      _navigateToRoute(route.toString());
+      return;
+    }
+
+    // 2. Fallback to conversationId
     final conversationId = message.data['conversationId'];
     if (conversationId != null) {
       _navigateToChat(conversationId.toString());
+    }
+  }
+
+  void _navigateToRoute(String route) {
+    if (!route.startsWith('/')) {
+      appRouter.push('/$route');
+    } else {
+      appRouter.push(route);
     }
   }
 

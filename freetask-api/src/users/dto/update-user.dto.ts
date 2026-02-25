@@ -53,6 +53,30 @@ export class UpdateUserDto {
   isAvailable?: boolean;
 
   @IsOptional()
+  @IsString()
+  state?: string;
+
+  @IsOptional()
+  @IsString()
+  district?: string;
+
+  @IsOptional()
+  @IsNumber()
+  latitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  longitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  coverageRadius?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  acceptsOutstation?: boolean;
+
+  @IsOptional()
   @IsIn(
     [
       'MBBEMYKL',

@@ -70,6 +70,8 @@ class ServiceCard extends StatelessWidget {
                         children: [
                           _CategoryChip(
                               label: service.category.replaceAll('&amp;', '&')),
+                          if (service.distance != null)
+                            _DistanceChip(distance: service.distance!),
                           if (service.isPending) const _PendingChip(),
                           if (service.isRejected) const _RejectedChip(),
                         ],
@@ -245,6 +247,38 @@ class _CategoryChip extends StatelessWidget {
               color: AppColors.primary,
               fontWeight: FontWeight.w600,
             ),
+      ),
+    );
+  }
+}
+
+class _DistanceChip extends StatelessWidget {
+  const _DistanceChip({required this.distance});
+
+  final double distance;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.blue.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.shade200, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.location_on, size: 12, color: Colors.blue.shade700),
+          const SizedBox(width: 4),
+          Text(
+            '${distance.toStringAsFixed(1)} km',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Colors.blue.shade800,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ],
       ),
     );
   }

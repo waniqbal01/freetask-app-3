@@ -164,14 +164,7 @@ class ConnectionStatusBanner extends StatelessWidget {
         );
         break;
       case ConnectionStatus.disconnected:
-        backgroundColor = Colors.red.shade100;
-        message = 'Tiada sambungan';
-        trailing = Icon(
-          Icons.cloud_off,
-          size: 16,
-          color: Colors.red.shade700,
-        );
-        break;
+        return const SizedBox.shrink();
       case ConnectionStatus.connected:
         return const SizedBox.shrink();
     }

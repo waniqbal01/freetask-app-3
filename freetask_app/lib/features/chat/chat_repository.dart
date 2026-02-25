@@ -14,6 +14,7 @@ import '../../core/storage/storage.dart';
 import '../../core/utils/query_utils.dart';
 import '../../services/http_client.dart';
 import '../auth/auth_repository.dart';
+import '../../models/chat_enums.dart';
 import 'chat_models.dart';
 import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
@@ -66,6 +67,8 @@ class ChatRepository {
     _logoutSubscription = authRepository.onLogout.listen((_) => dispose());
     _socketSubscription =
         SocketService.instance.newMessageStream.listen(_onNewMessage);
+    _readUpdateSubscription =
+        SocketService.instance.chatReadUpdateStream.listen(_onChatReadUpdate);
     // Pre-cache the auth token to avoid repeated async storage reads
     _preCacheToken();
   }
@@ -74,6 +77,7 @@ class ChatRepository {
   final Dio _dio;
   StreamSubscription? _logoutSubscription;
   StreamSubscription? _socketSubscription;
+  StreamSubscription? _readUpdateSubscription;
   String? _cachedToken; // In-memory token cache
 
   /// Pre-load token into memory to avoid repeated async storage reads
@@ -258,7 +262,7 @@ class ChatRepository {
       // Check if message already exists (dedup)
       if (!currentMessages.any((m) => m.id == message.id)) {
         final updatedMessages = <ChatMessage>[message, ...currentMessages];
-        updatedMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+        updatedMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
         _messages[conversationId] = updatedMessages;
         _emit(conversationId);
       }
@@ -318,40 +322,117 @@ class ChatRepository {
     _threadsController.add(List<ChatThread>.unmodifiable(_threads));
   }
 
+  void _onChatReadUpdate(Map<String, dynamic> data) {
+    if (data['conversationId'] == null) return;
+
+    final conversationId = data['conversationId'].toString();
+    final currentMessages = _messages[conversationId];
+
+    if (currentMessages != null && currentMessages.isNotEmpty) {
+      bool changed = false;
+      final updatedMessages = currentMessages.map((msg) {
+        // If the message is ours and not already read, mark it read
+        if (msg.senderId == authRepository.currentUser?.id.toString() &&
+            msg.status != MessageStatus.read) {
+          changed = true;
+          return msg.copyWith(
+            status: MessageStatus.read,
+            readAt: DateTime.now(),
+          );
+        }
+        return msg;
+      }).toList();
+
+      if (changed) {
+        _messages[conversationId] = updatedMessages;
+        _emit(conversationId);
+      }
+    }
+  }
+
   Future<void> sendMessage({
     required String conversationId,
     required String text,
     String? attachmentUrl,
     String type = 'text',
+    String? replyToId,
   }) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty && attachmentUrl == null) {
       _notifyStreamError('Mesej kosong tidak dihantar.');
       return;
     }
+
+    // Optimistically add message to UI
+    final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+    final tempMessage = ChatMessage(
+      id: tempId,
+      jobId: conversationId,
+      senderId: authRepository.currentUser?.id.toString() ?? '',
+      senderName: authRepository.currentUser?.name ?? 'Me',
+      text: trimmed,
+      timestamp: DateTime.now(),
+      type: type,
+      attachmentUrl: attachmentUrl,
+      status: MessageStatus.pending,
+      replyToId: replyToId,
+    );
+
+    final currentMessages = _messages[conversationId] ?? <ChatMessage>[];
+    _messages[conversationId] = [tempMessage, ...currentMessages];
+    _emit(conversationId);
+
     try {
-      // Optimistic update could be added here, but for now we rely on socket event
-      // coming back from server after creation.
-      await _dio.post<void>(
+      // Backend workaround: the backend doesn't support replyToId natively.
+      // We encode it as a prefix in the text content payload.
+      String payloadContent = trimmed;
+      if (replyToId != null) {
+        payloadContent = '__REPLY:${replyToId}__\n$trimmed';
+      }
+
+      final response = await _dio.post<Map<String, dynamic>>(
         '/chats/$conversationId/messages',
         data: <String, dynamic>{
-          'content': trimmed,
+          'content': payloadContent,
           'type': type, // 'text', 'image', 'file'
           'attachmentUrl': attachmentUrl,
+          if (replyToId != null) 'replyToId': replyToId,
         },
         options: await _authorizedOptions(),
       );
 
-      // No need to _loadMessages manually if socket works.
-      // But purely for safety/redundancy or if socket is slow/disconnected:
-      // We can fetch. But socket should handle it.
-      // Let's rely on socket to avoid duplicates or race conditions if possible.
-      // However, if socket is disconnected, we won't get the update.
-      // So checking socket status might be good.
+      // Server returns the created message
+      final data = response.data;
+      if (data != null) {
+        final savedMessage = ChatMessage.fromJson(data);
+        final msgs = _messages[conversationId] ?? <ChatMessage>[];
+        // Replace temp message with actual message from server
+        final index = msgs.indexWhere((m) => m.id == tempId);
+        if (index != -1) {
+          msgs[index] = savedMessage;
+        } else {
+          // If not found (maybe cleared?), just insert it unless socket already added it
+          if (!msgs.any((m) => m.id == savedMessage.id)) {
+            msgs.insert(0, savedMessage);
+          }
+        }
+        _messages[conversationId] = msgs;
+        _emit(conversationId);
+      }
+
       if (!SocketService.instance.isConnected) {
         await _loadMessages(conversationId, mergeExisting: true);
       }
     } on DioException catch (error) {
+      // Mark optimistic message as failed
+      final msgs = _messages[conversationId] ?? <ChatMessage>[];
+      final index = msgs.indexWhere((m) => m.id == tempId);
+      if (index != -1) {
+        msgs[index] = msgs[index].copyWith(status: MessageStatus.failed);
+        _messages[conversationId] = msgs;
+        _emit(conversationId);
+      }
+
       await _handleError(error);
       rethrow;
     }
@@ -407,6 +488,7 @@ class ChatRepository {
   void dispose() {
     _logoutSubscription?.cancel();
     _socketSubscription?.cancel();
+    _readUpdateSubscription?.cancel();
     _cachedToken = null; // Clear cached token on logout
 
     for (final controller in _controllers.values) {
@@ -456,7 +538,7 @@ class ChatRepository {
           .map(ChatMessage.fromJson)
           .toList(growable: false)
         ..sort((ChatMessage a, ChatMessage b) =>
-            a.timestamp.compareTo(b.timestamp));
+            b.timestamp.compareTo(a.timestamp));
 
       List<ChatMessage> merged;
       if (append) {
@@ -486,25 +568,9 @@ class ChatRepository {
         */
         // If messages is OlderChunk and current is NewerChunk.
         // [...messages, ...current] results in [Older, Newer]. Correct.
-        merged = _dedupeMessages(<ChatMessage>[...messages, ...current]);
-      } else if (mergeExisting && current.isNotEmpty) {
-        // Reloading/Fetching latest.
-        // fetched messages are latest.
-        // current might have some old ones.
-        // If we allow holes, it's complex.
-        // But usually we just replace or merge if we are sure we are fetching from 0.
-        // original logic:
-        /*
-         } else if (mergeExisting && current.isNotEmpty) {
-            merged = _dedupeMessages(<ChatMessage>[...current, ...messages]);
-         }
-         */
-        // If messages = Newest 50.
-        // Current = [Oldest ... Newest].
-        // [...current, ...messages] puts fetched messages AT END.
-        // If they overlap, dedupe handles it.
-        // This seems correct for adding new messages or refreshing latest key.
         merged = _dedupeMessages(<ChatMessage>[...current, ...messages]);
+      } else if (mergeExisting && current.isNotEmpty) {
+        merged = _dedupeMessages(<ChatMessage>[...messages, ...current]);
       } else {
         merged = messages;
       }
@@ -546,7 +612,7 @@ class ChatRepository {
   List<ChatMessage> _dedupeMessages(List<ChatMessage> messages) {
     final seen = <String>{};
     messages.sort(
-        (ChatMessage a, ChatMessage b) => a.timestamp.compareTo(b.timestamp));
+        (ChatMessage a, ChatMessage b) => b.timestamp.compareTo(a.timestamp));
     return messages
         .where((ChatMessage message) => seen.add(message.id))
         .toList(growable: false);

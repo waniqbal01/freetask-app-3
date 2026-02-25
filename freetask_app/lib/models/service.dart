@@ -17,6 +17,13 @@ class Service {
     this.rating,
     this.reviewCount,
     this.completedJobsCount,
+    this.distance,
+    this.freelancerState,
+    this.freelancerDistrict,
+    this.freelancerLatitude,
+    this.freelancerLongitude,
+    this.freelancerCoverageRadius,
+    this.freelancerAcceptsOutstation = false,
   });
 
   factory Service.fromJson(Map<String, dynamic> json) {
@@ -43,6 +50,14 @@ class Service {
       rating: (json['rating'] as num?)?.toDouble(),
       reviewCount: json['reviewCount'] as int?,
       completedJobsCount: json['completedJobsCount'] as int?,
+      distance: (json['distance'] as num?)?.toDouble(),
+      freelancerState: freelancer?['state']?.toString(),
+      freelancerDistrict: freelancer?['district']?.toString(),
+      freelancerLatitude: (freelancer?['latitude'] as num?)?.toDouble(),
+      freelancerLongitude: (freelancer?['longitude'] as num?)?.toDouble(),
+      freelancerCoverageRadius: freelancer?['coverageRadius'] as int?,
+      freelancerAcceptsOutstation:
+          freelancer?['acceptsOutstation'] as bool? ?? false,
     );
   }
 
@@ -63,6 +78,13 @@ class Service {
   final double? rating;
   final int? reviewCount;
   final int? completedJobsCount;
+  final double? distance;
+  final String? freelancerState;
+  final String? freelancerDistrict;
+  final double? freelancerLatitude;
+  final double? freelancerLongitude;
+  final int? freelancerCoverageRadius;
+  final bool freelancerAcceptsOutstation;
 
   bool get isPriceUnavailable => hasPriceIssue || price <= 0;
   bool get isPending => approvalStatus == 'PENDING';

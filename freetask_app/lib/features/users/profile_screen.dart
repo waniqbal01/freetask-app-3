@@ -14,7 +14,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import '../../services/upload_service.dart';
 import '../../core/utils/url_utils.dart';
+import '../../core/constants/malaysia_locations.dart';
 import 'users_repository.dart';
+import 'package:geolocator/geolocator.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -373,13 +375,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           inputType: TextInputType.phone,
           onSave: (val) => usersRepository.updateProfile(phoneNumber: val),
         ),
-        _buildProfileItem(
-          fieldKey: 'location',
-          label: 'Lokasi',
-          value: user.location ?? 'Belum ditetapkan',
-          icon: Icons.location_on,
-          onSave: (val) => usersRepository.updateProfile(location: val),
-        ),
+        _buildLocationSection(user),
         if (isFreelancer) ...[
           _buildProfileItem(
             fieldKey: 'bio',
@@ -478,6 +474,277 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
         ],
+      ],
+    );
+  }
+
+  Widget _buildLocationSection(AppUser user) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        Text(
+          'Lokasi & Liputan Perkhidmatan',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).primaryColor,
+              ),
+        ),
+        const SizedBox(height: 16),
+        _buildStateDropdown(user),
+        _buildDistrictDropdown(user),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.gps_fixed, color: Colors.grey),
+          title: const Text('Koordinat GPS',
+              style: TextStyle(fontSize: 12, color: Colors.grey)),
+          subtitle: Text(
+            user.latitude != null && user.longitude != null
+                ? '${user.latitude!.toStringAsFixed(4)}, ${user.longitude!.toStringAsFixed(4)}'
+                : 'Belum ditetapkan',
+            style: const TextStyle(fontSize: 16, color: Colors.black87),
+          ),
+          trailing: TextButton.icon(
+            icon: const Icon(Icons.my_location, size: 16),
+            label: const Text('Kemaskini'),
+            onPressed: () => _fetchAndUpdateGPS(user),
+          ),
+        ),
+        if (user.roleEnum.isFreelancer) ...[
+          _buildProfileItem(
+              fieldKey: 'coverageRadius',
+              label: 'Jejari Liputan (km)',
+              value: user.coverageRadius?.toString() ?? 'Belum ditetapkan',
+              icon: Icons.radar,
+              inputType: TextInputType.number,
+              onSave: (val) async {
+                final radius = int.tryParse(val);
+                if (radius != null) {
+                  await usersRepository.updateProfile(coverageRadius: radius);
+                } else if (val.isEmpty) {
+                  // handle clearing
+                } else {
+                  throw Exception('Sila masukkan nombor yang sah.');
+                }
+              }),
+          SwitchListTile(
+            title: const Text('Terima Job Luar Kawasan'),
+            subtitle: Text(user.acceptsOutstation
+                ? 'Boleh ditempah oleh client dari luar kawasan (cas tambahan mungkin dikenakan)'
+                : 'Hanya terima tempahan dalam radius liputan sahaja'),
+            value: user.acceptsOutstation,
+            onChanged: (val) async {
+              try {
+                setState(() => _isLoadingUser = true);
+                await usersRepository.updateProfile(acceptsOutstation: val);
+                await _loadUser();
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Gagal: $e')),
+                );
+                setState(() => _isLoadingUser = false);
+              }
+            },
+            secondary: Icon(
+              user.acceptsOutstation ? Icons.directions_car : Icons.block,
+              color: user.acceptsOutstation ? Colors.green : Colors.grey,
+            ),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ],
+        const Divider(height: 32),
+      ],
+    );
+  }
+
+  Future<void> _fetchAndUpdateGPS(AppUser user) async {
+    setState(() => _isLoadingUser = true);
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw Exception('Keizinan lokasi ditolak.');
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception('Keizinan lokasi ditolak kekal. Sila ubah di tetapan.');
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      await usersRepository.updateProfile(
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
+      await _loadUser();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('GPS berjaya dikemaskini')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal mendapatkan GPS: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingUser = false);
+      }
+    }
+  }
+
+  Widget _buildStateDropdown(AppUser user) {
+    final states = malaysiaStatesAndDistricts.keys.toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_editingField != 'state')
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.map, color: Colors.grey),
+            title: const Text('Negeri',
+                style: TextStyle(fontSize: 12, color: Colors.grey)),
+            subtitle: Text(
+              user.state ?? 'Belum ditetapkan',
+              style: const TextStyle(fontSize: 16, color: Colors.black87),
+            ),
+            trailing: IconButton(
+              icon: const Icon(Icons.edit, size: 20),
+              color: Theme.of(context).primaryColor,
+              onPressed: () => _startEditing('state', user.state ?? ''),
+            ),
+          )
+        else
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Pilih Negeri',
+                  style: TextStyle(fontSize: 12, color: Colors.grey)),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        isExpanded: true,
+                        value: states.contains(_editController.text)
+                            ? _editController.text
+                            : null,
+                        hint: const Text('Sila pilih negeri'),
+                        items: states
+                            .map((e) => DropdownMenuItem(
+                                  value: e,
+                                  child: Text(e),
+                                ))
+                            .toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => _editController.text = val);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                      icon: const Icon(Icons.check, color: Colors.green),
+                      onPressed: _isSavingField
+                          ? null
+                          : () => _saveField((val) async {
+                                // Reset district when state changes
+                                await usersRepository.updateProfile(
+                                    state: val, district: '');
+                              })),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.red),
+                    onPressed: _isSavingField ? null : _cancelEditing,
+                  ),
+                ],
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _buildDistrictDropdown(AppUser user) {
+    if (user.state == null || user.state!.isEmpty)
+      return const SizedBox.shrink();
+
+    final districts = malaysiaStatesAndDistricts[user.state] ?? [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_editingField != 'district')
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.location_city, color: Colors.grey),
+            title: const Text('Daerah',
+                style: TextStyle(fontSize: 12, color: Colors.grey)),
+            subtitle: Text(
+              user.district ?? 'Belum ditetapkan',
+              style: const TextStyle(fontSize: 16, color: Colors.black87),
+            ),
+            trailing: IconButton(
+              icon: const Icon(Icons.edit, size: 20),
+              color: Theme.of(context).primaryColor,
+              onPressed: () => _startEditing('district', user.district ?? ''),
+            ),
+          )
+        else
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Pilih Daerah',
+                  style: TextStyle(fontSize: 12, color: Colors.grey)),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        isExpanded: true,
+                        value: districts.contains(_editController.text)
+                            ? _editController.text
+                            : null,
+                        hint: const Text('Sila pilih daerah'),
+                        items: districts
+                            .map((e) => DropdownMenuItem(
+                                  value: e,
+                                  child: Text(e),
+                                ))
+                            .toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => _editController.text = val);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                      icon: const Icon(Icons.check, color: Colors.green),
+                      onPressed: _isSavingField
+                          ? null
+                          : () => _saveField((val) async {
+                                await usersRepository.updateProfile(
+                                    district: val);
+                              })),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.red),
+                    onPressed: _isSavingField ? null : _cancelEditing,
+                  ),
+                ],
+              ),
+            ],
+          ),
       ],
     );
   }

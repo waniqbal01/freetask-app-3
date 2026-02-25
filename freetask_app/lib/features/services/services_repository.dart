@@ -21,8 +21,17 @@ class ServicesRepository {
   final AppStorage _storage;
   final Dio _dio;
 
-  Future<List<Service>> getServices(
-      {String? q, String? category, int? freelancerId, String? sortBy}) async {
+  Future<List<Service>> getServices({
+    String? q,
+    String? category,
+    int? freelancerId,
+    String? sortBy,
+    String? state,
+    String? district,
+    double? lat,
+    double? lng,
+    int? maxDistance,
+  }) async {
     try {
       final response = await _dio.get<List<dynamic>>(
         '/services',
@@ -31,6 +40,11 @@ class ServicesRepository {
           if (category != null && category.isNotEmpty) 'category': category,
           if (freelancerId != null) 'freelancerId': freelancerId,
           if (sortBy != null && sortBy.isNotEmpty) 'sortBy': sortBy,
+          if (state != null && state.isNotEmpty) 'state': state,
+          if (district != null && district.isNotEmpty) 'district': district,
+          if (lat != null) 'lat': lat,
+          if (lng != null) 'lng': lng,
+          if (maxDistance != null) 'maxDistance': maxDistance,
         },
         options: await _authorizedOptions(requireAuth: false),
       );

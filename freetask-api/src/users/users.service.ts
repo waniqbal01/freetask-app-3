@@ -6,7 +6,7 @@ import { toAppUser } from './user.mapper';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   create(data: Prisma.UserCreateInput) {
     return this.prisma.user.create({ data });
@@ -82,6 +82,12 @@ export class UsersService {
         rate: dto.rate,
         phoneNumber: dto.phoneNumber,
         location: dto.location,
+        state: dto.state,
+        district: dto.district,
+        latitude: dto.latitude,
+        longitude: dto.longitude,
+        coverageRadius: dto.coverageRadius,
+        acceptsOutstation: dto.acceptsOutstation,
         isAvailable: dto.isAvailable,
         bankCode: dto.bankCode,
         bankAccount: dto.bankAccount,

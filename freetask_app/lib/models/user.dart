@@ -14,6 +14,12 @@ class AppUser {
     this.reviewCount,
     this.phoneNumber,
     this.location,
+    this.state,
+    this.district,
+    this.latitude,
+    this.longitude,
+    this.coverageRadius,
+    this.acceptsOutstation = false,
     this.isAvailable = true,
     this.bankCode,
     this.bankAccount,
@@ -40,6 +46,12 @@ class AppUser {
       reviewCount: json['reviewCount'] as int?,
       phoneNumber: json['phoneNumber'] as String?,
       location: json['location'] as String?,
+      state: json['state'] as String?,
+      district: json['district'] as String?,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      coverageRadius: json['coverageRadius'] as int?,
+      acceptsOutstation: json['acceptsOutstation'] as bool? ?? false,
       isAvailable: json['isAvailable'] as bool? ?? true,
       bankCode: json['bankCode']?.toString(),
       bankAccount: json['bankAccount']?.toString(),
@@ -61,6 +73,12 @@ class AppUser {
   final int? reviewCount;
   final String? phoneNumber;
   final String? location;
+  final String? state;
+  final String? district;
+  final double? latitude;
+  final double? longitude;
+  final int? coverageRadius;
+  final bool acceptsOutstation;
   final bool isAvailable;
 
   // Bank Details

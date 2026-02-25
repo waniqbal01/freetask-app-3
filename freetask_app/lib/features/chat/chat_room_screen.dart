@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -10,8 +11,10 @@ import '../../core/utils/error_utils.dart';
 import '../../core/utils/url_utils.dart';
 import '../../core/utils/time_utils.dart';
 import '../../widgets/chat_widgets.dart';
-import '../../widgets/scroll_to_bottom_fab.dart';
+
 import '../auth/auth_providers.dart';
+import '../../core/websocket/socket_service.dart';
+import '../../models/chat_enums.dart';
 import 'chat_models.dart';
 import 'chat_repository.dart';
 
@@ -36,19 +39,96 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
   FileType? _selectedFileType;
   bool _isUploading = false;
 
+  // Real-time state
+  bool _isOtherTyping = false;
+  bool _isOtherOnline = false;
+  DateTime? _otherLastSeen;
+  ConnectionStatus _connectionStatus = SocketService.instance.currentStatus;
+
+  // Replied message state
+  ChatMessage? _replyingTo;
+
+  // Typing detection
+  bool _isTyping = false;
+  Timer? _typingTimer;
+
+  // Subscriptions
+  StreamSubscription? _typingSub;
+  StreamSubscription? _presenceSub;
+  StreamSubscription? _connSub;
+
   @override
   void initState() {
     super.initState();
-    // Notify repository that this chat is now active.
-    // This clears unread badge and marks messages as read via socket.
-    // addPostFrameCallback ensures UI is rendered before we mark as read.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(chatRepositoryProvider).enterChat(widget.chatId);
+    });
+
+    _controller.addListener(_onTextChanged);
+
+    final otherId = widget.initialThread?.participantId;
+
+    _connSub = SocketService.instance.connectionStream.listen((status) {
+      if (mounted) setState(() => _connectionStatus = status);
+    });
+
+    _typingSub = SocketService.instance.typingStream.listen((event) {
+      if (event['data'] != null &&
+          event['data']['conversationId'] == widget.chatId) {
+        // Technically we should check if the user who typed is the other user,
+        // but since this is a 1-on-1 chat room, we can infer it.
+        final type = event['event'];
+        if (mounted) {
+          setState(() {
+            _isOtherTyping = type == 'start';
+          });
+        }
+      }
+    });
+
+    _presenceSub = SocketService.instance.presenceStream.listen((presence) {
+      // If we don't know otherId, we can't reliably update presence.
+      // But assuming presence is for the other user.
+      if (otherId != null && presence.userId == otherId) {
+        if (mounted) {
+          setState(() {
+            _isOtherOnline = presence.isOnline;
+            _otherLastSeen = presence.lastSeen;
+          });
+        }
+      }
+    });
+  }
+
+  void _onTextChanged() {
+    final text = _controller.text;
+    if (text.isNotEmpty && !_isTyping) {
+      _isTyping = true;
+      SocketService.instance.sendTyping(widget.chatId, true);
+    }
+
+    _typingTimer?.cancel();
+    _typingTimer = Timer(const Duration(seconds: 2), () {
+      if (_isTyping) {
+        _isTyping = false;
+        SocketService.instance.sendTyping(widget.chatId, false);
+      }
     });
   }
 
   @override
   void dispose() {
+    _controller.removeListener(_onTextChanged);
+    _typingTimer?.cancel();
+    _typingSub?.cancel();
+    _presenceSub?.cancel();
+    _connSub?.cancel();
+
+    // Stop typing if leaving
+    if (_isTyping) {
+      SocketService.instance.sendTyping(widget.chatId, false);
+    }
+
     ref.read(chatRepositoryProvider).leaveChat(widget.chatId);
     _controller.dispose();
     _scrollController.dispose();
@@ -148,14 +228,23 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                         ),
                         // Online status placeholder (will update via WebSocket)
                         const SizedBox(width: 8),
-                        Text(
-                          'online',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.white.withOpacity(0.9),
-                            fontWeight: FontWeight.w400,
+                        if (_isOtherOnline)
+                          Text(
+                            'online',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.white.withOpacity(0.9),
+                              fontWeight: FontWeight.w400,
+                            ),
+                          )
+                        else if (_otherLastSeen != null)
+                          Text(
+                            TimeUtils.formatLastSeen(_otherLastSeen!),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.white.withOpacity(0.7),
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ],
@@ -167,7 +256,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
       ),
       body: Column(
         children: <Widget>[
-          // Connection status banner removed
+          ConnectionStatusBanner(status: _connectionStatus),
           Expanded(
             child: asyncMessages.when(
               data: (List<ChatMessage> messages) {
@@ -179,54 +268,93 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                     child: Text('Tiada mesej lagi. Hantar mesej pertama!'),
                   );
                 }
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (_scrollController.hasClients) {
-                    final atBottom = _scrollController.offset >=
-                        _scrollController.position.maxScrollExtent - 40;
-                    if (atBottom || !hasMore) {
-                      _scrollController.jumpTo(
-                        _scrollController.position.maxScrollExtent,
-                      );
+                return NotificationListener<ScrollNotification>(
+                  onNotification: (ScrollNotification scrollInfo) {
+                    if (scrollInfo.metrics.pixels >=
+                            scrollInfo.metrics.maxScrollExtent - 200 &&
+                        hasMore &&
+                        !isLoadingMore) {
+                      _handleLoadMore();
                     }
-                  }
-                });
-                return RefreshIndicator(
-                  onRefresh: () => ref
-                      .read(chatRepositoryProvider)
-                      .reloadMessages(widget.chatId),
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    itemCount: messages.length + (hasMore ? 1 : 0),
-                    itemBuilder: (BuildContext context, int index) {
-                      if (hasMore && index == 0) {
-                        return _LoadMoreBanner(
-                          isLoadingMore: isLoadingMore,
-                          onLoadMore: _handleLoadMore,
+                    return false;
+                  },
+                  child: RefreshIndicator(
+                    onRefresh: () => ref
+                        .read(chatRepositoryProvider)
+                        .reloadMessages(widget.chatId),
+                    child: ListView.builder(
+                      reverse: true,
+                      controller: _scrollController,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      itemCount: messages.length + (hasMore ? 1 : 0),
+                      itemBuilder: (BuildContext context, int index) {
+                        if (index == messages.length) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 24.0),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+
+                        final message = messages[index];
+                        final bool isFirstMessageOfDay =
+                            _isFirstMessageOfDay(messages, index);
+
+                        ChatMessage? repliedMessage;
+                        if (message.replyToId != null) {
+                          try {
+                            repliedMessage = messages
+                                .firstWhere((m) => m.id == message.replyToId);
+                          } catch (_) {}
+                        }
+
+                        return Column(
+                          children: [
+                            if (isFirstMessageOfDay)
+                              _DateHeader(timestamp: message.timestamp),
+                            Dismissible(
+                              key: ValueKey(message.id),
+                              direction: DismissDirection.startToEnd,
+                              onDismissed: (_) {
+                                // Since we don't actually want to dismiss it from the list
+                                // we shouldn't use Dismissible this way directly for list modification,
+                                // but we can use confirmDismiss to intercept the swipe and return false.
+                              },
+                              confirmDismiss: (direction) async {
+                                if (direction == DismissDirection.startToEnd) {
+                                  setState(() {
+                                    _replyingTo = message;
+                                  });
+                                }
+                                return false; // Never actually dismiss the item
+                              },
+                              background: Container(
+                                alignment: Alignment.centerLeft,
+                                padding: const EdgeInsets.only(left: 20.0),
+                                color: Colors.transparent,
+                                child: const CircleAvatar(
+                                  backgroundColor: Colors.black12,
+                                  radius: 18,
+                                  child: Icon(Icons.reply,
+                                      color: Colors.black54, size: 20),
+                                ),
+                              ),
+                              child: _MessageBubble(
+                                message: message,
+                                repliedMessage: repliedMessage,
+                                isMe: currentUserId != null &&
+                                    message.senderId == currentUserId,
+                                onReply: () {
+                                  setState(() {
+                                    _replyingTo = message;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
                         );
-                      }
-
-                      final message =
-                          hasMore ? messages[index - 1] : messages[index];
-                      // Reverse index for checking next/prev message because ListView is usually safe,
-                      // but here we render top-down.
-                      // To check date change:
-                      final bool isFirstMessageOfDay = _isFirstMessageOfDay(
-                          messages, hasMore ? index - 1 : index);
-
-                      return Column(
-                        children: [
-                          if (isFirstMessageOfDay)
-                            _DateHeader(timestamp: message.timestamp),
-                          _MessageBubble(
-                            message: message,
-                            isMe: currentUserId != null &&
-                                message.senderId == currentUserId,
-                          ),
-                        ],
-                      );
-                    },
+                      },
+                    ),
                   ),
                 );
               },
@@ -261,6 +389,51 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
               },
             ),
           ),
+          if (_isOtherTyping)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Colors.grey.shade200,
+                      radius: 12,
+                      child: Text(
+                        thread.participantName.isNotEmpty
+                            ? thread.participantName[0].toUpperCase()
+                            : '?',
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const TypingAnimation(size: 6),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (_replyingTo != null)
+            _ReplyPreview(
+              message: _replyingTo!,
+              onCancel: () {
+                setState(() {
+                  _replyingTo = null;
+                });
+              },
+            ),
           _MessageComposer(
             controller: _controller,
             onSend: _handleSendMessage,
@@ -273,9 +446,6 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
           ),
         ],
       ),
-      floatingActionButton: ScrollToBottomFAB(
-        scrollController: _scrollController,
-      ),
     );
   }
 
@@ -287,8 +457,11 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
       return;
     }
 
+    final replyToId = _replyingTo?.id;
+
     setState(() {
       _isUploading = true;
+      _replyingTo = null;
     });
 
     try {
@@ -308,6 +481,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                 text: text,
                 type: type,
                 attachmentUrl: attachmentUrl,
+                replyToId: replyToId,
               );
         } else {
           type = 'file';
@@ -317,6 +491,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                 text: _selectedFile!.name,
                 type: type,
                 attachmentUrl: attachmentUrl,
+                replyToId: replyToId,
               );
 
           // If there's a caption for the file, send it as a separate message
@@ -334,6 +509,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
               conversationId: widget.chatId,
               text: text,
               type: 'text',
+              replyToId: replyToId,
             );
       }
 
@@ -380,10 +556,10 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
   // I will just update these two methods first.
 
   bool _isFirstMessageOfDay(List<ChatMessage> messages, int index) {
-    if (index == 0) return true;
+    if (index == messages.length - 1) return true;
     final current = messages[index];
-    final previous = messages[index - 1];
-    return TimeUtils.isDifferentDay(previous.timestamp, current.timestamp);
+    final older = messages[index + 1];
+    return TimeUtils.isDifferentDay(older.timestamp, current.timestamp);
   }
 
   Future<void> _handleLoadMore() async {
@@ -446,114 +622,221 @@ class _DateHeader extends StatelessWidget {
 }
 
 class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.message, required this.isMe});
+  const _MessageBubble({
+    required this.message,
+    required this.isMe,
+    this.onReply,
+    this.repliedMessage,
+  });
+
   final ChatMessage message;
   final bool isMe;
+  final VoidCallback? onReply;
+  final ChatMessage? repliedMessage;
 
   @override
   Widget build(BuildContext context) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints:
-            BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isMe
-              ? const Color(0xFFDCF8C6) // WhatsApp-style light green for sent
-              : Colors.white, // White for received
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(12),
-            topRight: const Radius.circular(12),
-            bottomLeft: isMe ? const Radius.circular(12) : Radius.zero,
-            bottomRight: isMe ? Radius.zero : const Radius.circular(12),
+      child: GestureDetector(
+        onDoubleTap: onReply,
+        onLongPress: () {
+          showModalBottomSheet(
+            context: context,
+            builder: (context) => SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.reply, color: Colors.blue),
+                    title: const Text('Balas (Reply)'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      if (onReply != null) onReply!();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+        child: Container(
+          constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.75),
+          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isMe
+                ? const Color(0xFFDCF8C6) // WhatsApp-style light green for sent
+                : Colors.white, // White for received
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(12),
+              topRight: const Radius.circular(12),
+              bottomLeft: isMe ? const Radius.circular(12) : Radius.zero,
+              bottomRight: isMe ? Radius.zero : const Radius.circular(12),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              )
+            ],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 4,
-              offset: const Offset(0, 1),
-            )
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            // Image message
-            if (message.type == 'image' && message.attachmentUrl != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      maxWidth: 250,
-                      maxHeight: 250,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (repliedMessage != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(8),
+                  margin: const EdgeInsets.only(bottom: 6),
+                  decoration: BoxDecoration(
+                    color:
+                        isMe ? const Color(0xFFC8E6C9) : Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border(
+                      left: BorderSide(
+                        color: isMe
+                            ? Colors.green.shade800
+                            : Colors.indigo.shade400,
+                        width: 4,
+                      ),
                     ),
-                    child: Image.network(
-                      UrlUtils.resolveImageUrl(message.attachmentUrl),
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          height: 150,
-                          width: 200,
-                          color: Colors.grey.shade300,
-                          child: const Icon(Icons.broken_image,
-                              color: Colors.grey),
-                        );
-                      },
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        repliedMessage!.senderName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: isMe
+                              ? Colors.green.shade800
+                              : Colors.indigo.shade400,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        repliedMessage!.type == 'image'
+                            ? '📷 Gambar'
+                            : (repliedMessage!.type == 'file'
+                                ? '📄 Dokumen'
+                                : repliedMessage!.text),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 12, color: Colors.black54),
+                      ),
+                    ],
+                  ),
+                ),
+              // Image message
+              if (message.type == 'image' && message.attachmentUrl != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: 250,
+                        maxHeight: 250,
+                      ),
+                      child: GestureDetector(
+                        onTap: () {
+                          // Full-screen image viewer
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => Scaffold(
+                                backgroundColor: Colors.black,
+                                appBar: AppBar(
+                                  backgroundColor: Colors.black,
+                                  foregroundColor: Colors.white,
+                                ),
+                                body: Center(
+                                  child: InteractiveViewer(
+                                    clipBehavior: Clip.none,
+                                    minScale: 1.0,
+                                    maxScale: 4.0,
+                                    child: Image.network(
+                                      UrlUtils.resolveImageUrl(
+                                          message.attachmentUrl),
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                        child: Image.network(
+                          UrlUtils.resolveImageUrl(message.attachmentUrl),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              height: 150,
+                              width: 200,
+                              color: Colors.grey.shade300,
+                              child: const Icon(Icons.broken_image,
+                                  color: Colors.grey),
+                            );
+                          },
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            if (message.type == 'file' && message.attachmentUrl != null)
-              Container(
-                padding: const EdgeInsets.all(8),
-                margin: const EdgeInsets.only(bottom: 4),
-                decoration: BoxDecoration(
-                  color: isMe ? const Color(0xFFC8E6C9) : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
+              if (message.type == 'file' && message.attachmentUrl != null)
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  margin: const EdgeInsets.only(bottom: 4),
+                  decoration: BoxDecoration(
+                    color:
+                        isMe ? const Color(0xFFC8E6C9) : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.insert_drive_file,
+                          color: Colors.blueGrey),
+                      const SizedBox(width: 8),
+                      Expanded(
+                          child: Text(message.text,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: Colors.black87))),
+                    ],
+                  ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.insert_drive_file, color: Colors.blueGrey),
-                    const SizedBox(width: 8),
-                    Expanded(
-                        child: Text(message.text,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.black87))),
+              if (message.type == 'text' ||
+                  (message.text.isNotEmpty && message.type != 'file'))
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    message.text,
+                    style: const TextStyle(fontSize: 15, color: Colors.black87),
+                    textAlign: TextAlign.left,
+                  ),
+                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    TimeUtils.formatTime(message.timestamp),
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: isMe ? Colors.blue.shade800 : Colors.black54),
+                  ),
+                  if (isMe) ...[
+                    const SizedBox(width: 4),
+                    MessageStatusIcon(status: message.status),
                   ],
-                ),
-              ),
-            if (message.type == 'text' ||
-                (message.text.isNotEmpty && message.type != 'file'))
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text(
-                  message.text,
-                  style: const TextStyle(fontSize: 15, color: Colors.black87),
-                  textAlign: TextAlign.left,
-                ),
-              ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  TimeUtils.formatTime(message.timestamp),
-                  style: TextStyle(
-                      fontSize: 11,
-                      color: isMe ? Colors.blue.shade800 : Colors.black54),
-                ),
-                if (isMe) ...[
-                  const SizedBox(width: 4),
-                  MessageStatusIcon(status: message.status),
                 ],
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -810,37 +1093,56 @@ class _AttachmentOption extends StatelessWidget {
   }
 }
 
-class _LoadMoreBanner extends StatelessWidget {
-  const _LoadMoreBanner({
-    required this.isLoadingMore,
-    required this.onLoadMore,
+class _ReplyPreview extends StatelessWidget {
+  const _ReplyPreview({
+    required this.message,
+    required this.onCancel,
   });
 
-  final bool isLoadingMore;
-  final VoidCallback onLoadMore;
+  final ChatMessage message;
+  final VoidCallback onCancel;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        border: Border(
+          left: BorderSide(color: Theme.of(context).primaryColor, width: 4),
+        ),
+      ),
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              'Sejarah chat dipendekkan. Muat lebih mesej lama.',
-              style: Theme.of(context).textTheme.bodySmall,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  message.senderName,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).primaryColor,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  message.type == 'image'
+                      ? '📷 Gambar'
+                      : (message.type == 'file' ? '📄 Dokumen' : message.text),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.black54, fontSize: 13),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 8),
-          FilledButton.tonal(
-            onPressed: isLoadingMore ? null : onLoadMore,
-            child: isLoadingMore
-                ? const SizedBox(
-                    height: 16,
-                    width: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Muat Lebih'),
+          IconButton(
+            icon: const Icon(Icons.close, size: 20, color: Colors.grey),
+            onPressed: onCancel,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
           ),
         ],
       ),

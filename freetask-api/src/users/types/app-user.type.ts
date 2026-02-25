@@ -13,6 +13,12 @@ export type AppUser = {
   rate: number | null;
   phoneNumber: string | null;
   location: string | null;
+  state: string | null;
+  district: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  coverageRadius: number | null;
+  acceptsOutstation: boolean;
   rating?: number | null;
   reviewCount?: number | null;
   isAvailable: boolean;

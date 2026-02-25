@@ -31,6 +31,7 @@ dependencies:
   open_filex: ^4.7.0
   universal_html: ^2.3.0
   universal_io: ^2.3.1
+  geolocator: ^14.0.2
 
 dev_dependencies:
   flutter_test:
