@@ -137,7 +137,7 @@ export class ChatsService {
         },
         include: {
           sender: {
-            select: { id: true, name: true },
+            select: { id: true, name: true, role: true },
           },
         },
       });
@@ -146,6 +146,25 @@ export class ChatsService {
         where: { id: conversationId },
         data: { updatedAt: new Date() },
       });
+
+      // Track Reply Rate: If a Freelancer sends their first message in this conversation
+      if (createdMessage.sender.role === 'FREELANCER') {
+        const previousMessages = await tx.chatMessage.count({
+          where: {
+            conversationId,
+            senderId: userId,
+            id: { not: createdMessage.id }, // exclude the one just created
+          },
+        });
+
+        if (previousMessages === 0) {
+          // This is their first reply in this conversation
+          await tx.user.update({
+            where: { id: userId },
+            data: { totalRepliedRequests: { increment: 1 } },
+          });
+        }
+      }
 
       return createdMessage;
     });

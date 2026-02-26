@@ -65,6 +65,12 @@ enum MessageStatus {
   FAILED
 }
 
+enum FreelancerLevel {
+  NEWBIE
+  STANDARD
+  PRO
+}
+
 model User {
   id                   Int             @id @default(autoincrement())
   createdAt            DateTime        @default(now())
@@ -104,6 +110,16 @@ model User {
   trustScore           Int             @default(50)
   lastSeen             DateTime?
   isOnline             Boolean         @default(false)
+
+  // Freelancer Level & Stats
+  level                 FreelancerLevel @default(NEWBIE)
+  totalCompletedJobs    Int             @default(0)
+  totalReviews          Int             @default(0)
+  totalRatingScore      Decimal         @default(0) @db.Decimal(10, 2)
+  totalIncomingRequests Int             @default(0)
+  totalRepliedRequests  Int             @default(0)
+  replyRate             Decimal?        @db.Decimal(5, 2)
+  levelDowngradeStrikes Int             @default(0)
 
   // Bank Details for Payouts
   bankCode       String? // e.g., "MBBEMYKL"

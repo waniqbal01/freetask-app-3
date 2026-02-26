@@ -36,7 +36,7 @@ export class ServicesService {
       },
       include: {
         freelancer: {
-          select: { id: true, name: true, email: true, avatarUrl: true },
+          select: { id: true, name: true, email: true, avatarUrl: true, level: true },
         },
       },
     });
@@ -134,6 +134,7 @@ export class ServicesService {
             id: true,
             name: true,
             avatarUrl: true,
+            level: true,
             state: true,
             district: true,
             latitude: true,
@@ -207,7 +208,7 @@ export class ServicesService {
       },
       include: {
         freelancer: {
-          select: { id: true, name: true, avatarUrl: true },
+          select: { id: true, name: true, avatarUrl: true, level: true },
         },
         _count: {
           select: {
@@ -233,6 +234,7 @@ export class ServicesService {
             name: true,
             email: true,
             avatarUrl: true,
+            level: true,
             state: true,
             district: true,
             latitude: true,

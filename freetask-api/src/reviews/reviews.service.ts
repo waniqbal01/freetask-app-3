@@ -52,14 +52,34 @@ export class ReviewsService {
       );
     }
 
-    const review = await this.prisma.review.create({
-      data: {
-        jobId: job.id,
-        reviewerId: userId,
-        revieweeId: dto.revieweeId,
-        rating: dto.rating,
-        comment: dto.comment,
-      },
+    const review = await this.prisma.$transaction(async (tx) => {
+      const createdReview = await tx.review.create({
+        data: {
+          jobId: job.id,
+          reviewerId: userId,
+          revieweeId: dto.revieweeId,
+          rating: dto.rating,
+          comment: dto.comment,
+        },
+      });
+
+      // If the reviewee is a freelancer, update their metrics
+      const reviewee = await tx.user.findUnique({
+        where: { id: dto.revieweeId },
+        select: { role: true },
+      });
+
+      if (reviewee?.role === 'FREELANCER') {
+        await tx.user.update({
+          where: { id: dto.revieweeId },
+          data: {
+            totalReviews: { increment: 1 },
+            totalRatingScore: { increment: dto.rating },
+          },
+        });
+      }
+
+      return createdReview;
     });
 
     return review;

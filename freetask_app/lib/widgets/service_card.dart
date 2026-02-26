@@ -68,6 +68,7 @@ class ServiceCard extends StatelessWidget {
                         spacing: 6,
                         runSpacing: 4,
                         children: [
+                          _LevelChip(level: service.freelancerLevel),
                           _CategoryChip(
                               label: service.category.replaceAll('&amp;', '&')),
                           if (service.distance != null)
@@ -422,6 +423,63 @@ class _RejectionBanner extends StatelessWidget {
                     fontWeight: FontWeight.w500,
                   ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LevelChip extends StatelessWidget {
+  const _LevelChip({required this.level});
+
+  final String level;
+
+  @override
+  Widget build(BuildContext context) {
+    Color color;
+    String label;
+    IconData icon;
+    switch (level) {
+      case 'PRO':
+        color = Colors.purple;
+        label = 'Pro';
+        icon = Icons.star;
+        break;
+      case 'STANDARD':
+        color = Colors.blue;
+        label = 'Standard';
+        icon = Icons.verified;
+        break;
+      default:
+        color = Colors.green;
+        label = 'Newbie';
+        icon = Icons.circle;
+        break;
+    }
+
+    Color textColor = color == Colors.purple
+        ? Colors.purple.shade900
+        : (color == Colors.blue ? Colors.blue.shade900 : Colors.green.shade900);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: textColor,
+                  fontWeight: FontWeight.w700,
+                ),
           ),
         ],
       ),

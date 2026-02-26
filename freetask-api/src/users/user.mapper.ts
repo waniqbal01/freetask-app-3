@@ -37,5 +37,11 @@ export const toAppUser = (user: User): AppUser => {
     bankAccount: user.bankAccount,
     bankHolderName: user.bankHolderName,
     bankVerified: user.bankVerified,
+    level: user.level,
+    totalCompletedJobs: user.totalCompletedJobs,
+    totalReviews: user.totalReviews,
+    replyRate: user.replyRate ? Number(user.replyRate) : null,
+    rating: user.totalReviews > 0 ? Number(user.totalRatingScore) / user.totalReviews : 0,
+    reviewCount: user.totalReviews,
   };
 };

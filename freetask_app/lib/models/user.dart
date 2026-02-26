@@ -25,6 +25,10 @@ class AppUser {
     this.bankAccount,
     this.bankHolderName,
     this.bankVerified = false,
+    this.level = 'NEWBIE',
+    this.totalCompletedJobs = 0,
+    this.totalReviews = 0,
+    this.replyRate,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
@@ -57,6 +61,10 @@ class AppUser {
       bankAccount: json['bankAccount']?.toString(),
       bankHolderName: json['bankHolderName']?.toString(),
       bankVerified: json['bankVerified'] as bool? ?? false,
+      level: json['level']?.toString() ?? 'NEWBIE',
+      totalCompletedJobs: json['totalCompletedJobs'] as int? ?? 0,
+      totalReviews: json['totalReviews'] as int? ?? 0,
+      replyRate: (json['replyRate'] as num?)?.toDouble(),
     );
   }
 
@@ -86,4 +94,10 @@ class AppUser {
   final String? bankAccount;
   final String? bankHolderName;
   final bool bankVerified;
+
+  // Freelancer Level and Stats
+  final String level;
+  final int totalCompletedJobs;
+  final int totalReviews;
+  final double? replyRate;
 }

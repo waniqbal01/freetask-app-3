@@ -26,4 +26,8 @@ export type AppUser = {
   bankAccount?: string | null;
   bankHolderName?: string | null;
   bankVerified?: boolean;
+  level: string;
+  totalCompletedJobs: number;
+  totalReviews: number;
+  replyRate?: number | null;
 };

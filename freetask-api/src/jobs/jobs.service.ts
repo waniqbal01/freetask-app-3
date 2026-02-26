@@ -88,6 +88,12 @@ export class JobsService {
       // NOTE: Escrow is NOT created here anymore
       // It will be created when payment is completed (AWAITING_PAYMENT → IN_PROGRESS)
 
+      // Increment totalIncomingRequests for the freelancer
+      await this.prisma.user.update({
+        where: { id: service.freelancerId },
+        data: { totalIncomingRequests: { increment: 1 } },
+      });
+
       // Notify Freelancer
       await this.notificationsService.sendNotification({
         userId: service.freelancerId,
@@ -161,6 +167,12 @@ export class JobsService {
         conversationId: conversation.id,
       },
       include: this.jobInclude,
+    });
+
+    // Increment totalIncomingRequests for the freelancer
+    await this.prisma.user.update({
+      where: { id: freelancerId },
+      data: { totalIncomingRequests: { increment: 1 } },
     });
 
     await this.notificationsService.sendNotification({
@@ -741,6 +753,7 @@ export class JobsService {
           where: { id: existingJob.freelancerId },
           data: {
             pendingBalance: { increment: freelancerShare },
+            totalCompletedJobs: { increment: 1 },
           },
         });
 

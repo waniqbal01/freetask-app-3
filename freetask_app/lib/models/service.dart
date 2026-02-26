@@ -24,6 +24,7 @@ class Service {
     this.freelancerLongitude,
     this.freelancerCoverageRadius,
     this.freelancerAcceptsOutstation = false,
+    this.freelancerLevel = 'NEWBIE',
   });
 
   factory Service.fromJson(Map<String, dynamic> json) {
@@ -58,6 +59,7 @@ class Service {
       freelancerCoverageRadius: freelancer?['coverageRadius'] as int?,
       freelancerAcceptsOutstation:
           freelancer?['acceptsOutstation'] as bool? ?? false,
+      freelancerLevel: freelancer?['level']?.toString() ?? 'NEWBIE',
     );
   }
 
@@ -85,6 +87,7 @@ class Service {
   final double? freelancerLongitude;
   final int? freelancerCoverageRadius;
   final bool freelancerAcceptsOutstation;
+  final String freelancerLevel;
 
   bool get isPriceUnavailable => hasPriceIssue || price <= 0;
   bool get isPending => approvalStatus == 'PENDING';

@@ -359,7 +359,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
+        if (isFreelancer) ...[
+          _buildLevelBadge(user.level),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: _buildLevelProgress(user),
+          ),
+          const SizedBox(height: 24),
+        ] else ...[
+          const SizedBox(height: 24),
+        ],
         _buildProfileItem(
           fieldKey: 'name',
           label: 'Nama Penuh',
@@ -959,6 +970,113 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         const Divider(height: 1),
       ],
+    );
+  }
+
+  Widget _buildLevelBadge(String level) {
+    Color color;
+    String label;
+    IconData icon;
+    switch (level) {
+      case 'PRO':
+        color = Colors.purple;
+        label = 'Pro';
+        icon = Icons.star;
+        break;
+      case 'STANDARD':
+        color = Colors.blue;
+        label = 'Standard';
+        icon = Icons.verified;
+        break;
+      default:
+        color = Colors.green;
+        label = 'Newbie';
+        icon = Icons.circle;
+        break;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLevelProgress(AppUser user) {
+    if (user.level == 'PRO') {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.purple.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.purple.withValues(alpha: 0.2)),
+        ),
+        child: const Center(
+          child: Text(
+            '🌟 Tahniah! Anda adalah Freelancer tahap Pro.',
+            style: TextStyle(color: Colors.purple, fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+    }
+
+    final isNewbie = user.level == 'NEWBIE';
+    final nextLevelName = isNewbie ? 'Standard' : 'Pro';
+    final targetJobs = isNewbie ? 10 : 30;
+
+    final currentJobs = user.totalCompletedJobs;
+    final progress = (currentJobs / targetJobs).clamp(0.0, 1.0);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Progress ke $nextLevelName',
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text('$currentJobs / $targetJobs Job'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          LinearProgressIndicator(
+            value: progress,
+            backgroundColor: Colors.grey.shade200,
+            color: Theme.of(context).primaryColor,
+            minHeight: 8,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Tingkatkan siapan job & skor rating untuk naik level!',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          ),
+        ],
+      ),
     );
   }
 }

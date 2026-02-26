@@ -231,6 +231,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 ),
             textAlign: TextAlign.center,
           ),
+          if (user['role']?.toString().toUpperCase() == 'FREELANCER') ...[
+            const SizedBox(height: 12),
+            _buildLevelBadge(user['level']?.toString() ?? 'NEWBIE'),
+          ],
           if (rate != null) ...[
             const SizedBox(height: 4),
             Text(
@@ -474,6 +478,52 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildLevelBadge(String level) {
+    Color color;
+    String label;
+    IconData icon;
+    switch (level) {
+      case 'PRO':
+        color = Colors.purple;
+        label = 'Pro';
+        icon = Icons.star;
+        break;
+      case 'STANDARD':
+        color = Colors.blue;
+        label = 'Standard';
+        icon = Icons.verified;
+        break;
+      default:
+        color = Colors.green;
+        label = 'Newbie';
+        icon = Icons.circle;
+        break;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
