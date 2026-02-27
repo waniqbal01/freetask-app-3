@@ -521,22 +521,6 @@ class _SearchAndFilterCard extends StatelessWidget {
   final bool isNearMeEnabled;
   final ValueChanged<bool> onNearMeToggled;
 
-  String get _sortLabel {
-    if (isNearMeEnabled) return 'Berdekatan';
-    switch (selectedSortOption) {
-      case 'popular':
-        return 'Popular';
-      case 'newest':
-        return 'Baru';
-      case 'cheapest':
-        return 'Murah';
-      case 'expensive':
-        return 'Mahal';
-      default:
-        return 'Tapis';
-    }
-  }
-
   void _showCategorySelector(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
@@ -551,30 +535,6 @@ class _SearchAndFilterCard extends StatelessWidget {
             if (value != null) {
               onCategorySelected(value);
             }
-            Navigator.pop(context);
-          },
-        );
-      },
-    );
-  }
-
-  void _showSortSelector(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return _SortBottomSheet(
-          selectedSortOption: selectedSortOption,
-          isNearMeEnabled: isNearMeEnabled,
-          onSortOptionSelected: (val) {
-            onSortOptionSelected(val);
-            if (isNearMeEnabled) onNearMeToggled(false);
-            Navigator.pop(context);
-          },
-          onNearMeToggled: (val) {
-            onNearMeToggled(val);
-            if (val) onSortOptionSelected(null);
             Navigator.pop(context);
           },
         );
@@ -957,114 +917,6 @@ class _SelectionBottomSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-        ],
-      ),
-    );
-  }
-}
-
-class _SortBottomSheet extends StatelessWidget {
-  const _SortBottomSheet({
-    required this.selectedSortOption,
-    required this.isNearMeEnabled,
-    required this.onSortOptionSelected,
-    required this.onNearMeToggled,
-  });
-
-  final String? selectedSortOption;
-  final bool isNearMeEnabled;
-  final ValueChanged<String?> onSortOptionSelected;
-  final ValueChanged<bool> onNearMeToggled;
-
-  Widget _buildListTile(BuildContext context, String title, IconData icon,
-      bool isSelected, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(icon,
-          color: isSelected ? AppColors.primary : AppColors.neutral500),
-      title: Text(title,
-          style: TextStyle(
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              color: isSelected ? AppColors.primary : AppColors.neutral900)),
-      trailing:
-          isSelected ? const Icon(Icons.check, color: AppColors.primary) : null,
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 12),
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(99),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Tapis & Susunan', style: AppTextStyles.titleMedium),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Divider(),
-          _buildListTile(
-            context,
-            'Terdekat',
-            Icons.my_location,
-            isNearMeEnabled,
-            () => onNearMeToggled(true),
-          ),
-          _buildListTile(
-            context,
-            'Popular',
-            Icons.local_fire_department_outlined,
-            selectedSortOption == 'popular' && !isNearMeEnabled,
-            () => onSortOptionSelected('popular'),
-          ),
-          _buildListTile(
-            context,
-            'Paling Baru',
-            Icons.auto_awesome_outlined,
-            selectedSortOption == 'newest' && !isNearMeEnabled,
-            () => onSortOptionSelected('newest'),
-          ),
-          _buildListTile(
-            context,
-            'Harga (Murah ke Mahal)',
-            Icons.arrow_upward_rounded,
-            selectedSortOption == 'cheapest' && !isNearMeEnabled,
-            () => onSortOptionSelected('cheapest'),
-          ),
-          _buildListTile(
-            context,
-            'Harga (Mahal ke Murah)',
-            Icons.arrow_downward_rounded,
-            selectedSortOption == 'expensive' && !isNearMeEnabled,
-            () => onSortOptionSelected('expensive'),
-          ),
-          const SizedBox(height: 24),
         ],
       ),
     );

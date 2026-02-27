@@ -686,8 +686,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildDistrictDropdown(AppUser user) {
-    if (user.state == null || user.state!.isEmpty)
+    if (user.state == null || user.state!.isEmpty) {
       return const SizedBox.shrink();
+    }
 
     final districts = malaysiaStatesAndDistricts[user.state] ?? [];
 

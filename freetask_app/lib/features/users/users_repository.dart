@@ -61,8 +61,9 @@ class UsersRepository {
     addIfPresent('bankAccount', bankAccount);
     addIfPresent('bankHolderName', bankHolderName);
     if (isAvailable != null) payload['isAvailable'] = isAvailable;
-    if (acceptsOutstation != null)
+    if (acceptsOutstation != null) {
       payload['acceptsOutstation'] = acceptsOutstation;
+    }
 
     if (payload.isEmpty) {
       return;

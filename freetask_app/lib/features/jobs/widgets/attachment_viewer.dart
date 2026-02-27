@@ -194,8 +194,9 @@ class _AttachmentViewerState extends State<AttachmentViewer> {
           directory = await getDownloadsDirectory();
         }
 
-        if (directory == null)
+        if (directory == null) {
           throw Exception('Folder muat turun tidak ditemui');
+        }
 
         if (!await directory.exists()) {
           await directory.create(recursive: true);
