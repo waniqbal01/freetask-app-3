@@ -21,20 +21,19 @@ import 'package:http_parser/http_parser.dart';
 
 import '../../core/websocket/socket_service.dart';
 
-final chatRepositoryProvider = Provider.autoDispose<ChatRepository>((Ref ref) {
+final chatRepositoryProvider = Provider<ChatRepository>((Ref ref) {
   final repository = ChatRepository();
   ref.onDispose(repository.dispose);
   return repository;
 });
 
-final chatThreadsProvider =
-    StreamProvider.autoDispose<List<ChatThread>>((Ref ref) {
+final chatThreadsProvider = StreamProvider<List<ChatThread>>((Ref ref) {
   final repository = ref.watch(chatRepositoryProvider);
   return repository.threadsStream;
 });
 
-final chatThreadsProviderWithQuery = StreamProvider.autoDispose
-    .family<List<ChatThread>, ({String? limit, String? offset})>(
+final chatThreadsProviderWithQuery =
+    StreamProvider.family<List<ChatThread>, ({String? limit, String? offset})>(
         (Ref ref, query) {
   final repository = ref.watch(chatRepositoryProvider);
   // If requesting the main list (first page), return the live stream
@@ -91,6 +90,8 @@ class ChatRepository {
   String? _activeConversationId;
 
   List<ChatThread> _threads = <ChatThread>[];
+  List<ChatThread> get currentThreads =>
+      List<ChatThread>.unmodifiable(_threads);
   final Map<String, List<ChatMessage>> _messages =
       <String, List<ChatMessage>>{};
   final Map<String, StreamController<List<ChatMessage>>> _controllers =

@@ -11,27 +11,24 @@ class AppBottomNav extends StatelessWidget {
   final AppTab currentTab;
 
   void _onDestinationSelected(BuildContext context, int index) {
-    final tab = AppTab.values[index];
-    switch (tab) {
-      case AppTab.chats:
-        context.go('/chats');
-        break;
-      case AppTab.jobs:
-        context.go('/jobs');
-        break;
-      case AppTab.home:
-        context.go('/home');
-        break;
+    if (index == 0) {
+      // By default, the Home tab goes to chats. The user can toggle to marketplace from there.
+      context.go('/chats');
+    } else if (index == 1) {
+      context.go('/jobs');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Both chats and home tab will highlight the first 'Home' button
+    final int selectedIndex = currentTab == AppTab.jobs ? 1 : 0;
+
     return SafeArea(
       top: false,
       child: NavigationBar(
         height: 68,
-        selectedIndex: currentTab.index,
+        selectedIndex: selectedIndex,
         elevation: 8,
         backgroundColor: Colors.white,
         indicatorColor: AppColors.primary.withValues(alpha: 0.08),
@@ -42,17 +39,12 @@ class AppBottomNav extends StatelessWidget {
           NavigationDestination(
             icon: Icon(Icons.chat_bubble_outline),
             selectedIcon: Icon(Icons.chat_bubble_rounded),
-            label: 'Chat',
+            label: 'Home',
           ),
           NavigationDestination(
             icon: Icon(Icons.work_outline),
             selectedIcon: Icon(Icons.work_rounded),
             label: 'Jobs',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.storefront_outlined),
-            selectedIcon: Icon(Icons.storefront_rounded),
-            label: 'Services',
           ),
         ],
       ),

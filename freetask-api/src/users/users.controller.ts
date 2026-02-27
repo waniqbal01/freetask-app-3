@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, UseGuards, Query } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { GetUser } from '../auth/get-user.decorator';
 import { UsersService } from './users.service';
@@ -7,7 +7,17 @@ import { UpdateUserDto } from './dto/update-user.dto';
 @UseGuards(JwtAuthGuard)
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
+
+  @Get('freelancers')
+  async getFreelancers(
+    @Query('q') q?: string,
+    @Query('category') category?: string,
+    @Query('state') state?: string,
+    @Query('district') district?: string,
+  ) {
+    return this.usersService.getFreelancers({ q, category, state, district });
+  }
 
   @Get('me')
   getMe(@GetUser('userId') userId: number) {

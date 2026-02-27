@@ -8,15 +8,17 @@ import '../../core/constants/app_strings.dart';
 import '../../core/utils/error_utils.dart';
 import '../../core/widgets/ft_button.dart';
 import '../../core/constants/malaysia_locations.dart';
-import '../../models/service.dart';
+
 import '../../models/user.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/service_card.dart';
+import '../../widgets/freelancer_card.dart';
 import '../../widgets/app_bottom_nav.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../widgets/notification_bell_button.dart';
 import '../auth/auth_repository.dart';
 import 'services_repository.dart';
+import '../users/users_repository.dart';
+import '../chat/chat_repository.dart';
 
 class ServiceListScreen extends StatefulWidget {
   const ServiceListScreen({super.key});
@@ -26,8 +28,12 @@ class ServiceListScreen extends StatefulWidget {
 }
 
 class _ServiceListScreenState extends State<ServiceListScreen> {
+  // Static cache to preserve data across route transitions
+  static List<AppUser>? _cachedFreelancers;
+  static List<String>? _cachedCategories;
+
   final TextEditingController _searchController = TextEditingController();
-  final List<Service> _services = <Service>[];
+  final List<AppUser> _freelancers = <AppUser>[];
   bool _isLoading = false;
   String? _errorMessage;
   List<String> _categories = const <String>['Semua'];
@@ -44,7 +50,17 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchServices();
+    // Use cached data to enable instant UI load
+    if (_cachedFreelancers != null) {
+      _freelancers.addAll(_cachedFreelancers!);
+      // Still fetch in background, but don't show full loading
+      _isLoading = false;
+    }
+    if (_cachedCategories != null) {
+      _categories = _cachedCategories!;
+    }
+
+    _fetchFreelancers(silent: _cachedFreelancers != null);
     _loadCategories();
     _loadCurrentUser();
     _searchController.addListener(_onSearchChanged);
@@ -59,14 +75,17 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
 
   void _onSearchChanged() {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), _fetchServices);
+    _debounce =
+        Timer(const Duration(milliseconds: 300), () => _fetchFreelancers());
   }
 
-  Future<void> _fetchServices() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  Future<void> _fetchFreelancers({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     final t0 = DateTime.now();
     try {
@@ -75,42 +94,37 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
         await _fetchGPSForNearMe();
       }
 
-      final services = await servicesRepository.getServices(
+      final freelancersList = await usersRepository.getFreelancers(
         q: _searchController.text,
         category: _selectedCategory == 'Semua' ? null : _selectedCategory,
-        sortBy: _isNearMeEnabled ? 'nearest' : _selectedSortOption,
         state: _selectedState,
         district: _selectedDistrict,
-        lat: _isNearMeEnabled ? _userLat : null,
-        lng: _isNearMeEnabled ? _userLng : null,
-        maxDistance: _isNearMeEnabled
-            ? 50
-            : null, // hardcoded 50km for MVP near me bounds
       );
       debugPrint(
-          '[PERF] LoadServices: ${DateTime.now().difference(t0).inMilliseconds}ms');
+          '[PERF] LoadFreelancers: ${DateTime.now().difference(t0).inMilliseconds}ms');
 
       if (!mounted) return;
 
       setState(() {
-        _services
+        _freelancers
           ..clear()
-          ..addAll(services);
+          ..addAll(freelancersList);
+        _cachedFreelancers = List.from(_freelancers);
       });
     } on DioException catch (error) {
       if (!mounted) return;
       final message = resolveDioErrorMessage(error);
       setState(() {
-        _errorMessage = message;
+        _errorMessage = silent ? null : message;
       });
-      showErrorSnackBar(context, message);
+      if (!silent) showErrorSnackBar(context, message);
     } catch (error) {
       if (!mounted) return;
       const message = AppStrings.errorLoadingServices;
       setState(() {
-        _errorMessage = message;
+        _errorMessage = silent ? null : message;
       });
-      showErrorSnackBar(context, '$message\n$error');
+      if (!silent) showErrorSnackBar(context, '$message\n$error');
     } finally {
       if (mounted) {
         setState(() {
@@ -123,11 +137,11 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
   Future<void> _loadCategories() async {
     try {
       final categories = await servicesRepository.getCategories();
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
+
       setState(() {
         _categories = <String>['Semua', ...categories];
+        _cachedCategories = _categories;
         if (!_categories.contains(_selectedCategory)) {
           _selectedCategory = 'Semua';
         }
@@ -196,291 +210,275 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
           child: LayoutBuilder(
             builder: (BuildContext context, BoxConstraints _) {
               return Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
-                  child: RefreshIndicator(
-                    onRefresh: _fetchServices,
-                    color: AppColors.primary,
-                    child: CustomScrollView(
-                      slivers: <Widget>[
-                        SliverToBoxAdapter(
-                          child: Stack(
-                            children: [
-                              // 1. Background Gradient Container
-                              Container(
-                                width: double.infinity,
-                                height: 180,
-                                padding:
-                                    const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFF2196F3),
-                                      Color(0xFF1565C0),
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: const BorderRadius.vertical(
-                                    bottom: Radius.circular(32),
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.primary
-                                          .withValues(alpha: 0.3),
-                                      blurRadius: 20,
-                                      offset: const Offset(0, 10),
-                                    ),
+                child: RefreshIndicator(
+                  onRefresh: _fetchFreelancers,
+                  color: AppColors.primary,
+                  child: CustomScrollView(
+                    slivers: <Widget>[
+                      SliverToBoxAdapter(
+                        child: Stack(
+                          children: [
+                            // 1. Background Gradient Container
+                            Container(
+                              width: double.infinity,
+                              height: 260,
+                              padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xFF2196F3),
+                                    Color(0xFF1565C0),
                                   ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
                                 ),
-                                child: SafeArea(
-                                  bottom: false,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // Top Bar: Logo/Brand & Notification
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 6,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white
-                                                  .withValues(alpha: 0.15),
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                              border: Border.all(
+                                borderRadius: const BorderRadius.vertical(
+                                  bottom: Radius.circular(32),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.primary
+                                        .withValues(alpha: 0.3),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: SafeArea(
+                                bottom: false,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Top Bar: Logo/Brand & Notification
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Container(
+                                              decoration: BoxDecoration(
                                                 color: Colors.white
-                                                    .withValues(alpha: 0.2),
+                                                    .withOpacity(0.15),
+                                                shape: BoxShape.circle,
                                               ),
+                                              child:
+                                                  const NotificationBellButton(
+                                                      color: Colors.white),
                                             ),
-                                            child: Row(
-                                              children: [
-                                                const Icon(
-                                                  Icons
-                                                      .store_mall_directory_outlined,
-                                                  color: Colors.white,
-                                                  size: 18,
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Text(
-                                                  'Marketplace',
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .labelLarge
-                                                      ?.copyWith(
-                                                        color: Colors.white,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          // Bell + Profile always together on the right
-                                          Row(
-                                            children: [
-                                              Container(
-                                                width: 40,
-                                                height: 40,
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white
-                                                      .withValues(alpha: 0.15),
-                                                  shape: BoxShape.circle,
-                                                ),
-                                                child:
-                                                    const NotificationBellButton(
-                                                        color: Colors.white),
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                color: Colors.white
+                                                    .withOpacity(0.15),
+                                                shape: BoxShape.circle,
                                               ),
-                                              const SizedBox(width: 8),
-                                              GestureDetector(
-                                                onTap: () =>
+                                              child: IconButton(
+                                                icon: const Icon(
+                                                    Icons.account_circle,
+                                                    color: Colors.white),
+                                                onPressed: () =>
                                                     context.push('/profile'),
-                                                child: CircleAvatar(
-                                                  radius: 20,
-                                                  backgroundColor: Colors.white
-                                                      .withValues(alpha: 0.2),
-                                                  child: Builder(
-                                                    builder: (ctx) {
-                                                      final n =
-                                                          (_currentUser?.name ??
-                                                                  '')
-                                                              .trim();
-                                                      final initials = n
-                                                              .isNotEmpty
-                                                          ? n
-                                                              .split(' ')
-                                                              .map((w) => w[0])
-                                                              .take(2)
-                                                              .join()
-                                                              .toUpperCase()
-                                                          : '?';
-                                                      return Text(
-                                                        initials,
-                                                        style: const TextStyle(
-                                                          color: Colors.white,
-                                                          fontSize: 12,
-                                                          fontWeight:
-                                                              FontWeight.w700,
-                                                        ),
-                                                      );
-                                                    },
-                                                  ),
-                                                ),
+                                                tooltip: 'Profile',
                                               ),
-                                            ],
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 24),
+                                    // Personalized Greeting
+                                    RichText(
+                                      text: TextSpan(
+                                        children: [
+                                          TextSpan(
+                                            text: 'Hello, ',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .headlineSmall
+                                                ?.copyWith(
+                                                  color: Colors.white
+                                                      .withOpacity(0.9),
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                          ),
+                                          TextSpan(
+                                            text: _currentUser?.name
+                                                    .split(' ')
+                                                    .first ??
+                                                'Tetamu',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .headlineSmall
+                                                ?.copyWith(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                           ),
                                         ],
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    const Text(
+                                      'Cari pekerja yang sesuai di sini.',
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 16,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              // 2. Overlapping Search Card
-                              Container(
-                                margin: const EdgeInsets.only(
-                                    top: 100, left: 20, right: 20, bottom: 20),
-                                child: _SearchAndFilterCard(
-                                  searchController: _searchController,
-                                  onSearchChanged: _onSearchChanged,
-                                  categories: _categories,
-                                  selectedCategory: _selectedCategory,
-                                  onCategorySelected: (String value) {
-                                    setState(() => _selectedCategory = value);
-                                    _fetchServices();
-                                  },
-                                  selectedSortOption: _selectedSortOption,
-                                  onSortOptionSelected: (String? value) {
-                                    setState(() => _selectedSortOption = value);
-                                    _fetchServices();
-                                  },
-                                  selectedState: _selectedState,
-                                  onStateSelected: (String? value) {
-                                    setState(() {
-                                      _selectedState = value;
-                                      _selectedDistrict = null;
-                                    });
-                                    _fetchServices();
-                                  },
-                                  selectedDistrict: _selectedDistrict,
-                                  onDistrictSelected: (String? value) {
-                                    setState(() => _selectedDistrict = value);
-                                    _fetchServices();
-                                  },
-                                  isNearMeEnabled: _isNearMeEnabled,
-                                  onNearMeToggled: (bool value) {
-                                    setState(() => _isNearMeEnabled = value);
-                                    _fetchServices();
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (_isLoading)
-                          SliverPadding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            sliver: SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (BuildContext context, int index) {
-                                  if (index.isOdd) {
-                                    return const SizedBox(height: 12);
-                                  }
-                                  return const ServiceCardSkeleton();
-                                },
-                                childCount: (6 * 2) - 1,
                               ),
                             ),
-                          )
-                        else if (_errorMessage != null)
-                          SliverFillRemaining(
-                            hasScrollBody: false,
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 24),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: <Widget>[
-                                  Icon(
-                                    Icons.error_outline,
-                                    size: 42,
+                            // 2. Overlapping Search Card
+                            Container(
+                              margin: const EdgeInsets.only(
+                                  top: 220, left: 20, right: 20, bottom: 20),
+                              child: _SearchAndFilterCard(
+                                searchController: _searchController,
+                                onSearchChanged: _onSearchChanged,
+                                categories: _categories,
+                                selectedCategory: _selectedCategory,
+                                onCategorySelected: (String value) {
+                                  setState(() => _selectedCategory = value);
+                                  _fetchFreelancers();
+                                },
+                                selectedSortOption: _selectedSortOption,
+                                onSortOptionSelected: (String? value) {
+                                  setState(() => _selectedSortOption = value);
+                                  _fetchFreelancers();
+                                },
+                                selectedState: _selectedState,
+                                onStateSelected: (String? value) {
+                                  setState(() {
+                                    _selectedState = value;
+                                    _selectedDistrict = null;
+                                  });
+                                  _fetchFreelancers();
+                                },
+                                selectedDistrict: _selectedDistrict,
+                                onDistrictSelected: (String? value) {
+                                  setState(() => _selectedDistrict = value);
+                                  _fetchFreelancers();
+                                },
+                                isNearMeEnabled: _isNearMeEnabled,
+                                onNearMeToggled: (bool value) {
+                                  setState(() => _isNearMeEnabled = value);
+                                  _fetchFreelancers();
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_isLoading)
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (BuildContext context, int index) {
+                                if (index.isOdd) {
+                                  return const SizedBox(height: 12);
+                                }
+                                return const FreelancerCardSkeleton();
+                              },
+                              childCount: (6 * 2) - 1,
+                            ),
+                          ),
+                        )
+                      else if (_errorMessage != null)
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: <Widget>[
+                                Icon(
+                                  Icons.error_outline,
+                                  size: 42,
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  _errorMessage!,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
                                     color: Theme.of(context).colorScheme.error,
                                   ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    _errorMessage!,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color:
-                                          Theme.of(context).colorScheme.error,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  FTButton(
-                                    label: 'Cuba Lagi',
-                                    onPressed: _fetchServices,
-                                    expanded: false,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
-                        else if (_services.isEmpty)
-                          SliverFillRemaining(
-                            hasScrollBody: false,
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 24),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                children: <Widget>[
-                                  const Icon(
-                                      Icons.store_mall_directory_outlined,
-                                      size: 52,
-                                      color: Colors.grey),
-                                  const SizedBox(height: 12),
-                                  const Text(
-                                    'Tiada servis ditemui',
-                                    style: AppTextStyles.titleMedium,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    'Tiada servis ditemui untuk carian ini.',
-                                    textAlign: TextAlign.center,
-                                    style: AppTextStyles.bodySmall,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
-                        else
-                          SliverPadding(
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                            sliver: SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (BuildContext context, int index) {
-                                  if (index.isOdd) {
-                                    return const SizedBox(height: 12);
-                                  }
-                                  final service = _services[index ~/ 2];
-                                  return ServiceCard(
-                                    service: service,
-                                    onTap: () =>
-                                        context.push('/service/${service.id}'),
-                                  );
-                                },
-                                childCount: (_services.length * 2) - 1,
-                              ),
+                                ),
+                                const SizedBox(height: 12),
+                                FTButton(
+                                  label: 'Cuba Lagi',
+                                  onPressed: _fetchFreelancers,
+                                  expanded: false,
+                                ),
+                              ],
                             ),
                           ),
-                      ],
-                    ),
+                        )
+                      else if (_freelancers.isEmpty)
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                const Icon(Icons.people_outline,
+                                    size: 52, color: Colors.grey),
+                                const SizedBox(height: 12),
+                                const Text(
+                                  'Tiada freelancer ditemui',
+                                  style: AppTextStyles.titleMedium,
+                                ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Tiada freelancer ditemui untuk carian ini.',
+                                  textAlign: TextAlign.center,
+                                  style: AppTextStyles.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (BuildContext context, int index) {
+                                if (index.isOdd) {
+                                  return const SizedBox(height: 12);
+                                }
+                                final freelancer = _freelancers[index ~/ 2];
+                                return FreelancerCard(
+                                  user: freelancer,
+                                  onTap: () async {
+                                    try {
+                                      final chatRepo = ChatRepository();
+                                      final thread =
+                                          await chatRepo.createConversation(
+                                              otherUserId: freelancer.id);
+                                      if (context.mounted) {
+                                        context.push(
+                                            '/chats/${thread.id}/messages');
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        showErrorSnackBar(
+                                            context, 'Gagal membuka chat: $e');
+                                      }
+                                    }
+                                  },
+                                );
+                              },
+                              childCount: (_freelancers.length * 2) - 1,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               );
@@ -546,7 +544,7 @@ class _SearchAndFilterCard extends StatelessWidget {
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
         return _SelectionBottomSheet(
-          title: 'Perkhidmatan',
+          title: 'Kemahiran',
           items: categories,
           selectedValue: selectedCategory,
           onSelected: (value) {
@@ -646,11 +644,82 @@ class _SearchAndFilterCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Toggle Buttons
+          Row(
+            children: [
+              // Chat Button (Inactive)
+              Expanded(
+                child: InkWell(
+                  onTap: () => context.go('/chats'),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.chat_bubble_outline,
+                          color: Colors.grey.shade600,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Chat',
+                          style:
+                              Theme.of(context).textTheme.labelLarge?.copyWith(
+                                    color: Colors.grey.shade600,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Marketplace Button (Active)
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2196F3).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFF2196F3).withOpacity(0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.store_mall_directory_outlined,
+                        color: Color(0xFF2196F3),
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Marketplace',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: const Color(0xFF2196F3),
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
           TextField(
             controller: searchController,
             onChanged: (_) => onSearchChanged(),
             decoration: InputDecoration(
-              hintText: 'Cari servis...',
+              hintText: 'Cari freelancer...',
               prefixIcon:
                   const Icon(Icons.search_rounded, color: AppColors.neutral500),
               contentPadding:
@@ -680,18 +749,10 @@ class _SearchAndFilterCard extends StatelessWidget {
                 _ActionChip(
                   icon: Icons.work_outline_rounded,
                   label: selectedCategory == 'Semua'
-                      ? 'Kategori'
+                      ? 'Kemahiran'
                       : selectedCategory,
                   isActive: selectedCategory != 'Semua',
                   onTap: () => _showCategorySelector(context),
-                  showDropdownIcon: true,
-                ),
-                const SizedBox(width: 8),
-                _ActionChip(
-                  icon: Icons.tune_rounded,
-                  label: _sortLabel,
-                  isActive: isNearMeEnabled || selectedSortOption != null,
-                  onTap: () => _showSortSelector(context),
                   showDropdownIcon: true,
                 ),
                 const SizedBox(width: 8),

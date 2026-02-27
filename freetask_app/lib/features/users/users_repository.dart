@@ -7,6 +7,7 @@ import '../../core/utils/api_error_handler.dart';
 import '../../core/storage/storage.dart';
 import '../../services/http_client.dart';
 import '../auth/auth_repository.dart';
+import '../../models/user.dart';
 
 class UsersRepository {
   UsersRepository({Dio? dio})
@@ -119,6 +120,58 @@ class UsersRepository {
       }
       await handleApiError(error);
       rethrow;
+    }
+  }
+
+  Future<List<AppUser>> getFreelancers({
+    String? q,
+    String? category,
+    String? state,
+    String? district,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (q != null && q.isNotEmpty) queryParams['q'] = q;
+      if (category != null && category != 'Semua') {
+        queryParams['category'] = category;
+      }
+      if (state != null && state.isNotEmpty) queryParams['state'] = state;
+      if (district != null && district.isNotEmpty) {
+        queryParams['district'] = district;
+      }
+
+      final token = await _storage.read(AuthRepository.tokenStorageKey);
+      final options = token != null && token.isNotEmpty
+          ? Options(headers: {'Authorization': 'Bearer $token'})
+          : null;
+
+      final response = await _dio.get<List<dynamic>>(
+        '/users/freelancers',
+        queryParameters: queryParams,
+        options: options,
+      );
+
+      final data = response.data;
+      if (data == null) return [];
+
+      return data
+          .map((json) {
+            try {
+              return AppUser.fromJson(json as Map<String, dynamic>);
+            } catch (e, st) {
+              debugPrint(
+                  'Failed to parse freelancer JSON: $json\nError: $e\nStack: $st');
+              // Return a fallback or skip it, we return null and then whereType filters out nulls
+              return null;
+            }
+          })
+          .whereType<AppUser>()
+          .toList();
+    } on DioException catch (error) {
+      await handleApiError(error);
+      rethrow;
+    } catch (e) {
+      throw Exception('Gagal memuat senarai freelancer: $e');
     }
   }
 }

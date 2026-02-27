@@ -36,325 +36,326 @@ class ChatListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(_currentUserProvider);
     final role = userAsync.asData?.value?.role.toUpperCase();
+    final repo = ref.watch(chatRepositoryProvider);
     final threadsAsync = ref.watch(
       chatThreadsProviderWithQuery((limit: limitQuery, offset: offsetQuery)),
     );
 
-    return threadsAsync.when(
-      data: (List<ChatThread> threads) {
-        if (threads.isEmpty) {
-          // UX-G-07: Role-aware chat empty state
-          final isClient = role == 'CLIENT';
-          final title = isClient
-              ? 'Belum ada chat lagi.'
-              : 'Belum ada chat sebagai freelancer.';
-          final subtitle = isClient
-              ? 'Chat akan muncul apabila anda menempah servis atau memulakan job dengan freelancer.'
-              : 'Chat akan muncul apabila client menempah servis anda atau memberikan job kepada anda.';
+    // Bypass StreamProvider's 1-frame AsyncLoading delay by using the synchronous cache
+    final List<ChatThread>? threads = repo.currentThreads.isNotEmpty
+        ? repo.currentThreads
+        : threadsAsync.value;
 
-          return Scaffold(
-            backgroundColor: Colors.white,
-            bottomNavigationBar: const AppBottomNav(currentTab: AppTab.chats),
-            body: CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: _ChatHeader(
-                    userName: userAsync.asData?.value?.name,
-                    onSearchTap: () => _showSearch(context, ref),
-                  ),
-                ),
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Container(
-                    color: Colors.white,
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(Icons.chat_bubble_outline,
-                                size: 64, color: Colors.grey.shade400),
-                          ),
-                          const SizedBox(height: 24),
-                          Text(title,
-                              style: const TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 8),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 32),
-                            child: Text(
-                              subtitle,
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    color: Colors.grey.shade600,
-                                  ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
+    if (threads != null) {
+      if (threads.isEmpty) {
+        // UX-G-07: Role-aware chat empty state
+        final isClient = role == 'CLIENT';
+        final title = isClient
+            ? 'Belum ada chat lagi.'
+            : 'Belum ada chat sebagai freelancer.';
+        final subtitle = isClient
+            ? 'Chat akan muncul apabila anda menempah servis atau memulakan job dengan freelancer.'
+            : 'Chat akan muncul apabila client menempah servis anda atau memberikan job kepada anda.';
 
         return Scaffold(
           backgroundColor: Colors.white,
           bottomNavigationBar: const AppBottomNav(currentTab: AppTab.chats),
-          body: RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(
-                chatThreadsProviderWithQuery(
-                  (limit: limitQuery, offset: offsetQuery),
+          body: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: _ChatHeader(
+                  userName: userAsync.asData?.value?.name,
+                  onSearchTap: () => _showSearch(context, ref),
                 ),
-              );
-            },
-            child: CustomScrollView(
-              slivers: [
-                // Services-style gradient header
-                SliverToBoxAdapter(
-                  child: _ChatHeader(
-                    userName: userAsync.asData?.value?.name,
-                    onSearchTap: () => _showSearch(context, ref),
+              ),
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Container(
+                  color: Colors.white,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.chat_bubble_outline,
+                              size: 64, color: Colors.grey.shade400),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(title,
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: Text(
+                            subtitle,
+                            textAlign: TextAlign.center,
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Colors.grey.shade600,
+                                    ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                // Chat list
-                SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (BuildContext context, int index) {
-                      final thread = threads[index];
-                      final snippet = thread.lastMessage?.isNotEmpty == true
-                          ? thread.lastMessage!
-                          : 'Tiada mesej lagi.';
-                      final lastAtLabel = _formatTimestamp(thread.lastAt);
+              ),
+            ],
+          ),
+        );
+      }
 
-                      Color statusColor;
-                      // Determine status color based on thread status
-                      // 'ACTIVE' is the default for normal conversations
-                      switch (thread.status.toUpperCase()) {
-                        case 'PENDING':
-                          statusColor = Colors.orange;
-                          break;
-                        case 'IN_PROGRESS':
-                        case 'ACTIVE':
-                          statusColor = const Color(0xFF2196F3);
-                          break;
-                        case 'COMPLETED':
-                          statusColor = Colors.green;
-                          break;
-                        case 'CANCELLED':
-                        case 'REJECTED':
-                        case 'ARCHIVED':
-                          statusColor = Colors.red;
-                          break;
-                        default:
-                          statusColor = Colors.grey;
-                      }
+      return Scaffold(
+        backgroundColor: Colors.white,
+        bottomNavigationBar: const AppBottomNav(currentTab: AppTab.chats),
+        body: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(
+              chatThreadsProviderWithQuery(
+                (limit: limitQuery, offset: offsetQuery),
+              ),
+            );
+          },
+          child: CustomScrollView(
+            slivers: [
+              // Services-style gradient header
+              SliverToBoxAdapter(
+                child: _ChatHeader(
+                  userName: userAsync.asData?.value?.name,
+                  onSearchTap: () => _showSearch(context, ref),
+                ),
+              ),
+              // Chat list
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (BuildContext context, int index) {
+                    final thread = threads[index];
+                    final snippet = thread.lastMessage?.isNotEmpty == true
+                        ? thread.lastMessage!
+                        : 'Tiada mesej lagi.';
+                    final lastAtLabel = _formatTimestamp(thread.lastAt);
 
-                      return Material(
-                        color: Colors.white,
-                        child: InkWell(
-                          onTap: () => context.push(
-                            '/chats/${thread.id}/messages',
-                            extra: thread,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Avatar with gradient border (WhatsApp style)
-                                Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        statusColor.withOpacity(0.6),
-                                        statusColor,
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                  ),
-                                  padding: const EdgeInsets.all(2),
-                                  child: CircleAvatar(
-                                    radius: 26,
-                                    backgroundColor: Colors.grey.shade200,
-                                    backgroundImage: (thread
-                                                    .participantAvatarUrl !=
-                                                null &&
-                                            thread.participantAvatarUrl!
-                                                .isNotEmpty)
-                                        ? NetworkImage(
-                                            UrlUtils.resolveImageUrl(
-                                                thread.participantAvatarUrl),
-                                          )
-                                        : null,
-                                    child: (thread.participantAvatarUrl !=
-                                                null &&
-                                            thread.participantAvatarUrl!
-                                                .isNotEmpty)
-                                        ? null
-                                        : Text(
-                                            thread.participantName.isNotEmpty
-                                                ? thread.participantName[0]
-                                                    .toUpperCase()
-                                                : '?',
-                                            style: TextStyle(
-                                              color: statusColor,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 20,
-                                            ),
-                                          ),
+                    Color statusColor;
+                    // Determine status color based on thread status
+                    // 'ACTIVE' is the default for normal conversations
+                    switch (thread.status.toUpperCase()) {
+                      case 'PENDING':
+                        statusColor = Colors.orange;
+                        break;
+                      case 'IN_PROGRESS':
+                      case 'ACTIVE':
+                        statusColor = const Color(0xFF2196F3);
+                        break;
+                      case 'COMPLETED':
+                        statusColor = Colors.green;
+                        break;
+                      case 'CANCELLED':
+                      case 'REJECTED':
+                      case 'ARCHIVED':
+                        statusColor = Colors.red;
+                        break;
+                      default:
+                        statusColor = Colors.grey;
+                    }
+
+                    return Material(
+                      color: Colors.white,
+                      child: InkWell(
+                        onTap: () => context.push(
+                          '/chats/${thread.id}/messages',
+                          extra: thread,
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Avatar with gradient border (WhatsApp style)
+                              Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      statusColor.withOpacity(0.6),
+                                      statusColor,
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
                                   ),
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              thread.participantName,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 16,
-                                                color: Colors.black87,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
+                                padding: const EdgeInsets.all(2),
+                                child: CircleAvatar(
+                                  radius: 26,
+                                  backgroundColor: Colors.grey.shade200,
+                                  backgroundImage:
+                                      (thread.participantAvatarUrl != null &&
+                                              thread.participantAvatarUrl!
+                                                  .isNotEmpty)
+                                          ? NetworkImage(
+                                              UrlUtils.resolveImageUrl(
+                                                  thread.participantAvatarUrl),
+                                            )
+                                          : null,
+                                  child: (thread.participantAvatarUrl != null &&
+                                          thread
+                                              .participantAvatarUrl!.isNotEmpty)
+                                      ? null
+                                      : Text(
+                                          thread.participantName.isNotEmpty
+                                              ? thread.participantName[0]
+                                                  .toUpperCase()
+                                              : '?',
+                                          style: TextStyle(
+                                            color: statusColor,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 20,
                                           ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            lastAtLabel,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey.shade600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        thread.title,
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: Colors.grey.shade700,
-                                          fontWeight: FontWeight.w500,
                                         ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            thread.participantName,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 16,
+                                              color: Colors.black87,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          lastAtLabel,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      thread.title,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey.shade700,
+                                        fontWeight: FontWeight.w500,
                                       ),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              snippet,
-                                              style: TextStyle(
-                                                color: Colors.grey.shade600,
-                                                fontSize: 14,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            snippet,
+                                            style: TextStyle(
+                                              color: Colors.grey.shade600,
+                                              fontSize: 14,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        // Status badge
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                statusColor.withOpacity(0.15),
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            border: Border.all(
+                                              color:
+                                                  statusColor.withOpacity(0.3),
+                                              width: 0.5,
                                             ),
                                           ),
-                                          const SizedBox(width: 8),
-                                          // Status badge
+                                          child: Text(
+                                            thread.status
+                                                .replaceAll('_', ' ')
+                                                .toLowerCase(),
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              color:
+                                                  statusColor.withOpacity(0.9),
+                                              fontWeight: FontWeight.w700,
+                                              letterSpacing: 0.3,
+                                            ),
+                                          ),
+                                        ),
+                                        // Unread badge (red circle like WhatsApp)
+                                        if (thread.unreadCount > 0) ...[
+                                          const SizedBox(width: 6),
                                           Container(
                                             padding: const EdgeInsets.symmetric(
                                                 horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color:
-                                                  statusColor.withOpacity(0.15),
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              border: Border.all(
-                                                color: statusColor
-                                                    .withOpacity(0.3),
-                                                width: 0.5,
-                                              ),
+                                            decoration: const BoxDecoration(
+                                              color: Color(
+                                                  0xFFE53935), // Red badge
+                                              shape: BoxShape.circle,
                                             ),
-                                            child: Text(
-                                              thread.status
-                                                  .replaceAll('_', ' ')
-                                                  .toLowerCase(),
-                                              style: TextStyle(
-                                                fontSize: 9,
-                                                color: statusColor
-                                                    .withOpacity(0.9),
-                                                fontWeight: FontWeight.w700,
-                                                letterSpacing: 0.3,
-                                              ),
+                                            constraints: const BoxConstraints(
+                                              minWidth: 20,
+                                              minHeight: 20,
                                             ),
-                                          ),
-                                          // Unread badge (red circle like WhatsApp)
-                                          if (thread.unreadCount > 0) ...[
-                                            const SizedBox(width: 6),
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 6,
-                                                      vertical: 2),
-                                              decoration: const BoxDecoration(
-                                                color: Color(
-                                                    0xFFE53935), // Red badge
-                                                shape: BoxShape.circle,
-                                              ),
-                                              constraints: const BoxConstraints(
-                                                minWidth: 20,
-                                                minHeight: 20,
-                                              ),
-                                              child: Center(
-                                                child: Text(
-                                                  thread.unreadCount > 99
-                                                      ? '99+'
-                                                      : '${thread.unreadCount}',
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
+                                            child: Center(
+                                              child: Text(
+                                                thread.unreadCount > 99
+                                                    ? '99+'
+                                                    : '${thread.unreadCount}',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
                                                 ),
                                               ),
                                             ),
-                                          ],
+                                          ),
                                         ],
-                                      ),
-                                    ],
-                                  ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
-                      );
-                    },
-                    childCount: threads.length,
-                  ),
+                      ),
+                    );
+                  },
+                  childCount: threads.length,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      );
+    }
+
+    return threadsAsync.when(
+      data: (_) => const SizedBox.shrink(), // Fallback (shouldn't be reached)
       loading: () => Scaffold(
         appBar: AppBar(
           flexibleSpace: Container(
@@ -503,41 +504,8 @@ class _ChatHeader extends StatelessWidget {
               children: [
                 // Top Bar: Badge & Actions
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.2),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.chat_bubble_rounded,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Chat',
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelLarge
-                                ?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
                     Row(
                       children: [
                         Container(
@@ -621,6 +589,82 @@ class _ChatHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Toggle Buttons
+              Row(
+                children: [
+                  // Chat Button (Active)
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2196F3).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(0xFF2196F3).withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.chat_bubble_rounded,
+                            color: Color(0xFF2196F3),
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Chat',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelLarge
+                                ?.copyWith(
+                                  color: const Color(0xFF2196F3),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Marketplace Button (Inactive)
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => context.go('/home'),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.store_mall_directory_outlined,
+                              color: Colors.grey.shade600,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Marketplace',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelLarge
+                                  ?.copyWith(
+                                    color: Colors.grey.shade600,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
               // Search Bar
               InkWell(
                 onTap: onSearchTap,

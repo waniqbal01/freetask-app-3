@@ -69,6 +69,84 @@ export class UsersService {
     };
   }
 
+  async getFreelancers(query: {
+    q?: string;
+    category?: string;
+    state?: string;
+    district?: string;
+  }) {
+    const where: Prisma.UserWhereInput = {
+      role: 'FREELANCER',
+    };
+
+    if (query.q) {
+      where.OR = [
+        { name: { contains: query.q, mode: 'insensitive' } },
+        { bio: { contains: query.q, mode: 'insensitive' } },
+      ];
+    }
+
+    if (query.category && query.category !== 'Semua') {
+      // In PostgreSQL, to search within a JSONB array/string array
+      where.skills = {
+        array_contains: query.category,
+      };
+    }
+
+    if (query.state) {
+      where.state = query.state;
+    }
+
+    if (query.district) {
+      where.district = query.district;
+    }
+
+    const freelancers = await this.prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        avatarUrl: true,
+        bio: true,
+        skills: true,
+        rate: true,
+        location: true,
+        state: true,
+        district: true,
+        latitude: true,
+        longitude: true,
+        coverageRadius: true,
+        acceptsOutstation: true,
+        isAvailable: true,
+        level: true,
+        totalCompletedJobs: true,
+        totalReviews: true,
+        replyRate: true,
+        // We do sensitive exclusions manually or just rely on what we select
+      },
+    });
+
+    // Add aggregate ratings for each freelancer
+    const result = await Promise.all(
+      freelancers.map(async (f) => {
+        const aggregate = await this.prisma.review.aggregate({
+          where: { revieweeId: f.id },
+          _avg: { rating: true },
+          _count: { id: true },
+        });
+
+        return {
+          ...f,
+          rating: aggregate._avg.rating ?? 0,
+          reviewCount: aggregate._count.id ?? 0,
+        };
+      })
+    );
+
+    return result;
+  }
+
   async updateProfile(id: number, dto: UpdateUserDto) {
     const avatarUrl = dto.avatarUrl ?? dto.avatar;
 
