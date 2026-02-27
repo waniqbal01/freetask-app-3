@@ -41,10 +41,13 @@ class ChatListScreen extends ConsumerWidget {
       chatThreadsProviderWithQuery((limit: limitQuery, offset: offsetQuery)),
     );
 
-    // Bypass StreamProvider's 1-frame AsyncLoading delay by using the synchronous cache
-    final List<ChatThread>? threads = repo.currentThreads.isNotEmpty
+    final List<ChatThread>? rawThreads = repo.currentThreads.isNotEmpty
         ? repo.currentThreads
         : threadsAsync.value;
+
+    final List<ChatThread>? threads = rawThreads
+        ?.where((t) => t.lastMessage != null && t.lastMessage!.isNotEmpty)
+        .toList();
 
     if (threads != null) {
       if (threads.isEmpty) {
@@ -759,11 +762,13 @@ class _ChatSearchDelegate extends SearchDelegate<String> {
     return threadsAsync.when(
       data: (threads) {
         final filtered = threads.where((thread) {
+          if (thread.lastMessage == null || thread.lastMessage!.isEmpty) {
+            return false;
+          }
           final searchLower = query.toLowerCase();
           return thread.participantName.toLowerCase().contains(searchLower) ||
               thread.title.toLowerCase().contains(searchLower) ||
-              (thread.lastMessage?.toLowerCase().contains(searchLower) ??
-                  false);
+              thread.lastMessage!.toLowerCase().contains(searchLower);
         }).toList();
 
         if (filtered.isEmpty) {
