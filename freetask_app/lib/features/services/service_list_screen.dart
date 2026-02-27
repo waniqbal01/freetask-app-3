@@ -455,6 +455,9 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                                 final freelancer = _freelancers[index ~/ 2];
                                 return FreelancerCard(
                                   user: freelancer,
+                                  onAvatarTap: () {
+                                    context.push('/users/${freelancer.id}');
+                                  },
                                   onTap: () async {
                                     try {
                                       final chatRepo = ChatRepository();

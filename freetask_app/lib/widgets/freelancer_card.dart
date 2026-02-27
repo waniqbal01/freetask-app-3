@@ -7,11 +7,13 @@ class FreelancerCard extends StatelessWidget {
   const FreelancerCard({
     required this.user,
     required this.onTap,
+    this.onAvatarTap,
     super.key,
   });
 
   final AppUser user;
   final VoidCallback onTap;
+  final VoidCallback? onAvatarTap;
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +38,7 @@ class FreelancerCard extends StatelessWidget {
                 FreelancerAvatar(
                   avatarUrl: user.avatarUrl,
                   size: 60,
-                  onTap: onTap,
+                  onTap: onAvatarTap ?? onTap,
                 ),
                 const SizedBox(width: AppSpacing.s16),
                 Expanded(
@@ -108,6 +110,28 @@ class FreelancerCard extends StatelessWidget {
                                   ? [
                                       _SkillChip(
                                           label: '+${user.skills!.length - 3}')
+                                    ]
+                                  : [],
+                            ),
+                        ),
+                      ],
+                      if (user.serviceNames != null &&
+                          user.serviceNames!.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: user.serviceNames!
+                              .take(5)
+                              .map((serviceName) =>
+                                  _ServiceChip(label: serviceName))
+                              .toList()
+                            ..addAll(
+                              user.serviceNames!.length > 5
+                                  ? [
+                                      _ServiceChip(
+                                          label:
+                                              '+${user.serviceNames!.length - 5}')
                                     ]
                                   : [],
                             ),
@@ -371,6 +395,42 @@ class _SkillChip extends StatelessWidget {
               color: AppColors.primary,
               fontWeight: FontWeight.w600,
             ),
+      ),
+    );
+  }
+}
+
+class _ServiceChip extends StatelessWidget {
+  const _ServiceChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.secondary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.design_services_outlined,
+              size: 12, color: AppColors.secondary),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColors.secondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+        ],
       ),
     );
   }

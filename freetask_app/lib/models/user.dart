@@ -29,10 +29,12 @@ class AppUser {
     this.totalCompletedJobs = 0,
     this.totalReviews = 0,
     this.replyRate,
+    this.serviceNames,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
     final skills = json['skills'];
+    final services = json['services'];
     final roleStr = json['role']?.toString() ?? '';
     return AppUser(
       id: json['id']?.toString() ?? '',
@@ -65,6 +67,12 @@ class AppUser {
       totalCompletedJobs: json['totalCompletedJobs'] as int? ?? 0,
       totalReviews: json['totalReviews'] as int? ?? 0,
       replyRate: (json['replyRate'] as num?)?.toDouble(),
+      serviceNames: services is List
+          ? services
+              .map((dynamic service) => service['title']?.toString())
+              .whereType<String>()
+              .toList()
+          : null,
     );
   }
 
@@ -100,4 +108,5 @@ class AppUser {
   final int totalCompletedJobs;
   final int totalReviews;
   final double? replyRate;
+  final List<String>? serviceNames;
 }

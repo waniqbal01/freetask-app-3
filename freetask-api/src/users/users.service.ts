@@ -87,9 +87,12 @@ export class UsersService {
     }
 
     if (query.category && query.category !== 'Semua') {
-      // In PostgreSQL, to search within a JSONB array/string array
-      where.skills = {
-        array_contains: query.category,
+      where.services = {
+        some: {
+          category: query.category,
+          approvalStatus: 'APPROVED',
+          isActive: true,
+        },
       };
     }
 
@@ -123,6 +126,16 @@ export class UsersService {
         totalCompletedJobs: true,
         totalReviews: true,
         replyRate: true,
+        services: {
+          where: {
+            approvalStatus: 'APPROVED',
+            isActive: true,
+          },
+          select: {
+            title: true,
+            category: true,
+          },
+        },
         // We do sensitive exclusions manually or just rely on what we select
       },
     });
