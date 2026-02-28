@@ -54,6 +54,14 @@ export class RegisterDto {
   bio?: string;
 
   @IsOptional()
+  @IsString()
+  state?: string;
+
+  @IsOptional()
+  @IsString()
+  district?: string;
+
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   skills?: string[];

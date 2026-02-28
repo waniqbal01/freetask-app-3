@@ -20,6 +20,7 @@ import { AdminModule } from './admin/admin.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
 import { WithdrawalsModule } from './withdrawals/withdrawals.module';
 import { WebsocketModule } from './websocket/websocket.module';
+import { BackupModule } from './backup/backup.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { WebsocketModule } from './websocket/websocket.module';
     PortfolioModule,
     WithdrawalsModule,
     WebsocketModule,
+    BackupModule,
   ],
   controllers: [HealthController],
   providers: [
@@ -55,4 +57,4 @@ import { WebsocketModule } from './websocket/websocket.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

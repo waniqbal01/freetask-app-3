@@ -76,26 +76,34 @@ class ChatListScreen extends ConsumerWidget {
                 child: Container(
                   color: Colors.white,
                   child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            shape: BoxShape.circle,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2196F3).withOpacity(0.08),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.chat_bubble_outline,
+                              size: 64,
+                              color: Color(0xFF2196F3),
+                            ),
                           ),
-                          child: Icon(Icons.chat_bubble_outline,
-                              size: 64, color: Colors.grey.shade400),
-                        ),
-                        const SizedBox(height: 24),
-                        Text(title,
+                          const SizedBox(height: 24),
+                          Text(
+                            title,
+                            textAlign: TextAlign.center,
                             style: const TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 8),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 32),
-                          child: Text(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
                             subtitle,
                             textAlign: TextAlign.center,
                             style:
@@ -103,8 +111,35 @@ class ChatListScreen extends ConsumerWidget {
                                       color: Colors.grey.shade600,
                                     ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 28),
+                          FilledButton.icon(
+                            onPressed: () => context.go('/home'),
+                            icon: const Icon(
+                              Icons.store_mall_directory_outlined,
+                            ),
+                            label: Text(
+                              isClient
+                                  ? 'Cari Freelancer Sekarang'
+                                  : 'Terokai Marketplace',
+                            ),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF2196F3),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 14,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              textStyle: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

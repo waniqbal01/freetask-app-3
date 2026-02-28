@@ -308,8 +308,12 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                   if (value == null || value.isEmpty) {
                     return 'Sila masukkan harga';
                   }
-                  if (double.tryParse(value) == null) {
+                  final parsed = double.tryParse(value);
+                  if (parsed == null) {
                     return 'Harga tidak sah';
+                  }
+                  if (parsed < 50.0) {
+                    return 'Harga minimum adalah RM 50.00';
                   }
                   return null;
                 },

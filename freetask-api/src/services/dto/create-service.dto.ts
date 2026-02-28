@@ -6,6 +6,7 @@ import {
   IsPositive,
   IsString,
   MaxLength,
+  Min,
 } from 'class-validator';
 
 export class CreateServiceDto {
@@ -22,6 +23,7 @@ export class CreateServiceDto {
   @IsNotEmpty()
   @IsNumber({ maxDecimalPlaces: 2 })
   @IsPositive()
+  @Min(50, { message: 'Harga minimum servis adalah RM 50.00' })
   price: number;
 
   @IsString()

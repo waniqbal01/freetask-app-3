@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mime/mime.dart';
 
 import '../../core/constants/app_strings.dart';
+import '../../core/constants/malaysia_locations.dart';
 import '../../core/notifications/notification_service.dart';
 import '../../core/utils/error_utils.dart';
 import '../../services/upload_service.dart';
@@ -37,6 +38,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _rateController = TextEditingController();
 
   late String _selectedRole;
+  String? _selectedState;
+  String? _selectedDistrict;
 
   bool _isSubmitting = false;
   bool _isUploadingAvatar = false;
@@ -86,6 +89,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       'name': _nameController.text.trim(),
       'email': email,
       'password': password,
+      if (_selectedState != null) 'state': _selectedState,
+      if (_selectedDistrict != null) 'district': _selectedDistrict,
     };
 
     if (isFreelancerRole) {
@@ -498,6 +503,67 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                 ],
+                              ),
+                            ],
+                            const SizedBox(height: AppSpacing.s16),
+                            DropdownButtonFormField<String>(
+                              value: _selectedState,
+                              items: malaysiaStatesAndDistricts.keys
+                                  .map(
+                                    (s) => DropdownMenuItem(
+                                      value: s,
+                                      child: Text(s),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedState = value;
+                                  _selectedDistrict = null;
+                                });
+                              },
+                              decoration: const InputDecoration(
+                                labelText: 'Negeri',
+                                prefixIcon: Icon(Icons.map_outlined),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Sila pilih negeri';
+                                }
+                                return null;
+                              },
+                            ),
+                            if (_selectedState != null) ...[
+                              const SizedBox(height: AppSpacing.s16),
+                              DropdownButtonFormField<String>(
+                                value: _selectedDistrict,
+                                items: (malaysiaStatesAndDistricts[
+                                            _selectedState] ??
+                                        [])
+                                    .map(
+                                      (d) => DropdownMenuItem(
+                                        value: d,
+                                        child: Text(d),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedDistrict = value;
+                                  });
+                                },
+                                decoration: const InputDecoration(
+                                  labelText: 'Daerah',
+                                  prefixIcon:
+                                      Icon(Icons.location_city_outlined),
+                                ),
+                                validator: (value) {
+                                  if (_selectedState != null &&
+                                      (value == null || value.isEmpty)) {
+                                    return 'Sila pilih daerah';
+                                  }
+                                  return null;
+                                },
                               ),
                             ],
                             if (isFreelancer) ...[

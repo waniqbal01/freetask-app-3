@@ -69,6 +69,8 @@ export class AuthService {
         role: dto.role as any,
         avatarUrl,
         bio: dto.bio,
+        state: dto.state,
+        district: dto.district,
         skills: dto.skills,
         rate: dto.rate,
       },
