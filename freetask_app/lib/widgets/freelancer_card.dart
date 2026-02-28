@@ -93,7 +93,8 @@ class FreelancerCard extends StatelessWidget {
                           runSpacing: 6,
                           children: user.skills!
                               .take(3)
-                              .map((skill) => _SkillChip(label: skill))
+                              .map((skill) => _SkillChip(
+                                  label: skill.replaceAll('&amp;', '&')))
                               .toList()
                             ..addAll(
                               user.skills!.length > 3

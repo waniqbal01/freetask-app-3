@@ -21,7 +21,7 @@ export class PaymentsService {
     private billplzService: BillplzService,
     private escrowService: EscrowService,
     private notificationsService: NotificationsService,
-  ) {}
+  ) { }
 
   async createPayment(dto: CreatePaymentDto) {
     // Check if job exists
@@ -37,10 +37,10 @@ export class PaymentsService {
       throw new NotFoundException('Job not found');
     }
 
-    // NEW VALIDATION: Job must be in AWAITING_PAYMENT status
-    if (job.status !== 'AWAITING_PAYMENT') {
+    // NEW VALIDATION: Job must be in AWAITING_PAYMENT or PENDING status (legacy)
+    if (job.status !== 'AWAITING_PAYMENT' && job.status !== 'PENDING') {
       throw new BadRequestException(
-        `Payment can only be made for jobs in AWAITING_PAYMENT status. Current status: ${job.status}`,
+        `Payment can only be made for jobs in AWAITING_PAYMENT or PENDING status. Current status: ${job.status}`,
       );
     }
 

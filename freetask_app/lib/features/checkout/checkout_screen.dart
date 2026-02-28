@@ -1,8 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-import '../escrow/escrow_repository.dart';
+import '../../services/payment_service.dart';
+import '../../services/http_client.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/section_card.dart';
 
@@ -77,12 +79,32 @@ class CheckoutScreen extends StatelessWidget {
                                 const Icon(Icons.payments_outlined,
                                     color: AppColors.neutral300),
                                 const SizedBox(width: 8),
-                                Text('Harga: $priceText'),
+                                Text(
+                                  priceText,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.green),
+                                ),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            const Text(
-                                'Maklumat tambahan tidak tersedia untuk demo ini.'),
+                            if (draft['description'] != null &&
+                                draft['description'].toString().isNotEmpty) ...[
+                              const SizedBox(height: 16),
+                              Text(
+                                'Penerangan Kerja:',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                        color: Colors.grey.shade600,
+                                        fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                draft['description'].toString(),
+                                style: TextStyle(color: Colors.grey.shade800),
+                              ),
+                            ],
                           ],
                         ),
                 ),
@@ -109,37 +131,55 @@ class CheckoutScreen extends StatelessWidget {
                       }
 
                       try {
-                        await escrowRepository.hold(jobId);
+                        final jobIdInt = int.tryParse(jobId);
+                        if (jobIdInt == null) {
+                          throw Exception('ID Job tidak sah: $jobId');
+                        }
+
+                        // UX-C-05: Create real payment via Billplz
+                        final paymentService = PaymentService(HttpClient().dio);
+                        final paymentUrl = await paymentService.createPayment(
+                            jobIdInt, 'billplz');
 
                         if (!context.mounted) return;
 
-                        // UX-C-05: Redirect to job detail with success flag
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Dana RM${price.toStringAsFixed(2)} dipegang untuk job $jobId.',
+                        // Navigate to Billplz checkout
+                        final uri = Uri.parse(paymentUrl);
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri,
+                              mode: LaunchMode.externalApplication);
+
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'Diarahkan ke halaman pembayaran Billplz...'),
+                              duration: Duration(seconds: 2),
                             ),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
+                          );
 
-                        // Navigate to job detail with fromCheckout flag
-                        context.go('/jobs/$jobId', extra: {
-                          'fromCheckout': true,
-                        });
-                      } on EscrowUnavailable catch (error) {
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(error.message)),
-                        );
+                          // Navigate to jobs tab instead of staying on checkout
+                          context.go('/jobs');
+                        } else {
+                          throw Exception(
+                              'Tidak dapat membuka pautan pembayaran.');
+                        }
                       } on DioException catch (error) {
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
                               error.response?.data.toString() ??
-                                  'Ralat escrow.',
+                                  'Ralat membuka laman bayaran.',
                             ),
+                          ),
+                        );
+                      } catch (error) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Ralat: $error'),
+                            backgroundColor: Colors.red,
                           ),
                         );
                       }

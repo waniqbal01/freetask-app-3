@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/utils/error_utils.dart';
+import '../../core/constants/app_categories.dart';
 import '../../core/widgets/ft_button.dart';
 import '../../models/service.dart';
 import '../../theme/app_theme.dart';
@@ -33,17 +34,6 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
   PlatformFile? _selectedImage;
   String? _currentThumbnailUrl;
 
-  final List<String> _categories = [
-    'Digital & Tech',
-    'Design & Creative',
-    'Marketing & Growth',
-    'Writing & Translation',
-    'Business & Admin',
-    'Home & Repair Services',
-    'Event & Media Services',
-    'Education & Coaching',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -52,7 +42,16 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
         TextEditingController(text: widget.service.description);
     _priceController =
         TextEditingController(text: widget.service.price.toString());
-    _selectedCategory = widget.service.category;
+
+    // Clean up old category strings from DB (e.g. &amp;)
+    final dbCat = widget.service.category.replaceAll('&amp;', '&').trim();
+    if (kServiceCategories.contains(dbCat)) {
+      _selectedCategory = dbCat;
+    } else {
+      // Fallback if not found to prevent drop-down assertion error
+      _selectedCategory = kServiceCategories.first;
+    }
+
     _currentThumbnailUrl = widget.service.thumbnailUrl;
   }
 
@@ -297,6 +296,7 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
 
               // Category
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 initialValue: _selectedCategory,
                 decoration: const InputDecoration(
                   labelText: 'Kategori',
@@ -304,10 +304,13 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
                   contentPadding:
                       EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 ),
-                items: _categories.map((category) {
+                items: kServiceCategories.map((category) {
                   return DropdownMenuItem(
                     value: category,
-                    child: Text(category),
+                    child: Text(
+                      category,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   );
                 }).toList(),
                 onChanged: (value) {

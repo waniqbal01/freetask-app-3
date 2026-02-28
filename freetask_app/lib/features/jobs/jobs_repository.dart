@@ -294,7 +294,15 @@ class JobsRepository {
     if (status != null && status.isNotEmpty) {
       query['status'] = status.join(',');
     }
-    return _fetchJobs(query);
+
+    final jobs = await _fetchJobs(query);
+
+    // Filter out unpaid custom offers from the list
+    return jobs.where((job) {
+      final isCustomOffer = job.serviceId.isEmpty;
+      final isUnpaid = job.status == JobStatus.awaitingPayment;
+      return !(isCustomOffer && isUnpaid);
+    }).toList();
   }
 
   Future<List<Job>> getFreelancerJobs(
@@ -304,7 +312,15 @@ class JobsRepository {
     if (status != null && status.isNotEmpty) {
       query['status'] = status.join(',');
     }
-    return _fetchJobs(query);
+
+    final jobs = await _fetchJobs(query);
+
+    // Filter out unpaid custom offers from the list
+    return jobs.where((job) {
+      final isCustomOffer = job.serviceId.isEmpty;
+      final isUnpaid = job.status == JobStatus.awaitingPayment;
+      return !(isCustomOffer && isUnpaid);
+    }).toList();
   }
 
   Future<List<Job>> getAllJobs(

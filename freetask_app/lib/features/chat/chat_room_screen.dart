@@ -649,7 +649,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
             bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
           child: _CreateOfferForm(
-            onSubmit: (title, description, price) async {
+            onSubmit: (title, description, price, attachments) async {
               Navigator.pop(context);
               setState(() => _isUploading = true);
               try {
@@ -658,6 +658,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                       title: title,
                       description: description,
                       amount: price,
+                      attachments: attachments,
                     );
                 _showSnackBar('Tawaran berjaya dihantar!');
               } catch (e) {
@@ -675,7 +676,8 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
 
 class _CreateOfferForm extends StatefulWidget {
   const _CreateOfferForm({required this.onSubmit});
-  final Function(String title, String description, double price) onSubmit;
+  final Function(String title, String description, double price,
+      List<String>? attachments) onSubmit;
 
   @override
   State<_CreateOfferForm> createState() => _CreateOfferFormState();
@@ -687,12 +689,33 @@ class _CreateOfferFormState extends State<_CreateOfferForm> {
   final _amountController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
+  PlatformFile? _selectedImage;
+  bool _isUploadingImage = false;
+
   @override
   void dispose() {
     _titleController.dispose();
     _descController.dispose();
     _amountController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        withData: kIsWeb,
+      );
+      if (result != null && result.files.isNotEmpty) {
+        setState(() {
+          _selectedImage = result.files.first;
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memilih gambar: $e')),
+      );
+    }
   }
 
   @override
@@ -742,26 +765,116 @@ class _CreateOfferFormState extends State<_CreateOfferForm> {
                 if (v == null || v.isEmpty) return 'Perlu diisi';
                 final num = double.tryParse(v);
                 if (num == null || num <= 0) return 'Harga tidak sah';
+                if (num < 50) return 'Minimum tawaran adalah RM 50';
                 return null;
               },
             ),
+            const SizedBox(height: 16),
+
+            // Image Picker Section
+            const Text(
+              'Gambar Rujukan (Pilihan)',
+              style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87),
+            ),
+            const SizedBox(height: 8),
+            if (_selectedImage != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.image, color: Colors.blue),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _selectedImage!.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.red),
+                      onPressed: () => setState(() => _selectedImage = null),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+              )
+            else
+              OutlinedButton.icon(
+                onPressed: _pickImage,
+                icon: const Icon(Icons.add_photo_alternate_outlined),
+                label: const Text('Muat Naik Gambar'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () {
-                if (_formKey.currentState!.validate()) {
-                  widget.onSubmit(
-                    _titleController.text,
-                    _descController.text,
-                    double.parse(_amountController.text),
-                  );
-                }
-              },
+              onPressed: _isUploadingImage
+                  ? null
+                  : () async {
+                      if (_formKey.currentState!.validate()) {
+                        setState(() => _isUploadingImage = true);
+                        List<String>? attachments;
+
+                        try {
+                          if (_selectedImage != null) {
+                            // Uses ChatRepository to upload image if there's any
+                            final repo = ProviderScope.containerOf(context)
+                                .read(chatRepositoryProvider);
+                            final url =
+                                await repo.uploadChatImage(_selectedImage!);
+                            attachments = [url];
+                          }
+
+                          widget.onSubmit(
+                            _titleController.text,
+                            _descController.text,
+                            double.parse(_amountController.text),
+                            attachments,
+                          );
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content:
+                                      Text('Gagal memuat naik gambar: $e')),
+                            );
+                          }
+                          setState(() => _isUploadingImage = false);
+                        }
+                      }
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2196F3),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
-              child: const Text('Hantar Tawaran'),
+              child: _isUploadingImage
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Hantar Tawaran'),
             ),
           ],
         ),
@@ -836,25 +949,30 @@ class _MessageBubble extends StatelessWidget {
           constraints: BoxConstraints(
               maxWidth: MediaQuery.of(context).size.width * 0.75),
           margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: isMe
-                ? const Color(0xFFDCF8C6) // WhatsApp-style light green for sent
-                : Colors.white, // White for received
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(12),
-              topRight: const Radius.circular(12),
-              bottomLeft: isMe ? const Radius.circular(12) : Radius.zero,
-              bottomRight: isMe ? Radius.zero : const Radius.circular(12),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 4,
-                offset: const Offset(0, 1),
-              )
-            ],
-          ),
+          padding: message.type == 'offer'
+              ? EdgeInsets.zero
+              : const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: message.type == 'offer'
+              ? const BoxDecoration() // No background for custom offer card
+              : BoxDecoration(
+                  color: isMe
+                      ? const Color(
+                          0xFFDCF8C6) // WhatsApp-style light green for sent
+                      : Colors.white, // White for received
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(12),
+                    topRight: const Radius.circular(12),
+                    bottomLeft: isMe ? const Radius.circular(12) : Radius.zero,
+                    bottomRight: isMe ? Radius.zero : const Radius.circular(12),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    )
+                  ],
+                ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -1188,10 +1306,9 @@ class _MessageComposerState extends State<_MessageComposer> {
     showModalBottomSheet(
       context: context,
       builder: (context) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-        child: Wrap(
-          alignment: WrapAlignment.spaceAround,
-          runSpacing: 20,
+        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             _AttachmentOption(
               icon: Icons.image,
@@ -1365,130 +1482,287 @@ class _OfferBubbleContent extends ConsumerWidget {
         ref.watch(authRepositoryProvider).currentUser?.role.toLowerCase() ==
             'freelancer';
 
+    // Premium UI Theme colors
+    final primaryColor = Theme.of(context).primaryColor;
+    final accentColor = const Color(0xFFF57C00); // Orange shade for offers
+    final bgColor = isMe ? Colors.white : Colors.white; // Always white card
+    final borderColor = isMe ? Colors.green.shade200 : Colors.grey.shade300;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.only(bottom: 4),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.orange.shade200, width: 2),
-        borderRadius: BorderRadius.circular(8),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.local_offer, color: Colors.orange, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16),
+          // Header Section
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.1),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(14),
+              ),
+              border: Border(
+                bottom: BorderSide(
+                  color: accentColor.withValues(alpha: 0.2),
+                  width: 1,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (description.isNotEmpty) ...[
-            Text(description, style: const TextStyle(fontSize: 14)),
-            const SizedBox(height: 8),
-          ],
-          Text(
-            'RM $priceStr',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-              color: Colors.green,
             ),
-          ),
-          const SizedBox(height: 12),
-          if (!isFreelancer && offerJobId != null)
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  context.push('/checkout', extra: {
-                    'jobId': offerJobId,
-                    'price': priceStr,
-                    'title': title,
-                  });
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Accept & Pay'),
-              ),
-            )
-          else if (isFreelancer && offerJobId != null)
-            Column(
+            child: Row(
               children: [
-                const Center(
-                  child: Text(
-                    'Menunggu pembayaran dari klien...',
-                    style: TextStyle(
-                        fontStyle: FontStyle.italic,
-                        color: Colors.black54,
-                        fontSize: 12),
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: accentColor.withValues(alpha: 0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
+                  child: Icon(Icons.local_offer_rounded,
+                      color: accentColor, size: 18),
                 ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
-                    label: const Text('Tarik Balik Tawaran',
-                        style: TextStyle(color: Colors.red)),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.red),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Tawaran Baru',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: accentColor,
+                      fontSize: 13,
+                      letterSpacing: 0.5,
                     ),
-                    onPressed: () async {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Tarik Balik Tawaran?'),
-                          content: const Text(
-                              'Tawaran ini akan dipadam dan klien akan dimaklumkan.'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx, false),
-                              child: const Text('Batal'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx, true),
-                              child: const Text('Padam',
-                                  style: TextStyle(color: Colors.red)),
-                            ),
-                          ],
-                        ),
-                      );
-                      if (confirm == true && context.mounted) {
-                        try {
-                          await ref
-                              .read(chatRepositoryProvider)
-                              .deleteCustomOffer(offerJobId);
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content:
-                                      Text('Tawaran berjaya ditarik balik.')),
-                            );
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Gagal: $e')),
-                            );
-                          }
-                        }
-                      }
-                    },
                   ),
                 ),
               ],
             ),
+          ),
+
+          // Body Section
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 17,
+                    color: Colors.black87,
+                  ),
+                ),
+                if (description.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade700,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+
+                // Display Attachment if available
+                if (offerData['attachments'] != null &&
+                    (offerData['attachments'] as List).isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      UrlUtils.resolveImageUrl(
+                          (offerData['attachments'] as List).first.toString()),
+                      height: 140,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        height: 140,
+                        width: double.infinity,
+                        color: Colors.grey.shade200,
+                        child:
+                            const Icon(Icons.broken_image, color: Colors.grey),
+                      ),
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 16),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.payments_outlined,
+                          size: 18, color: Colors.green),
+                      const SizedBox(width: 8),
+                      Text(
+                        'RM $priceStr',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 18,
+                          color: Colors.green.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Actions Section
+                if (!isFreelancer && offerJobId != null)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () {
+                        context.push('/checkout', extra: {
+                          'jobId': offerJobId,
+                          'price': priceStr,
+                          'title': title,
+                          'description': description,
+                        });
+                      },
+                      child: const Text(
+                        'Terima & Bayar Jawatan',
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  )
+                else if (isFreelancer && offerJobId != null)
+                  Column(
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.grey.shade400,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Menunggu pembayaran klien...',
+                              style: TextStyle(
+                                fontStyle: FontStyle.italic,
+                                color: Colors.grey.shade600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.delete_outline,
+                              size: 18, color: Colors.red),
+                          label: const Text(
+                            'Tarik Balik Tawaran',
+                            style: TextStyle(
+                                color: Colors.red, fontWeight: FontWeight.w600),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: Colors.red.shade300),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            backgroundColor: Colors.red.shade50,
+                          ),
+                          onPressed: () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Tarik Balik Tawaran?'),
+                                content: const Text(
+                                    'Tawaran ini akan dipadam dan klien akan dimaklumkan.'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, false),
+                                    child: const Text('Batal'),
+                                  ),
+                                  TextButton(
+                                    style: TextButton.styleFrom(
+                                        foregroundColor: Colors.red),
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    child: const Text('Padam Tawaran'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirm == true && context.mounted) {
+                              try {
+                                await ref
+                                    .read(chatRepositoryProvider)
+                                    .deleteCustomOffer(offerJobId);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content: Text(
+                                            'Tawaran berjaya ditarik balik.')),
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Gagal: $e')),
+                                  );
+                                }
+                              }
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );

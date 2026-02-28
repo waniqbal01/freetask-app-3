@@ -847,12 +847,6 @@ class _JobListScreenState extends State<JobListScreen> {
                   label: AppStrings.emptyClientCta,
                   onPressed: () => context.go('/home'),
                   expanded: false,
-                )
-              else
-                FTButton(
-                  label: AppStrings.emptyFreelancerActivateCta,
-                  onPressed: () => context.push('/profile'),
-                  expanded: false,
                 ),
             ],
           ),

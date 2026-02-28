@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_categories.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/widgets/confirmation_dialog.dart';
 
@@ -395,27 +396,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onSave: (val) => usersRepository.updateProfile(bio: val),
           ),
 
-          _buildProfileItem(
-            fieldKey: 'skills',
-            label: 'Kemahiran',
-            value: user.skills?.join(', ') ?? 'Belum ditetapkan',
-            icon: Icons.build,
-            onSave: (val) {
-              if (val.trim().isNotEmpty) {
-                final wordCount = val.trim().split(RegExp(r'\s+')).length;
-                if (wordCount > 10) {
-                  throw Exception(
-                      'Sila masukkan maksimum 10 perkataan sahaja.');
-                }
-              }
-              final skillsList = val
-                  .split(',')
-                  .map((e) => e.trim())
-                  .where((e) => e.isNotEmpty)
-                  .toList();
-              return usersRepository.updateProfile(skills: skillsList);
-            },
-          ),
+          _buildCategorySelector(user),
 
           const SizedBox(height: 16),
           // Active Status Toggle
@@ -494,6 +475,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildCategorySelector(AppUser user) {
+    final currentCategories = user.skills
+            ?.map((s) => s.replaceAll('&amp;', '&').trim())
+            .where((s) => s.isNotEmpty && s != '-')
+            .toList() ??
+        [];
+    final isEditing = _editingField == 'skills';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.category_outlined, color: Colors.grey),
+          title: const Text(
+            'Kategori Perkhidmatan',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          subtitle: currentCategories.isEmpty
+              ? const Text(
+                  'Belum ditetapkan',
+                  style: TextStyle(fontSize: 16, color: Colors.black87),
+                )
+              : Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: currentCategories
+                      .map((cat) => Chip(
+                            label:
+                                Text(cat, style: const TextStyle(fontSize: 12)),
+                            backgroundColor: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.1),
+                            side: BorderSide(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .primary
+                                    .withValues(alpha: 0.4)),
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            visualDensity: VisualDensity.compact,
+                          ))
+                      .toList(),
+                ),
+          trailing: isEditing
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.edit, size: 20),
+                  color: Theme.of(context).primaryColor,
+                  onPressed: () =>
+                      _startEditing('skills', currentCategories.join(',')),
+                ),
+        ),
+        if (isEditing) ...[
+          const SizedBox(height: 8),
+          _CategoryEditPanel(
+            initial: currentCategories,
+            isSaving: _isSavingField,
+            onSave: (selected) async {
+              await _saveField((_) async {
+                await usersRepository.updateProfile(skills: selected);
+              });
+            },
+            onCancel: _cancelEditing,
+          ),
+          const SizedBox(height: 8),
         ],
       ],
     );
@@ -981,6 +1033,125 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Text(
             'Tingkatkan siapan job & skor rating untuk naik level!',
             style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Inline chip-panel used in profile to edit service categories.
+class _CategoryEditPanel extends StatefulWidget {
+  const _CategoryEditPanel({
+    required this.initial,
+    required this.isSaving,
+    required this.onSave,
+    required this.onCancel,
+  });
+
+  final List<String> initial;
+  final bool isSaving;
+  final Future<void> Function(List<String> selected) onSave;
+  final VoidCallback onCancel;
+
+  @override
+  State<_CategoryEditPanel> createState() => _CategoryEditPanelState();
+}
+
+class _CategoryEditPanelState extends State<_CategoryEditPanel> {
+  late final Set<String> _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.initial
+        .map((s) => s.replaceAll('&amp;', '&').trim())
+        .where((s) => kServiceCategories.contains(s))
+        .toSet();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Pilih 1–3 Kategori Perkhidmatan',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: kServiceCategories.map((cat) {
+              final selected = _selected.contains(cat);
+              final atMax = _selected.length >= 3 && !selected;
+              return FilterChip(
+                label: Text(cat, style: const TextStyle(fontSize: 12)),
+                selected: selected,
+                onSelected: atMax
+                    ? null
+                    : (val) {
+                        setState(() {
+                          if (val) {
+                            _selected.add(cat);
+                          } else {
+                            _selected.remove(cat);
+                          }
+                        });
+                      },
+                selectedColor: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.15),
+                checkmarkColor: Theme.of(context).colorScheme.primary,
+                labelStyle: TextStyle(
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  color: atMax
+                      ? Colors
+                          .grey.shade400 // Made slightly darker for readability
+                      : (selected
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.grey.shade700),
+                ),
+                visualDensity: VisualDensity.compact,
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: widget.isSaving ? null : widget.onCancel,
+                child:
+                    const Text('Batal', style: TextStyle(color: Colors.grey)),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: widget.isSaving || _selected.isEmpty
+                    ? null
+                    : () => widget.onSave(_selected.toList()),
+                child: widget.isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Simpan'),
+              ),
+            ],
           ),
         ],
       ),
