@@ -9,6 +9,7 @@ import '../../services/notifications_repository.dart';
 import 'notification_service.dart';
 import 'notification_overlay.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../../features/chat/chat_room_screen.dart';
 
 // Top-level background handler — MUST be outside class
 @pragma('vm:entry-point')
@@ -83,6 +84,16 @@ class FCMService {
 
       // Foreground messages — FCM won't show heads-up, so we show locally
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        final conversationId = message.data['conversationId']?.toString();
+
+        // Suppress notification if user is actively in this chat room
+        if (conversationId != null &&
+            ChatRoomScreen.activeChatId == conversationId) {
+          debugPrint(
+              '[FCM] Suppressing notification, user is currently in chat $conversationId');
+          return;
+        }
+
         if (message.notification != null) {
           // Show elegant in-app overlay for 10/10 UX instead of system tray when open
           notificationService.pushLocal(

@@ -29,6 +29,7 @@ enum JobStatus {
   PAYOUT_FAILED_MANUAL
   DISPUTED
   CANCELED
+  EXPIRED
 }
 
 enum EscrowStatus {

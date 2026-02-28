@@ -507,8 +507,18 @@ class _ChatHeader extends StatelessWidget {
               children: [
                 // Top Bar: Badge & Actions
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    // Brand Name
+                    const Text(
+                      'freetask',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                     Row(
                       children: [
                         Container(
@@ -562,7 +572,7 @@ class _ChatHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Urus semua komunikasi projek anda di sini.',
+                  'Uruskan projek anda dengan freelancer yang tepat.',
                   style: TextStyle(
                     color: Colors.white70,
                     fontSize: 16,

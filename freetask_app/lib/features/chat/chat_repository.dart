@@ -439,6 +439,92 @@ class ChatRepository {
     }
   }
 
+  Future<ChatMessage> createCustomOffer({
+    required String clientId,
+    required String title,
+    required String description,
+    required double amount,
+    List<String>? attachments,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/jobs/custom-offer',
+        data: {
+          'clientId': int.parse(clientId),
+          'title': title,
+          'description': description,
+          'amount': amount,
+          if (attachments != null && attachments.isNotEmpty)
+            'attachments': attachments,
+        },
+        options: await _authorizedOptions(),
+      );
+
+      final data = response.data;
+      if (data == null) {
+        throw Exception('Gagal mencipta tawaran.');
+      }
+
+      // We don't necessarily get the chat message directly from this endpoint in the frontend,
+      // but the backend creates it and broadcast via socket.
+      // We can trigger a reload or let socket handle it.
+
+      // Reload messages for the conversation to ensure it's there
+      final conversationId = data['conversationId']?.toString();
+      if (conversationId != null) {
+        await _loadMessages(conversationId, mergeExisting: true);
+      }
+
+      // Return a dummy message or attempt to find it
+      return ChatMessage(
+        id: 'offer_${DateTime.now().millisecondsSinceEpoch}',
+        jobId: conversationId ?? '',
+        senderId: authRepository.currentUser?.id.toString() ?? '',
+        senderName: authRepository.currentUser?.name ?? 'Me',
+        text: 'Offer created',
+        timestamp: DateTime.now(),
+        type: 'offer',
+      );
+    } on DioException catch (error) {
+      await _handleError(error);
+      rethrow;
+    }
+  }
+
+  Future<void> resendCustomOffer(String jobId) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/jobs/custom-offer/$jobId/resend',
+        options: await _authorizedOptions(),
+      );
+
+      final data = response.data;
+      if (data == null) {
+        throw Exception('Gagal menghantar semula tawaran.');
+      }
+
+      final conversationId = data['conversationId']?.toString();
+      if (conversationId != null) {
+        await _loadMessages(conversationId, mergeExisting: true);
+      }
+    } on DioException catch (error) {
+      await _handleError(error);
+      rethrow;
+    }
+  }
+
+  Future<void> deleteCustomOffer(String jobId) async {
+    try {
+      await _dio.delete<void>(
+        '/jobs/custom-offer/$jobId',
+        options: await _authorizedOptions(),
+      );
+    } on DioException catch (error) {
+      await _handleError(error);
+      rethrow;
+    }
+  }
+
   Future<String> uploadChatImage(PlatformFile file) async {
     try {
       MultipartFile multipartFile;

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -23,11 +24,12 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { JobsQueryDto } from './dto/jobs-query.dto';
 import { CreateInquiryDto } from './dto/create-inquiry.dto';
+import { CreateCustomOfferDto } from './dto/create-custom-offer.dto';
 
 @Controller('jobs')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class JobsController {
-  constructor(private readonly jobsService: JobsService) {}
+  constructor(private readonly jobsService: JobsService) { }
 
   @Post()
   @Roles(UserRole.CLIENT)
@@ -47,6 +49,36 @@ export class JobsController {
     @Body() dto: CreateInquiryDto,
   ) {
     return this.jobsService.createInquiry(userId, role, dto);
+  }
+
+  @Post('custom-offer')
+  @Roles(UserRole.FREELANCER)
+  createCustomOffer(
+    @GetUser('userId') userId: number,
+    @GetUser('role') role: UserRole,
+    @Body() dto: CreateCustomOfferDto,
+  ) {
+    return this.jobsService.createCustomOffer(userId, role, dto);
+  }
+
+  @Post('custom-offer/:id/resend')
+  @Roles(UserRole.FREELANCER)
+  resendCustomOffer(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('userId') userId: number,
+    @GetUser('role') role: UserRole,
+  ) {
+    return this.jobsService.resendCustomOffer(id, userId, role);
+  }
+
+  @Delete('custom-offer/:id')
+  @Roles(UserRole.FREELANCER)
+  deleteCustomOffer(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('userId') userId: number,
+    @GetUser('role') role: UserRole,
+  ) {
+    return this.jobsService.deleteCustomOffer(id, userId, role);
   }
 
   @Get()

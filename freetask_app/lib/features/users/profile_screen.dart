@@ -16,7 +16,6 @@ import '../../services/upload_service.dart';
 import '../../core/utils/url_utils.dart';
 import '../../core/constants/malaysia_locations.dart';
 import 'users_repository.dart';
-import 'package:geolocator/geolocator.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -386,7 +385,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           inputType: TextInputType.phone,
           onSave: (val) => usersRepository.updateProfile(phoneNumber: val),
         ),
-        _buildLocationSection(user),
         if (isFreelancer) ...[
           _buildProfileItem(
             fieldKey: 'bio',
@@ -403,6 +401,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             value: user.skills?.join(', ') ?? 'Belum ditetapkan',
             icon: Icons.build,
             onSave: (val) {
+              if (val.trim().isNotEmpty) {
+                final wordCount = val.trim().split(RegExp(r'\s+')).length;
+                if (wordCount > 10) {
+                  throw Exception(
+                      'Sila masukkan maksimum 10 perkataan sahaja.');
+                }
+              }
               final skillsList = val
                   .split(',')
                   .map((e) => e.trim())
@@ -427,6 +432,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             contentPadding: EdgeInsets.zero,
           ),
+
+          const SizedBox(height: 24),
+          const Divider(),
+
+          _buildLocationSection(user),
 
           const SizedBox(height: 24),
           const Divider(),
@@ -504,112 +514,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(height: 16),
         _buildStateDropdown(user),
         _buildDistrictDropdown(user),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.gps_fixed, color: Colors.grey),
-          title: const Text('Koordinat GPS',
-              style: TextStyle(fontSize: 12, color: Colors.grey)),
-          subtitle: Text(
-            user.latitude != null && user.longitude != null
-                ? '${user.latitude!.toStringAsFixed(4)}, ${user.longitude!.toStringAsFixed(4)}'
-                : 'Belum ditetapkan',
-            style: const TextStyle(fontSize: 16, color: Colors.black87),
-          ),
-          trailing: TextButton.icon(
-            icon: const Icon(Icons.my_location, size: 16),
-            label: const Text('Kemaskini'),
-            onPressed: () => _fetchAndUpdateGPS(user),
-          ),
-        ),
-        if (user.roleEnum.isFreelancer) ...[
-          _buildProfileItem(
-              fieldKey: 'coverageRadius',
-              label: 'Jejari Liputan (km)',
-              value: user.coverageRadius?.toString() ?? 'Belum ditetapkan',
-              icon: Icons.radar,
-              inputType: TextInputType.number,
-              onSave: (val) async {
-                final radius = int.tryParse(val);
-                if (radius != null) {
-                  await usersRepository.updateProfile(coverageRadius: radius);
-                } else if (val.isEmpty) {
-                  // handle clearing
-                } else {
-                  throw Exception('Sila masukkan nombor yang sah.');
-                }
-              }),
-          SwitchListTile(
-            title: const Text('Terima Job Luar Kawasan'),
-            subtitle: Text(user.acceptsOutstation
-                ? 'Boleh ditempah oleh client dari luar kawasan (cas tambahan mungkin dikenakan)'
-                : 'Hanya terima tempahan dalam radius liputan sahaja'),
-            value: user.acceptsOutstation,
-            onChanged: (val) async {
-              try {
-                setState(() => _isLoadingUser = true);
-                await usersRepository.updateProfile(acceptsOutstation: val);
-                await _loadUser();
-              } catch (e) {
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Gagal: $e')),
-                );
-                setState(() => _isLoadingUser = false);
-              }
-            },
-            secondary: Icon(
-              user.acceptsOutstation ? Icons.directions_car : Icons.block,
-              color: user.acceptsOutstation ? Colors.green : Colors.grey,
-            ),
-            contentPadding: EdgeInsets.zero,
-          ),
-        ],
-        const Divider(height: 32),
       ],
     );
-  }
-
-  Future<void> _fetchAndUpdateGPS(AppUser user) async {
-    setState(() => _isLoadingUser = true);
-    try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          throw Exception('Keizinan lokasi ditolak.');
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        throw Exception('Keizinan lokasi ditolak kekal. Sila ubah di tetapan.');
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      await usersRepository.updateProfile(
-        latitude: position.latitude,
-        longitude: position.longitude,
-      );
-      await _loadUser();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('GPS berjaya dikemaskini')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal mendapatkan GPS: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoadingUser = false);
-      }
-    }
   }
 
   Widget _buildStateDropdown(AppUser user) {

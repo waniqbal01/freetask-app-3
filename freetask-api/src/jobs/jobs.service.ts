@@ -11,6 +11,7 @@ import { JobStatus, Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateJobDto } from './dto/create-job.dto';
 import { CreateInquiryDto } from './dto/create-inquiry.dto';
+import { CreateCustomOfferDto } from './dto/create-custom-offer.dto';
 import { DisputeJobDto } from './dto/dispute-job.dto';
 import { UpdateJobStatusDto } from './dto/update-job-status.dto';
 import { SubmitJobDto } from './dto/submit-job.dto';
@@ -183,6 +184,190 @@ export class JobsService {
     });
 
     return this.withFlatFields(job);
+  }
+
+  async createCustomOffer(userId: number, role: UserRole, dto: CreateCustomOfferDto) {
+    if (role !== UserRole.FREELANCER) {
+      throw new ForbiddenException('Only freelancers can create custom offers');
+    }
+
+    try {
+      const client = await this.prisma.user.findUnique({
+        where: { id: dto.clientId },
+      });
+      if (!client || client.role !== UserRole.CLIENT) {
+        throw new NotFoundException('Client not found or invalid user.');
+      }
+
+      const parsedAmount = Number(dto.amount);
+      if (!Number.isFinite(parsedAmount)) {
+        throw new BadRequestException('amount must be a valid number');
+      }
+      const amount = new Prisma.Decimal(parsedAmount.toFixed(2));
+
+      this.logger.log(`Creating custom offer for client ${dto.clientId} by freelancer ${userId}`);
+
+      const conversation = await this.chatsService.getOrCreateConversation(
+        dto.clientId,
+        userId,
+      );
+
+      const job = await this.prisma.job.create({
+        data: {
+          title: dto.title.trim(),
+          description: dto.description,
+          amount,
+          serviceId: null,
+          clientId: dto.clientId,
+          freelancerId: userId,
+          conversationId: conversation.id,
+          status: JobStatus.AWAITING_PAYMENT,
+          orderAttachments: dto.attachments
+            ? (dto.attachments as Prisma.InputJsonValue)
+            : undefined,
+        },
+        include: this.jobInclude,
+      });
+
+      const offerData = {
+        title: job.title,
+        description: job.description,
+        price: job.amount.toString(),
+        offerJobId: job.id,
+      };
+
+      await this.chatsService.postMessage(conversation.id, userId, role, {
+        content: JSON.stringify(offerData),
+        type: 'offer',
+      });
+
+      const lastMessage = await this.prisma.chatMessage.findFirst({
+        where: { conversationId: conversation.id, senderId: userId },
+        orderBy: { createdAt: 'desc' }
+      });
+      if (lastMessage) {
+        await this.prisma.chatMessage.update({
+          where: { id: lastMessage.id },
+          data: { jobId: job.id }
+        });
+      }
+
+      await this.notificationsService.sendNotification({
+        userId: dto.clientId,
+        title: 'New Custom Offer',
+        body: `Freelancer sent you a custom offer: ${job.title}. Please review and accept.`,
+        data: { type: 'custom_offer', jobId: job.id.toString() },
+      });
+
+      return this.withFlatFields(job);
+    } catch (error) {
+      this.logger.error(`Failed to create custom offer for client ${dto.clientId}`, error);
+      throw error;
+    }
+  }
+
+  async resendCustomOffer(id: number, userId: number, role: UserRole) {
+    if (role !== UserRole.FREELANCER) {
+      throw new ForbiddenException('Only freelancers can resend custom offers');
+    }
+
+    const job = await this.prisma.job.findFirst({
+      where: { id, freelancerId: userId, status: JobStatus.EXPIRED },
+    });
+
+    if (!job) {
+      throw new NotFoundException('Expired custom offer not found');
+    }
+
+    const newJob = await this.prisma.job.create({
+      data: {
+        title: job.title,
+        description: job.description,
+        amount: job.amount,
+        serviceId: job.serviceId,
+        clientId: job.clientId,
+        freelancerId: job.freelancerId,
+        conversationId: job.conversationId,
+        status: JobStatus.AWAITING_PAYMENT,
+        orderAttachments: job.orderAttachments ?? undefined,
+      },
+      include: this.jobInclude,
+    });
+
+    const offerData = {
+      title: newJob.title,
+      description: newJob.description,
+      price: newJob.amount.toString(),
+      offerJobId: newJob.id,
+    };
+
+    if (job.conversationId) {
+      await this.chatsService.postMessage(job.conversationId, userId, role, {
+        content: JSON.stringify(offerData),
+        type: 'offer',
+      });
+
+      const lastMessage = await this.prisma.chatMessage.findFirst({
+        where: { conversationId: job.conversationId, senderId: userId },
+        orderBy: { createdAt: 'desc' }
+      });
+      if (lastMessage) {
+        await this.prisma.chatMessage.update({
+          where: { id: lastMessage.id },
+          data: { jobId: newJob.id }
+        });
+      }
+    }
+
+    await this.notificationsService.sendNotification({
+      userId: newJob.clientId,
+      title: 'Custom Offer Resent',
+      body: `Freelancer resent the custom offer: ${newJob.title}.`,
+      data: { type: 'custom_offer', jobId: newJob.id.toString() },
+    });
+
+    return this.withFlatFields(newJob);
+  }
+
+  async deleteCustomOffer(id: number, userId: number, role: UserRole) {
+    if (role !== UserRole.FREELANCER) {
+      throw new ForbiddenException('Only freelancers can delete custom offers');
+    }
+
+    const job = await this.prisma.job.findFirst({
+      where: { id, freelancerId: userId },
+    });
+
+    if (!job) {
+      throw new NotFoundException('Custom offer not found');
+    }
+
+    // Only allow deletion while awaiting payment (before client accepts)
+    if (job.status !== JobStatus.AWAITING_PAYMENT) {
+      throw new ForbiddenException(
+        'Hanya tawaran yang belum dibayar boleh dipadam.',
+      );
+    }
+
+    // Send a system message to the chat so both parties know it was withdrawn
+    if (job.conversationId) {
+      await this.chatsService.postMessage(job.conversationId, userId, role, {
+        content: `[SYSTEM] Tawaran "${job.title}" telah ditarik balik oleh freelancer.`,
+        type: 'system',
+      });
+    }
+
+    // Notify client
+    await this.notificationsService.sendNotification({
+      userId: job.clientId,
+      title: 'Tawaran Ditarik Balik',
+      body: `Freelancer telah menarik balik tawaran: ${job.title}.`,
+      data: { type: 'custom_offer_withdrawn', jobId: job.id.toString() },
+    });
+
+    await this.prisma.job.delete({ where: { id } });
+
+    return { success: true, message: 'Tawaran berjaya dipadam.' };
   }
 
   async findAllForUser(
@@ -602,6 +787,55 @@ export class JobsService {
     }
   }
 
+  @Cron(CronExpression.EVERY_HOUR)
+  async handleAutoExpireOffers() {
+    this.logger.log('Checking for expired custom offers...');
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const jobs = await this.prisma.job.findMany({
+      where: {
+        status: JobStatus.AWAITING_PAYMENT,
+        createdAt: { lte: twentyFourHoursAgo },
+      },
+      include: {
+        conversation: true,
+      }
+    });
+
+    for (const job of jobs) {
+      if (job.serviceId === null) {  // Only for custom offers (no service linked)
+        try {
+          this.logger.log(`Auto-expiring custom offer ${job.id}`);
+          await this.applyStatusUpdate(job.id, JobStatus.EXPIRED);
+
+          // Notify both parties
+          await this.notificationsService.sendNotification({
+            userId: job.freelancerId,
+            title: 'Custom Offer Expired',
+            body: `Your custom offer '${job.title}' has expired as it was not paid within 24 hours.`,
+            data: { type: 'custom_offer_expired', jobId: job.id.toString() },
+          });
+
+          await this.notificationsService.sendNotification({
+            userId: job.clientId,
+            title: 'Custom Offer Expired',
+            body: `The custom offer '${job.title}' has expired.`,
+            data: { type: 'custom_offer_expired', jobId: job.id.toString() },
+          });
+
+          if (job.conversationId) {
+            await this.chatsService.postMessage(job.conversationId, job.freelancerId, UserRole.FREELANCER, {
+              content: `[SYSTEM] Tawaran "${job.title}" telah tamat tempoh.`,
+              type: 'system',
+            });
+          }
+        } catch (error) {
+          this.logger.error(`Failed to auto-expire custom offer ${job.id}`, error);
+        }
+      }
+    }
+  }
+
   private ensureValidTransition(current: JobStatus, next: JobStatus) {
     const transitions: Record<JobStatus, JobStatus[]> = {
       [JobStatus.INQUIRY]: [
@@ -616,6 +850,7 @@ export class JobsService {
       [JobStatus.AWAITING_PAYMENT]: [
         JobStatus.IN_PROGRESS, // Payment completed
         JobStatus.CANCELED, // Client cancel before payment
+        JobStatus.EXPIRED, // 24 hours no payment
       ],
       [JobStatus.IN_PROGRESS]: [
         JobStatus.IN_REVIEW, // Freelancer submit work
@@ -638,6 +873,7 @@ export class JobsService {
         JobStatus.PAYOUT_HOLD,
       ],
       [JobStatus.CANCELED]: [],
+      [JobStatus.EXPIRED]: [],
       [JobStatus.DISPUTED]: [JobStatus.COMPLETED, JobStatus.CANCELED],
       [JobStatus.SUBMITTED]: [
         JobStatus.COMPLETED,

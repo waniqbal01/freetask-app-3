@@ -251,8 +251,20 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                                   children: [
                                     // Top Bar: Logo/Brand & Notification
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
+                                        // Brand Name
+                                        const Text(
+                                          'freetask',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                        // Right side icons
                                         Row(
                                           children: [
                                             Container(
@@ -319,7 +331,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                                     ),
                                     const SizedBox(height: 8),
                                     const Text(
-                                      'Cari pekerja yang sesuai di sini.',
+                                      'Uruskan projek anda dengan freelancer yang tepat.',
                                       style: TextStyle(
                                         color: Colors.white70,
                                         fontSize: 16,
@@ -456,9 +468,19 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                                 return FreelancerCard(
                                   user: freelancer,
                                   onAvatarTap: () {
+                                    if (_currentUser?.id == freelancer.id) {
+                                      showInfoSnackBar(context,
+                                          'Ini adalah profil anda sendiri.');
+                                      return;
+                                    }
                                     context.push('/users/${freelancer.id}');
                                   },
                                   onTap: () async {
+                                    if (_currentUser?.id == freelancer.id) {
+                                      showInfoSnackBar(context,
+                                          'Anda tidak boleh mesej diri sendiri.');
+                                      return;
+                                    }
                                     try {
                                       final chatRepo = ChatRepository();
                                       final thread =

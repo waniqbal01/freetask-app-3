@@ -86,16 +86,6 @@ class FreelancerCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      if (user.bio != null && user.bio!.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          user.bio!,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: textTheme.bodySmall
-                              ?.copyWith(color: AppColors.neutral500),
-                        ),
-                      ],
                       if (user.skills != null && user.skills!.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         Wrap(
