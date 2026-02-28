@@ -105,6 +105,37 @@ class CheckoutScreen extends StatelessWidget {
                                 style: TextStyle(color: Colors.grey.shade800),
                               ),
                             ],
+                            if (draft['attachments'] != null &&
+                                (draft['attachments'] as List).isNotEmpty) ...[
+                              const SizedBox(height: 16),
+                              Text(
+                                'Gambar Rujukan:',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                        color: Colors.grey.shade600,
+                                        fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 8),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  draft['attachments'][0].toString(),
+                                  height: 120,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stack) =>
+                                      Container(
+                                    height: 120,
+                                    color: Colors.grey.shade200,
+                                    child: const Center(
+                                        child: Icon(Icons.broken_image,
+                                            color: Colors.grey)),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                 ),

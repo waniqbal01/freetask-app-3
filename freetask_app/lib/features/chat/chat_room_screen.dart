@@ -739,7 +739,11 @@ class _CreateOfferFormState extends State<_CreateOfferForm> {
                 labelText: 'Tajuk Servis',
                 border: OutlineInputBorder(),
               ),
-              validator: (v) => v == null || v.isEmpty ? 'Perlu diisi' : null,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Perlu diisi';
+                if (v.trim().length < 3) return 'Minimum 3 aksara';
+                return null;
+              },
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -749,7 +753,11 @@ class _CreateOfferFormState extends State<_CreateOfferForm> {
                 border: OutlineInputBorder(),
               ),
               maxLines: 3,
-              validator: (v) => v == null || v.isEmpty ? 'Perlu diisi' : null,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Perlu diisi';
+                if (v.trim().length < 10) return 'Minimum 10 aksara';
+                return null;
+              },
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -762,8 +770,8 @@ class _CreateOfferFormState extends State<_CreateOfferForm> {
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               validator: (v) {
-                if (v == null || v.isEmpty) return 'Perlu diisi';
-                final num = double.tryParse(v);
+                if (v == null || v.trim().isEmpty) return 'Perlu diisi';
+                final num = double.tryParse(v.trim());
                 if (num == null || num <= 0) return 'Harga tidak sah';
                 if (num < 50) return 'Minimum tawaran adalah RM 50';
                 return null;
@@ -843,9 +851,11 @@ class _CreateOfferFormState extends State<_CreateOfferForm> {
                           }
 
                           widget.onSubmit(
-                            _titleController.text,
-                            _descController.text,
-                            double.parse(_amountController.text),
+                            _titleController.text.trim(),
+                            _descController.text.trim(),
+                            double.parse(
+                                double.parse(_amountController.text.trim())
+                                    .toStringAsFixed(2)),
                             attachments,
                           );
                         } catch (e) {
@@ -1652,6 +1662,7 @@ class _OfferBubbleContent extends ConsumerWidget {
                           'price': priceStr,
                           'title': title,
                           'description': description,
+                          'attachments': offerData['attachments'],
                         });
                       },
                       child: const Text(

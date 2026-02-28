@@ -234,6 +234,7 @@ export class JobsService {
         description: job.description,
         price: job.amount.toString(),
         offerJobId: job.id,
+        attachments: dto.attachments,
       };
 
       await this.chatsService.postMessage(conversation.id, userId, role, {
