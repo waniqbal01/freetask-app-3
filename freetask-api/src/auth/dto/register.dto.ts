@@ -67,6 +67,18 @@ export class RegisterDto {
   skills?: string[];
 
   @IsOptional()
+  @IsString()
+  @Transform(({ value, obj }) => value ?? obj.phone)
+  phoneNumber?: string;
+
+  /**
+   * @deprecated Use phoneNumber instead.
+   */
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   rate?: number;

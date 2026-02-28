@@ -73,6 +73,7 @@ export class AuthService {
         district: dto.district,
         skills: dto.skills,
         rate: dto.rate,
+        phoneNumber: dto.phoneNumber,
       },
     });
 

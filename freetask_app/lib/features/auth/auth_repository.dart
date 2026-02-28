@@ -201,6 +201,9 @@ class AuthRepository {
     addOptional('bio');
     addOptional('skills');
     addOptional('rate');
+    addOptional('phone');
+    addOptional('state');
+    addOptional('district');
 
     return data;
   }
