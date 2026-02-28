@@ -75,49 +75,68 @@ export class UsersService {
     state?: string;
     district?: string;
   }) {
-    const where: Prisma.UserWhereInput = {
-      role: 'FREELANCER',
-      isAvailable: true,
-    };
+    const andConditions: Prisma.UserWhereInput[] = [
+      { role: 'FREELANCER' },
+      { isAvailable: true },
+    ];
 
     if (query.q) {
-      where.OR = [
-        { name: { contains: query.q, mode: 'insensitive' } },
-        { bio: { contains: query.q, mode: 'insensitive' } },
-      ];
+      const searchTerm = query.q;
+      andConditions.push({
+        OR: [
+          { name: { contains: searchTerm, mode: 'insensitive' } },
+          { bio: { contains: searchTerm, mode: 'insensitive' } },
+          {
+            services: {
+              some: {
+                OR: [
+                  { title: { contains: searchTerm, mode: 'insensitive' } },
+                  { category: { contains: searchTerm, mode: 'insensitive' } },
+                ],
+                approvalStatus: 'APPROVED',
+                isActive: true,
+              },
+            },
+          },
+        ],
+      });
     }
 
     if (query.category && query.category !== 'Semua') {
-      where.OR = [
-        // Freelancer has an approved, active service in this category
-        {
-          services: {
-            some: {
-              category: query.category,
-              approvalStatus: 'APPROVED',
-              isActive: true,
+      andConditions.push({
+        OR: [
+          // Freelancer has an approved, active service in this category
+          {
+            services: {
+              some: {
+                category: query.category,
+                approvalStatus: 'APPROVED',
+                isActive: true,
+              },
             },
           },
-        },
-        // OR freelancer selected this category during signup (stored as JSONB array in skills)
-        {
-          skills: {
-            array_contains: [query.category],
+          // OR freelancer selected this category during signup (stored as JSONB array in skills/categories)
+          {
+            skills: {
+              array_contains: [query.category],
+            },
           },
-        },
-      ];
+        ],
+      });
     }
 
     if (query.state) {
-      where.state = query.state;
+      andConditions.push({ state: query.state });
     }
 
     if (query.district) {
-      where.district = query.district;
+      andConditions.push({ district: query.district });
     }
 
     const freelancers = await this.prisma.user.findMany({
-      where,
+      where: {
+        AND: andConditions,
+      },
       select: {
         id: true,
         name: true,

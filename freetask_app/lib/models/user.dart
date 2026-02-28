@@ -45,7 +45,10 @@ class AppUser {
           json['avatar_url']?.toString() ?? json['avatarUrl']?.toString(),
       bio: json['bio']?.toString(),
       skills: skills is List
-          ? skills.map((dynamic skill) => skill.toString()).toList()
+          ? skills
+              .map((dynamic skill) =>
+                  skill.toString().replaceAll('&amp;', '&').trim())
+              .toList()
           : null,
       rate: (json['rate'] as num?)?.toDouble(),
       rating: (json['rating'] as num?)?.toDouble(),
@@ -69,7 +72,8 @@ class AppUser {
       replyRate: (json['replyRate'] as num?)?.toDouble(),
       serviceNames: services is List
           ? services
-              .map((dynamic service) => service['title']?.toString())
+              .map((dynamic service) =>
+                  service['title']?.toString().replaceAll('&amp;', '&').trim())
               .whereType<String>()
               .toList()
           : null,

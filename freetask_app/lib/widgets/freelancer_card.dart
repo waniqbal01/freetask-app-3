@@ -32,105 +32,122 @@ class FreelancerCard extends StatelessWidget {
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.s16),
-            child: Row(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                FreelancerAvatar(
-                  avatarUrl: user.avatarUrl,
-                  size: 60,
-                  onTap: onAvatarTap ?? onTap,
-                ),
-                const SizedBox(width: AppSpacing.s16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FreelancerAvatar(
+                      avatarUrl: user.avatarUrl,
+                      size: 64,
+                      onTap: onAvatarTap ?? onTap,
+                    ),
+                    const SizedBox(width: AppSpacing.s16),
+                    Expanded(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Text(
-                              user.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.neutral900,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  user.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.neutral900,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
                               ),
-                            ),
+                              if (user.rate != null)
+                                Text(
+                                  'RM${user.rate!.toStringAsFixed(0)}',
+                                  style: textTheme.titleMedium?.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                            ],
                           ),
-                          if (user.rate != null)
-                            Text(
-                              'RM${user.rate!.toStringAsFixed(2)}/jam',
-                              style: textTheme.labelLarge?.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w700,
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(Icons.location_on_outlined,
+                                  size: 14, color: AppColors.neutral400),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  '${user.district}, ${user.state}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: AppColors.neutral500,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
                               ),
-                            ),
+                              if (user.rate != null)
+                                Text(
+                                  '/jam',
+                                  style: textTheme.labelSmall?.copyWith(
+                                    color: AppColors.neutral400,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              _LevelChip(level: user.level),
+                              const SizedBox(width: 8),
+                              _RatingChip(
+                                rating: user.rating ?? 0.0,
+                                count: user.reviewCount ?? 0,
+                              ),
+                            ],
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        children: [
-                          _LevelChip(level: user.level),
-                          if (user.state != null && user.district != null)
-                            _LocationChip(
-                              location: '${user.district}, ${user.state}',
-                            ),
-                          _RatingChip(
-                            rating: user.rating ?? 0.0,
-                            count: user.reviewCount ?? 0,
-                          ),
-                        ],
-                      ),
-                      if (user.skills != null && user.skills!.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: user.skills!
-                              .take(3)
-                              .map((skill) => _SkillChip(
-                                  label: skill.replaceAll('&amp;', '&')))
-                              .toList()
-                            ..addAll(
-                              user.skills!.length > 3
-                                  ? [
-                                      _SkillChip(
-                                          label: '+${user.skills!.length - 3}')
-                                    ]
-                                  : [],
-                            ),
-                        ),
-                      ],
-                      if (user.serviceNames != null &&
-                          user.serviceNames!.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: user.serviceNames!
-                              .take(5)
-                              .map((serviceName) =>
-                                  _ServiceChip(label: serviceName))
-                              .toList()
-                            ..addAll(
-                              user.serviceNames!.length > 5
-                                  ? [
-                                      _ServiceChip(
-                                          label:
-                                              '+${user.serviceNames!.length - 5}')
-                                    ]
-                                  : [],
-                            ),
-                        ),
-                      ],
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
+                if (user.skills != null && user.skills!.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: user.skills!
+                        .take(3)
+                        .map((skill) => _SkillChip(label: skill))
+                        .toList()
+                      ..addAll(
+                        user.skills!.length > 3
+                            ? [_SkillChip(label: '+${user.skills!.length - 3}')]
+                            : [],
+                      ),
+                  ),
+                ],
+                if (user.serviceNames != null &&
+                    user.serviceNames!.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    child: Row(
+                      children: user.serviceNames!
+                          .take(5)
+                          .map((serviceName) => Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: _ServiceChip(label: serviceName),
+                              ))
+                          .toList(),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -266,58 +283,23 @@ class _LevelChip extends StatelessWidget {
         break;
     }
 
-    Color textColor = color == Colors.purple
-        ? Colors.purple.shade900
-        : (color == Colors.blue ? Colors.blue.shade900 : Colors.green.shade900);
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: color),
+          Icon(icon, size: 10, color: color),
           const SizedBox(width: 4),
           Text(
             label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: textColor,
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LocationChip extends StatelessWidget {
-  const _LocationChip({required this.location});
-
-  final String location;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.blueGrey.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.location_on, size: 12, color: Colors.blueGrey.shade700),
-          const SizedBox(width: 4),
-          Text(
-            location,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Colors.blueGrey.shade800,
-                  fontWeight: FontWeight.w600,
+                  color: color,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 10,
                 ),
           ),
         ],
@@ -334,35 +316,28 @@ class _RatingChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.amber.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.star, size: 12, color: Colors.amber.shade700),
-          const SizedBox(width: 4),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.star_rounded, size: 16, color: Colors.amber.shade700),
+        const SizedBox(width: 2),
+        Text(
+          count > 0 ? rating.toStringAsFixed(1) : 'Tiada Rating',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: AppColors.neutral900,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        if (count > 0) ...[
+          const SizedBox(width: 2),
           Text(
-            count > 0 ? rating.toStringAsFixed(1) : 'Tiada Rating',
+            '($count)',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Colors.amber.shade900,
-                  fontWeight: FontWeight.w700,
+                  color: AppColors.neutral400,
                 ),
           ),
-          if (count > 0) ...[
-            const SizedBox(width: 2),
-            Text(
-              '($count)',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Colors.amber.shade900,
-                  ),
-            ),
-          ],
         ],
-      ),
+      ],
     );
   }
 }
@@ -375,15 +350,16 @@ class _SkillChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(999),
+        color: AppColors.neutral50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.neutral100),
       ),
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.primary,
+              color: AppColors.neutral600,
               fontWeight: FontWeight.w600,
             ),
       ),
@@ -401,15 +377,14 @@ class _ServiceChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.secondary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
+        color: AppColors.secondary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.design_services_outlined,
-              size: 12, color: AppColors.secondary),
-          const SizedBox(width: 4),
+          Icon(Icons.layers_outlined, size: 12, color: AppColors.secondary),
+          const SizedBox(width: 6),
           Flexible(
             child: Text(
               label,
@@ -417,7 +392,8 @@ class _ServiceChip extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: AppColors.secondary,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
                   ),
             ),
           ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../models/user.dart';
 import '../../models/service.dart';
 import '../../core/utils/url_utils.dart';
 import '../reviews/reviews_repository.dart';
@@ -109,9 +110,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
           }
 
           final data = snapshot.data!;
-          final user = data.user;
+          final userMap = data.user;
+          final user = AppUser.fromJson(userMap);
           final reviews = data.reviews;
-          final servicesData = (user['services'] as List<dynamic>?) ?? [];
+          final servicesData = (userMap['services'] as List<dynamic>?) ?? [];
           final services = servicesData
               .map((e) => Service.fromJson(e as Map<String, dynamic>))
               .toList();
@@ -133,8 +135,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     ),
                   ),
                   _buildServiceList(services),
-                ] else if (user['role']?.toString().toUpperCase() ==
-                    'FREELANCER')
+                ] else if (user.roleEnum.isFreelancer)
                   const Padding(
                     padding: EdgeInsets.all(32.0),
                     child: Center(
@@ -164,7 +165,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     );
   }
 
-  Widget _buildMessageButton(Map<String, dynamic> user) {
+  Widget _buildMessageButton(AppUser user) {
     return FilledButton.icon(
       onPressed: () => _handleProfileMessage(user),
       icon: const Icon(Icons.chat),
@@ -172,7 +173,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     );
   }
 
-  Future<void> _handleProfileMessage(Map<String, dynamic> user) async {
+  Future<void> _handleProfileMessage(AppUser user) async {
     if (!mounted) return;
 
     try {
@@ -191,12 +192,12 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     }
   }
 
-  Widget _buildHeader(Map<String, dynamic> user, List<Review> reviews) {
-    final avatarUrl = user['avatarUrl'] as String?;
-    final name = user['name'] as String? ?? 'Pengguna';
-    final bio = user['bio'] as String?;
-    final skills = (user['skills'] as List<dynamic>?)?.cast<String>() ?? [];
-    final rate = user['rate'];
+  Widget _buildHeader(AppUser user, List<Review> reviews) {
+    final avatarUrl = user.avatarUrl;
+    final name = user.name;
+    final bio = user.bio;
+    final skills = user.skills ?? [];
+    final rate = user.rate;
 
     // Calculate average rating
     double avgRating = 0;
@@ -231,9 +232,9 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 ),
             textAlign: TextAlign.center,
           ),
-          if (user['role']?.toString().toUpperCase() == 'FREELANCER') ...[
+          if (user.roleEnum.isFreelancer) ...[
             const SizedBox(height: 12),
-            _buildLevelBadge(user['level']?.toString() ?? 'NEWBIE'),
+            _buildLevelBadge(user.level),
           ],
           if (rate != null) ...[
             const SizedBox(height: 4),

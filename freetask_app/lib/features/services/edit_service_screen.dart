@@ -43,8 +43,7 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
     _priceController =
         TextEditingController(text: widget.service.price.toString());
 
-    // Clean up old category strings from DB (e.g. &amp;)
-    final dbCat = widget.service.category.replaceAll('&amp;', '&').trim();
+    final dbCat = widget.service.category.trim();
     if (kServiceCategories.contains(dbCat)) {
       _selectedCategory = dbCat;
     } else {

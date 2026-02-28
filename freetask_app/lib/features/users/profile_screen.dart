@@ -482,7 +482,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildCategorySelector(AppUser user) {
     final currentCategories = user.skills
-            ?.map((s) => s.replaceAll('&amp;', '&').trim())
+            ?.map((s) => s.trim())
             .where((s) => s.isNotEmpty && s != '-')
             .toList() ??
         [];
@@ -1065,7 +1065,7 @@ class _CategoryEditPanelState extends State<_CategoryEditPanel> {
   void initState() {
     super.initState();
     _selected = widget.initial
-        .map((s) => s.replaceAll('&amp;', '&').trim())
+        .map((s) => s.trim())
         .where((s) => kServiceCategories.contains(s))
         .toSet();
   }

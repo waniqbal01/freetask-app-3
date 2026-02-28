@@ -69,8 +69,7 @@ class ServiceCard extends StatelessWidget {
                         runSpacing: 4,
                         children: [
                           _LevelChip(level: service.freelancerLevel),
-                          _CategoryChip(
-                              label: service.category.replaceAll('&amp;', '&')),
+                          _CategoryChip(label: service.category),
                           if (service.distance != null)
                             _DistanceChip(distance: service.distance!),
                           if (service.isPending) const _PendingChip(),

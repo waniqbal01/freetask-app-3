@@ -33,7 +33,7 @@ class Service {
     return Service(
       id: json['id']?.toString() ?? '',
       title: json['title']?.toString() ?? '',
-      category: json['category']?.toString() ?? '',
+      category: json['category']?.toString().replaceAll('&amp;', '&') ?? '',
       description: json['description']?.toString() ?? '',
       price: priceResult.value,
       hasPriceIssue: priceResult.hadError,

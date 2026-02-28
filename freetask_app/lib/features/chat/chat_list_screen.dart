@@ -7,6 +7,7 @@ import '../../core/utils/error_utils.dart';
 import '../../core/utils/url_utils.dart';
 import '../../core/utils/time_utils.dart';
 import '../../models/user.dart';
+import '../../theme/app_theme.dart';
 import 'chat_models.dart';
 import 'chat_repository.dart';
 import '../../widgets/app_bottom_nav.dart';
@@ -620,20 +621,21 @@ class _ChatHeader extends StatelessWidget {
         ),
         // Overlapping Search Card
         Container(
+          width: double.infinity,
           margin:
               const EdgeInsets.only(top: 220, left: 20, right: 20, bottom: 20),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: AppRadius.largeRadius,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpacing.s16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -716,26 +718,26 @@ class _ChatHeader extends StatelessWidget {
               // Search Bar
               InkWell(
                 onTap: onSearchTap,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: AppRadius.mediumRadius,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 16,
+                    horizontal: AppSpacing.s16,
+                    vertical: 14,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
+                    color: AppColors.neutral50,
+                    borderRadius: AppRadius.mediumRadius,
+                    border: Border.all(color: AppColors.neutral200),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.search_rounded, color: Colors.grey.shade600),
+                      const Icon(Icons.search_rounded,
+                          color: AppColors.neutral500),
                       const SizedBox(width: 12),
                       Text(
                         'Cari chat...',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 16,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.neutral300,
                         ),
                       ),
                     ],

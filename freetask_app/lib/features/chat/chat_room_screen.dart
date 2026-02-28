@@ -1652,8 +1652,11 @@ class _OfferBubbleContent extends ConsumerWidget {
                         backgroundColor: primaryColor,
                         foregroundColor: Colors.white,
                         elevation: 0,
+                        minimumSize: const Size(double.infinity,
+                            54), // Increased height from 48 to 54
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       onPressed: () {
@@ -1666,9 +1669,11 @@ class _OfferBubbleContent extends ConsumerWidget {
                         });
                       },
                       child: const Text(
-                        'Terima & Bayar Jawatan',
+                        'Terima & Bayar',
                         style: TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.bold),
+                          fontSize: 16, // Increased from 15
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   )
