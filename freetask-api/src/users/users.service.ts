@@ -77,6 +77,7 @@ export class UsersService {
   }) {
     const where: Prisma.UserWhereInput = {
       role: 'FREELANCER',
+      isAvailable: true,
     };
 
     if (query.q) {

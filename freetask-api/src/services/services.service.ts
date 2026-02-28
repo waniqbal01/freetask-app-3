@@ -117,6 +117,7 @@ export class ServicesService {
         ...(category ? { category } : {}),
         ...(freelancerId ? { freelancerId } : {}),
         freelancer: {
+          isAvailable: true,
           ...(state ? { state } : {}),
           ...(district ? { district } : {}),
           // Apply bounding box if coordinates are provided

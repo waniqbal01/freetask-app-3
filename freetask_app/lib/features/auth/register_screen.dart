@@ -32,6 +32,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _avatarController = TextEditingController();
   final _bioController = TextEditingController();
   final _skillsController = TextEditingController();
@@ -62,6 +63,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _nameController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _phoneController.dispose();
     _avatarController.dispose();
     _bioController.dispose();
     _skillsController.dispose();
@@ -84,20 +86,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final apiRole = _selectedRole.toUpperCase();
     final isFreelancerRole = apiRole == 'FREELANCER';
 
+    final phone = _phoneController.text.trim();
     final payload = <String, dynamic>{
       'role': apiRole,
       'name': _nameController.text.trim(),
       'email': email,
       'password': password,
+      if (phone.isNotEmpty) 'phone': phone,
       if (_selectedState != null) 'state': _selectedState,
       if (_selectedDistrict != null) 'district': _selectedDistrict,
     };
 
     if (isFreelancerRole) {
       final bio = _bioController.text.trim();
+      if (bio.isNotEmpty) payload['bio'] = bio;
 
-      if (bio.isNotEmpty) {
-        payload['bio'] = bio;
+      final skills = _skillsController.text.trim();
+      if (skills.isNotEmpty) {
+        payload['skills'] = skills
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
       }
     }
 
@@ -315,37 +325,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: AppSpacing.s24),
+                    // Role selector card
+                    _RoleSelector(
+                      selectedRole: _selectedRole,
+                      onChanged: (value) =>
+                          setState(() => _selectedRole = value),
+                    ),
+                    const SizedBox(height: AppSpacing.s16),
                     SectionCard(
-                      title: 'Maklumat Akaun',
+                      title: isFreelancer ? '🧑‍💻 Freelancer' : '👤 Client',
                       child: Form(
                         key: _formKey,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            DropdownButtonFormField<String>(
-                              initialValue: _selectedRole,
-                              items: const [
-                                DropdownMenuItem(
-                                    value: 'Client', child: Text('Client')),
-                                DropdownMenuItem(
-                                  value: 'Freelancer',
-                                  child: Text('Freelancer'),
-                                ),
-                              ],
-                              onChanged: (value) {
-                                if (value == null) {
-                                  return;
-                                }
-                                setState(() {
-                                  _selectedRole = value;
-                                });
-                              },
+                            // --- Nama ---
+                            TextFormField(
+                              controller: _nameController,
                               decoration: const InputDecoration(
-                                labelText: 'Jenis Akaun',
-                                prefixIcon: Icon(Icons.work_outline_rounded),
+                                labelText: 'Nama penuh',
+                                prefixIcon: Icon(Icons.person_outline),
                               ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Nama diperlukan';
+                                }
+                                return null;
+                              },
                             ),
                             const SizedBox(height: AppSpacing.s16),
+                            // --- Email ---
                             TextFormField(
                               controller: _emailController,
                               keyboardType: TextInputType.emailAddress,
@@ -364,20 +373,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               },
                             ),
                             const SizedBox(height: AppSpacing.s16),
-                            TextFormField(
-                              controller: _nameController,
-                              decoration: const InputDecoration(
-                                labelText: 'Nama penuh',
-                                prefixIcon: Icon(Icons.person_outline),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Nama diperlukan';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: AppSpacing.s16),
+                            // --- Password ---
                             TextFormField(
                               controller: _passwordController,
                               obscureText: _obscurePassword,
@@ -420,11 +416,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall
-                                  ?.copyWith(
-                                    color: AppColors.neutral500,
-                                  ),
+                                  ?.copyWith(color: AppColors.neutral500),
                             ),
                             const SizedBox(height: AppSpacing.s16),
+                            // --- Confirm Password ---
                             TextFormField(
                               controller: _confirmPasswordController,
                               obscureText: _obscureConfirmPassword,
@@ -452,132 +447,148 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               },
                             ),
                             const SizedBox(height: AppSpacing.s16),
+                            // --- Phone ---
                             TextFormField(
-                              controller: _avatarController,
-                              readOnly: true,
-                              onTap: () {
-                                if (_isUploadingAvatar) {
-                                  return;
-                                }
-                                FocusScope.of(context)
-                                    .requestFocus(FocusNode());
-                                _handlePickAvatar();
-                              },
+                              controller: _phoneController,
+                              keyboardType: TextInputType.phone,
                               decoration: InputDecoration(
-                                labelText: AppStrings.avatarFieldLabel,
-                                prefixIcon: const Icon(Icons.image_outlined),
-                                suffixIcon: _isUploadingAvatar
-                                    ? const Padding(
-                                        padding: EdgeInsets.all(12),
-                                        child: SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(
-                                              strokeWidth: 2),
-                                        ),
-                                      )
-                                    : IconButton(
-                                        icon: const Icon(Icons.upload_file),
-                                        onPressed: _isUploadingAvatar
-                                            ? null
-                                            : _handlePickAvatar,
-                                      ),
-                              ),
-                            ),
-                            if (_uploadedAvatarUrl != null) ...[
-                              const SizedBox(height: AppSpacing.s8),
-                              Text(
-                                'Pratonton avatar:',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .labelMedium
-                                    ?.copyWith(color: AppColors.neutral500),
-                              ),
-                              const SizedBox(height: AppSpacing.s8),
-                              Row(
-                                children: [
-                                  AuthorizedImage(
-                                    url: _uploadedAvatarUrl!,
-                                    width: 72,
-                                    height: 72,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ],
-                              ),
-                            ],
-                            const SizedBox(height: AppSpacing.s16),
-                            DropdownButtonFormField<String>(
-                              value: _selectedState,
-                              items: malaysiaStatesAndDistricts.keys
-                                  .map(
-                                    (s) => DropdownMenuItem(
-                                      value: s,
-                                      child: Text(s),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (value) {
-                                setState(() {
-                                  _selectedState = value;
-                                  _selectedDistrict = null;
-                                });
-                              },
-                              decoration: const InputDecoration(
-                                labelText: 'Negeri',
-                                prefixIcon: Icon(Icons.map_outlined),
+                                labelText: isFreelancer
+                                    ? 'Nombor telefon'
+                                    : 'Nombor telefon (Pilihan)',
+                                prefixIcon: const Icon(Icons.phone_outlined),
                               ),
                               validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Sila pilih negeri';
+                                if (isFreelancer &&
+                                    (value == null || value.trim().isEmpty)) {
+                                  return 'Nombor telefon diperlukan';
                                 }
                                 return null;
                               },
                             ),
-                            if (_selectedState != null) ...[
+                            // --- Freelancer-only fields ---
+                            if (isFreelancer) ...[
                               const SizedBox(height: AppSpacing.s16),
+                              // Negeri
                               DropdownButtonFormField<String>(
-                                value: _selectedDistrict,
-                                items: (malaysiaStatesAndDistricts[
-                                            _selectedState] ??
-                                        [])
-                                    .map(
-                                      (d) => DropdownMenuItem(
-                                        value: d,
-                                        child: Text(d),
-                                      ),
-                                    )
+                                value: _selectedState,
+                                items: malaysiaStatesAndDistricts.keys
+                                    .map((s) => DropdownMenuItem(
+                                          value: s,
+                                          child: Text(s),
+                                        ))
                                     .toList(),
                                 onChanged: (value) {
                                   setState(() {
-                                    _selectedDistrict = value;
+                                    _selectedState = value;
+                                    _selectedDistrict = null;
                                   });
                                 },
                                 decoration: const InputDecoration(
-                                  labelText: 'Daerah',
-                                  prefixIcon:
-                                      Icon(Icons.location_city_outlined),
+                                  labelText: 'Negeri',
+                                  prefixIcon: Icon(Icons.map_outlined),
                                 ),
                                 validator: (value) {
-                                  if (_selectedState != null &&
+                                  if (isFreelancer &&
                                       (value == null || value.isEmpty)) {
-                                    return 'Sila pilih daerah';
+                                    return 'Sila pilih negeri';
                                   }
                                   return null;
                                 },
                               ),
-                            ],
-                            if (isFreelancer) ...[
+                              if (_selectedState != null) ...[
+                                const SizedBox(height: AppSpacing.s16),
+                                // Daerah
+                                DropdownButtonFormField<String>(
+                                  value: _selectedDistrict,
+                                  items: (malaysiaStatesAndDistricts[
+                                              _selectedState] ??
+                                          [])
+                                      .map((d) => DropdownMenuItem(
+                                            value: d,
+                                            child: Text(d),
+                                          ))
+                                      .toList(),
+                                  onChanged: (value) {
+                                    setState(() => _selectedDistrict = value);
+                                  },
+                                  decoration: const InputDecoration(
+                                    labelText: 'Daerah',
+                                    prefixIcon:
+                                        Icon(Icons.location_city_outlined),
+                                  ),
+                                  validator: (value) {
+                                    if (_selectedState != null &&
+                                        (value == null || value.isEmpty)) {
+                                      return 'Sila pilih daerah';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ],
                               const SizedBox(height: AppSpacing.s16),
+                              // Avatar
                               TextFormField(
-                                controller: _bioController,
+                                controller: _avatarController,
+                                readOnly: true,
+                                onTap: () {
+                                  if (_isUploadingAvatar) return;
+                                  FocusScope.of(context)
+                                      .requestFocus(FocusNode());
+                                  _handlePickAvatar();
+                                },
+                                decoration: InputDecoration(
+                                  labelText: AppStrings.avatarFieldLabel,
+                                  prefixIcon: const Icon(Icons.image_outlined),
+                                  suffixIcon: _isUploadingAvatar
+                                      ? const Padding(
+                                          padding: EdgeInsets.all(12),
+                                          child: SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 2),
+                                          ),
+                                        )
+                                      : IconButton(
+                                          icon: const Icon(Icons.upload_file),
+                                          onPressed: _isUploadingAvatar
+                                              ? null
+                                              : _handlePickAvatar,
+                                        ),
+                                ),
+                              ),
+                              if (_uploadedAvatarUrl != null) ...[
+                                const SizedBox(height: AppSpacing.s8),
+                                Text(
+                                  'Pratonton avatar:',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .labelMedium
+                                      ?.copyWith(color: AppColors.neutral500),
+                                ),
+                                const SizedBox(height: AppSpacing.s8),
+                                Row(
+                                  children: [
+                                    AuthorizedImage(
+                                      url: _uploadedAvatarUrl!,
+                                      width: 72,
+                                      height: 72,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                              const SizedBox(height: AppSpacing.s16),
+                              // Skills/Kemahiran
+                              TextFormField(
+                                controller: _skillsController,
                                 decoration: const InputDecoration(
-                                  labelText: 'Bio',
-                                  prefixIcon: Icon(Icons.badge_outlined),
+                                  labelText: 'Skill / Kemahiran',
+                                  prefixIcon: Icon(Icons.star_outline_rounded),
                                   helperText:
-                                      'Bio membantu client memahami pengalaman anda. Disarankan minimum 30 aksara.',
+                                      'Pisahkan setiap kemahiran dengan koma. Contoh: Flutter, UI/UX, Python',
                                   helperMaxLines: 2,
                                 ),
-                                maxLines: 3,
                               ),
                             ],
                             if (_errorMessage != null) ...[
@@ -622,6 +633,107 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Role Selector Widget
+// ---------------------------------------------------------------------------
+class _RoleSelector extends StatelessWidget {
+  const _RoleSelector({
+    required this.selectedRole,
+    required this.onChanged,
+  });
+
+  final String selectedRole;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _RoleCard(
+            emoji: '👤',
+            label: 'Client',
+            subtitle: 'Cari & upah freelancer',
+            isSelected: selectedRole == 'Client',
+            onTap: () => onChanged('Client'),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.s12),
+        Expanded(
+          child: _RoleCard(
+            emoji: '🧑‍💻',
+            label: 'Freelancer',
+            subtitle: 'Tawarkan perkhidmatan anda',
+            isSelected: selectedRole == 'Freelancer',
+            onTap: () => onChanged('Freelancer'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RoleCard extends StatelessWidget {
+  const _RoleCard({
+    required this.emoji,
+    required this.label,
+    required this.subtitle,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String emoji;
+  final String label;
+  final String subtitle;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.s16, horizontal: AppSpacing.s12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? colorScheme.primary.withValues(alpha: 0.08)
+              : Colors.white,
+          borderRadius: AppRadius.mediumRadius,
+          border: Border.all(
+            color: isSelected ? colorScheme.primary : AppColors.neutral200,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 28)),
+            const SizedBox(height: AppSpacing.s4),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color:
+                        isSelected ? colorScheme.primary : AppColors.neutral600,
+                  ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.neutral500,
+                  ),
+            ),
+          ],
         ),
       ),
     );
