@@ -281,14 +281,14 @@ export class ServicesService {
 
   async categories(): Promise<string[]> {
     return [
-      'Digital & Tech',
-      'Design & Creative',
-      'Marketing & Growth',
-      'Writing & Translation',
-      'Business & Admin',
-      'Home & Repair Services',
-      'Event & Media Services',
+      'Creative & Media',
+      'Technology & Development',
+      'Marketing & Sales',
+      'Business & Professional',
+      'Home & Local Services',
       'Education & Coaching',
+      'Admin & Virtual Support',
+      'Technical & Specialized Services',
     ];
   }
 

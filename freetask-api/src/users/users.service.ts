@@ -88,13 +88,24 @@ export class UsersService {
     }
 
     if (query.category && query.category !== 'Semua') {
-      where.services = {
-        some: {
-          category: query.category,
-          approvalStatus: 'APPROVED',
-          isActive: true,
+      where.OR = [
+        // Freelancer has an approved, active service in this category
+        {
+          services: {
+            some: {
+              category: query.category,
+              approvalStatus: 'APPROVED',
+              isActive: true,
+            },
+          },
         },
-      };
+        // OR freelancer selected this category during signup (stored as JSONB array in skills)
+        {
+          skills: {
+            array_contains: [query.category],
+          },
+        },
+      ];
     }
 
     if (query.state) {

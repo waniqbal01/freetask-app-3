@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mime/mime.dart';
 
+import '../../core/constants/app_categories.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/constants/malaysia_locations.dart';
 import '../../core/notifications/notification_service.dart';
@@ -35,12 +36,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _phoneController = TextEditingController();
   final _avatarController = TextEditingController();
   final _bioController = TextEditingController();
-  final _skillsController = TextEditingController();
   final _rateController = TextEditingController();
 
   late String _selectedRole;
   String? _selectedState;
   String? _selectedDistrict;
+  final Set<String> _selectedCategories = {};
 
   bool _isSubmitting = false;
   bool _isUploadingAvatar = false;
@@ -66,7 +67,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _phoneController.dispose();
     _avatarController.dispose();
     _bioController.dispose();
-    _skillsController.dispose();
     _rateController.dispose();
     super.dispose();
   }
@@ -101,13 +101,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final bio = _bioController.text.trim();
       if (bio.isNotEmpty) payload['bio'] = bio;
 
-      final skills = _skillsController.text.trim();
-      if (skills.isNotEmpty) {
-        payload['skills'] = skills
-            .split(',')
-            .map((s) => s.trim())
-            .where((s) => s.isNotEmpty)
-            .toList();
+      if (_selectedCategories.isNotEmpty) {
+        payload['skills'] = _selectedCategories.toList();
       }
     }
 
@@ -579,16 +574,107 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                               ],
                               const SizedBox(height: AppSpacing.s16),
-                              // Skills/Kemahiran
-                              TextFormField(
-                                controller: _skillsController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Skill / Kemahiran',
-                                  prefixIcon: Icon(Icons.star_outline_rounded),
-                                  helperText:
-                                      'Pisahkan setiap kemahiran dengan koma. Contoh: Flutter, UI/UX, Python',
-                                  helperMaxLines: 2,
-                                ),
+                              // Kategori Perkhidmatan (multi-select chips)
+                              FormField<Set<String>>(
+                                initialValue: _selectedCategories,
+                                validator: (_) {
+                                  if (_selectedCategories.isEmpty) {
+                                    return 'Sila pilih sekurang-kurangnya 1 kategori';
+                                  }
+                                  return null;
+                                },
+                                builder: (field) {
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.category_outlined,
+                                            size: 16,
+                                            color: field.hasError
+                                                ? AppColors.error
+                                                : AppColors.neutral500,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            'Kategori Perkhidmatan (pilih 1–3)',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .labelMedium
+                                                ?.copyWith(
+                                                  color: field.hasError
+                                                      ? AppColors.error
+                                                      : AppColors.neutral500,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: AppSpacing.s8),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: kServiceCategories.map((cat) {
+                                          final selected =
+                                              _selectedCategories.contains(cat);
+                                          final atMax =
+                                              _selectedCategories.length >= 3 &&
+                                                  !selected;
+                                          return FilterChip(
+                                            label: Text(cat),
+                                            selected: selected,
+                                            onSelected: atMax
+                                                ? null
+                                                : (val) {
+                                                    setState(() {
+                                                      if (val) {
+                                                        _selectedCategories
+                                                            .add(cat);
+                                                      } else {
+                                                        _selectedCategories
+                                                            .remove(cat);
+                                                      }
+                                                    });
+                                                    field.didChange(
+                                                        _selectedCategories);
+                                                  },
+                                            selectedColor: Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                                .withValues(alpha: 0.15),
+                                            checkmarkColor: Theme.of(context)
+                                                .colorScheme
+                                                .primary,
+                                            labelStyle: TextStyle(
+                                              fontWeight: selected
+                                                  ? FontWeight.w600
+                                                  : FontWeight.w400,
+                                              color: atMax
+                                                  ? AppColors.neutral300
+                                                  : (selected
+                                                      ? Theme.of(context)
+                                                          .colorScheme
+                                                          .primary
+                                                      : AppColors.neutral600),
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                      if (field.hasError) ...[
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          field.errorText!,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                  color: AppColors.error),
+                                        ),
+                                      ],
+                                    ],
+                                  );
+                                },
                               ),
                             ],
                             if (_errorMessage != null) ...[

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_categories.dart';
 import '../../core/utils/error_utils.dart';
 import '../../core/widgets/ft_button.dart';
 import 'services_repository.dart';
@@ -27,16 +28,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
   bool _isLoading = false;
   PlatformFile? _selectedImage;
 
-  final List<String> _categories = [
-    'Digital & Tech',
-    'Design & Creative',
-    'Marketing & Growth',
-    'Writing & Translation',
-    'Business & Admin',
-    'Home & Repair Services',
-    'Event & Media Services',
-    'Education & Coaching',
-  ];
+  final List<String> _categories = kServiceCategories;
 
   bool _isUploading = false;
 
