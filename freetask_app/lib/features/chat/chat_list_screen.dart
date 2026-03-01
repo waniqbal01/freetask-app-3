@@ -398,6 +398,7 @@ class ChatListScreen extends ConsumerWidget {
                         ),
                       );
                     },
+                    childCount: threads.length,
                   ),
                 ),
               ],
@@ -633,7 +634,7 @@ class _ChatHeader extends StatelessWidget {
         Container(
           width: double.infinity,
           margin:
-              const EdgeInsets.only(top: 220, left: 20, right: 20, bottom: 20),
+              const EdgeInsets.only(top: 220, left: 20, right: 20, bottom: 92),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: AppRadius.largeRadius,
@@ -754,9 +755,6 @@ class _ChatHeader extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(
-                  height:
-                      72), // Fixed space to match Marketplace filter chips height
             ],
           ),
         ),

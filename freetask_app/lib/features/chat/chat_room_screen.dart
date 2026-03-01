@@ -820,6 +820,7 @@ class _CreateOfferFormState extends State<_CreateOfferForm> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Gagal memilih gambar: $e')),
       );
