@@ -279,6 +279,27 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
               textAlign: TextAlign.center,
             ),
           ],
+
+          if (user.state != null && user.state!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.location_on, color: Colors.grey.shade500, size: 16),
+                const SizedBox(width: 4),
+                Text(
+                  user.district != null && user.district!.isNotEmpty
+                      ? '${user.district}, ${user.state}'
+                      : user.state!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
+              ],
+            ),
+          ],
+
           const SizedBox(height: 16),
           _buildMessageButton(user),
           if (skills.isNotEmpty) ...[

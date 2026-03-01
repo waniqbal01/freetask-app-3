@@ -10,4 +10,5 @@ export interface ChatThreadDto {
   lastAt: Date;
   jobStatus: JobStatus;
   unreadCount: number;
+  isBlocked?: boolean;
 }

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -249,5 +249,48 @@ export class UsersService {
       data: { bankVerified: true },
     });
     return toAppUser(user);
+  }
+
+  async blockUser(blockerId: number, blockedId: number, reason?: string, isReported?: boolean) {
+    if (blockerId === blockedId) {
+      throw new BadRequestException('You cannot block yourself');
+    }
+
+    // Check if the blocked user exists
+    await this.ensureUserExists(blockedId);
+
+    // Check for active jobs between these two users
+    const activeJobs = await this.prisma.job.findFirst({
+      where: {
+        OR: [
+          { clientId: blockerId, freelancerId: blockedId },
+          { clientId: blockedId, freelancerId: blockerId },
+        ],
+        status: {
+          in: ['PENDING', 'AWAITING_PAYMENT', 'IN_PROGRESS', 'SUBMITTED', 'IN_REVIEW', 'IN_REVISION', 'DISPUTED'],
+        },
+      },
+    });
+
+    if (activeJobs) {
+      throw new BadRequestException('Tidak boleh sekat pengguna yang mempunyai task/kerja aktif');
+    }
+
+    // Upsert or create block
+    return this.prisma.userBlock.upsert({
+      where: {
+        blockerId_blockedId: { blockerId, blockedId },
+      },
+      update: {
+        reason,
+        isReported: isReported ?? false,
+      },
+      create: {
+        blockerId,
+        blockedId,
+        reason,
+        isReported: isReported ?? false,
+      },
+    });
   }
 }

@@ -11,14 +11,14 @@ class ChatThread {
     this.lastAt,
     this.status = 'ACTIVE',
     this.unreadCount = 0,
+    this.isBlocked = false,
   });
 
   factory ChatThread.fromJson(Map<String, dynamic> json) {
     return ChatThread(
       id: json['id']?.toString() ?? '',
-      title: json['jobTitle']?.toString() ??
-          json['job_title']?.toString() ??
-          'Conversation',
+      title:
+          json['jobTitle']?.toString() ?? json['job_title']?.toString() ?? '',
       participantName: json['participantName']?.toString() ??
           json['participant_name']?.toString() ??
           '',
@@ -40,6 +40,7 @@ class ChatThread {
                 '0',
           ) ??
           0,
+      isBlocked: json['isBlocked'] == true || json['is_blocked'] == true,
     );
   }
 
@@ -52,6 +53,7 @@ class ChatThread {
   final DateTime? lastAt;
   final String status;
   final int unreadCount;
+  final bool isBlocked;
 
   ChatThread copyWith({
     String? id,
@@ -63,6 +65,7 @@ class ChatThread {
     DateTime? lastAt,
     String? status,
     int? unreadCount,
+    bool? isBlocked,
   }) {
     return ChatThread(
       id: id ?? this.id,
@@ -74,6 +77,7 @@ class ChatThread {
       lastAt: lastAt ?? this.lastAt,
       status: status ?? this.status,
       unreadCount: unreadCount ?? this.unreadCount,
+      isBlocked: isBlocked ?? this.isBlocked,
     );
   }
 }

@@ -271,6 +271,22 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
             ],
           ),
         ),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            onSelected: (value) {
+              if (value == 'block') {
+                _showBlockUserDialog(context, thread);
+              }
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: 'block',
+                child: Text('Sekat / Lapor Pengguna'),
+              ),
+            ],
+          ),
+        ],
       ),
       body: Column(
         children: <Widget>[
@@ -452,23 +468,35 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                 });
               },
             ),
-          _MessageComposer(
-            controller: _controller,
-            onSend: _handleSendMessage,
-            onFileSelected: _handleFileSelection,
-            selectedFile: _selectedFile,
-            selectedFileType: _selectedFileType,
-            onClearFile: _clearSelectedFile,
-            isUploading: _isUploading,
-            enabled: !hasMessageError && !_isUploading,
-            isFreelancer: ref
-                    .watch(authRepositoryProvider)
-                    .currentUser
-                    ?.role
-                    .toLowerCase() ==
-                'freelancer',
-            onCreateOffer: () => _showCreateOfferDialog(context),
-          ),
+          if (thread.isBlocked)
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Colors.grey.shade200,
+              alignment: Alignment.center,
+              child: const Text(
+                'Anda tidak boleh membalas perbualan ini kerana ada sekatan.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.black54),
+              ),
+            )
+          else
+            _MessageComposer(
+              controller: _controller,
+              onSend: _handleSendMessage,
+              onFileSelected: _handleFileSelection,
+              selectedFile: _selectedFile,
+              selectedFileType: _selectedFileType,
+              onClearFile: _clearSelectedFile,
+              isUploading: _isUploading,
+              enabled: !hasMessageError && !_isUploading,
+              isFreelancer: ref
+                      .watch(authRepositoryProvider)
+                      .currentUser
+                      ?.role
+                      .toLowerCase() ==
+                  'freelancer',
+              onCreateOffer: () => _showCreateOfferDialog(context),
+            ),
         ],
       ),
     );
@@ -619,6 +647,86 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
+    );
+  }
+
+  void _showBlockUserDialog(BuildContext context, ChatThread thread) {
+    if (thread.participantId == null || thread.participantId!.isEmpty) return;
+
+    bool isReported = false;
+    final reasonController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Sekat Pengguna'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                      'Adakah anda pasti mahu menyekat ${thread.participantName}?'),
+                  const SizedBox(height: 16),
+                  CheckboxListTile(
+                    title: const Text('Laporkan pengguna ini kepada Admin',
+                        style: TextStyle(fontSize: 14)),
+                    value: isReported,
+                    onChanged: (val) {
+                      setDialogState(() {
+                        isReported = val ?? false;
+                      });
+                    },
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  if (isReported)
+                    TextField(
+                      controller: reasonController,
+                      decoration: const InputDecoration(
+                        labelText: 'Sebab laporan (Pilihan)',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 3,
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Batal'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    try {
+                      setState(() => _isUploading = true);
+                      await ref.read(chatRepositoryProvider).blockUser(
+                            thread.participantId!,
+                            reason: reasonController.text,
+                            isReported: isReported,
+                          );
+                      if (mounted) {
+                        _showSnackBar('Pengguna berjaya disekat.');
+                      }
+                    } on DioException catch (error) {
+                      if (mounted) _showSnackBar(resolveDioErrorMessage(error));
+                    } catch (e) {
+                      if (mounted) _showSnackBar('Gagal menyekat pengguna: $e');
+                    } finally {
+                      if (mounted) setState(() => _isUploading = false);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  child: const Text('Sekat',
+                      style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 

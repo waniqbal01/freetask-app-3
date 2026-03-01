@@ -572,6 +572,25 @@ class ChatRepository {
     }
   }
 
+  Future<void> blockUser(String userId,
+      {String? reason, bool isReported = false}) async {
+    try {
+      await _dio.post<void>(
+        '/users/$userId/block',
+        data: {
+          if (reason != null && reason.isNotEmpty) 'reason': reason,
+          'isReported': isReported,
+        },
+        options: await _authorizedOptions(),
+      );
+      // Refresh threads to get the latest block status
+      fetchThreads();
+    } on DioException catch (error) {
+      await _handleError(error);
+      rethrow;
+    }
+  }
+
   void dispose() {
     _logoutSubscription?.cancel();
     _socketSubscription?.cancel();

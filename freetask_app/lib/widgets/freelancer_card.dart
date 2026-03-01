@@ -115,22 +115,6 @@ class FreelancerCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (user.skills != null && user.skills!.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: user.skills!
-                        .take(3)
-                        .map((skill) => _SkillChip(label: skill))
-                        .toList()
-                      ..addAll(
-                        user.skills!.length > 3
-                            ? [_SkillChip(label: '+${user.skills!.length - 3}')]
-                            : [],
-                      ),
-                  ),
-                ],
                 if (user.serviceNames != null &&
                     user.serviceNames!.isNotEmpty) ...[
                   const SizedBox(height: 12),
@@ -338,31 +322,6 @@ class _RatingChip extends StatelessWidget {
           ),
         ],
       ],
-    );
-  }
-}
-
-class _SkillChip extends StatelessWidget {
-  const _SkillChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.neutral50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.neutral100),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.neutral600,
-              fontWeight: FontWeight.w600,
-            ),
-      ),
     );
   }
 }

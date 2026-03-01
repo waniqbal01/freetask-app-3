@@ -460,66 +460,60 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 return null;
                               },
                             ),
-                            // --- Freelancer-only fields ---
-                            if (isFreelancer) ...[
+                            const SizedBox(height: AppSpacing.s16),
+                            // Negeri
+                            DropdownButtonFormField<String>(
+                              value: _selectedState,
+                              items: malaysiaStatesAndDistricts.keys
+                                  .map((s) => DropdownMenuItem(
+                                        value: s,
+                                        child: Text(s),
+                                      ))
+                                  .toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedState = value;
+                                  _selectedDistrict = null;
+                                });
+                              },
+                              decoration: const InputDecoration(
+                                labelText: 'Negeri',
+                                prefixIcon: Icon(Icons.map_outlined),
+                              ),
+                              validator: (value) {
+                                // Optional for now, but visible for all
+                                return null;
+                              },
+                            ),
+                            if (_selectedState != null) ...[
                               const SizedBox(height: AppSpacing.s16),
-                              // Negeri
+                              // Daerah
                               DropdownButtonFormField<String>(
-                                value: _selectedState,
-                                items: malaysiaStatesAndDistricts.keys
-                                    .map((s) => DropdownMenuItem(
-                                          value: s,
-                                          child: Text(s),
+                                value: _selectedDistrict,
+                                items: (malaysiaStatesAndDistricts[
+                                            _selectedState] ??
+                                        [])
+                                    .map((d) => DropdownMenuItem(
+                                          value: d,
+                                          child: Text(d),
                                         ))
                                     .toList(),
                                 onChanged: (value) {
-                                  setState(() {
-                                    _selectedState = value;
-                                    _selectedDistrict = null;
-                                  });
+                                  setState(() => _selectedDistrict = value);
                                 },
                                 decoration: const InputDecoration(
-                                  labelText: 'Negeri',
-                                  prefixIcon: Icon(Icons.map_outlined),
+                                  labelText: 'Daerah',
+                                  prefixIcon:
+                                      Icon(Icons.location_city_outlined),
                                 ),
                                 validator: (value) {
-                                  if (isFreelancer &&
-                                      (value == null || value.isEmpty)) {
-                                    return 'Sila pilih negeri';
-                                  }
+                                  // Optional for now, but visible for all
                                   return null;
                                 },
                               ),
-                              if (_selectedState != null) ...[
-                                const SizedBox(height: AppSpacing.s16),
-                                // Daerah
-                                DropdownButtonFormField<String>(
-                                  value: _selectedDistrict,
-                                  items: (malaysiaStatesAndDistricts[
-                                              _selectedState] ??
-                                          [])
-                                      .map((d) => DropdownMenuItem(
-                                            value: d,
-                                            child: Text(d),
-                                          ))
-                                      .toList(),
-                                  onChanged: (value) {
-                                    setState(() => _selectedDistrict = value);
-                                  },
-                                  decoration: const InputDecoration(
-                                    labelText: 'Daerah',
-                                    prefixIcon:
-                                        Icon(Icons.location_city_outlined),
-                                  ),
-                                  validator: (value) {
-                                    if (_selectedState != null &&
-                                        (value == null || value.isEmpty)) {
-                                      return 'Sila pilih daerah';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ],
+                            ],
+                            // --- Freelancer-only fields ---
+                            if (isFreelancer) ...[
                               const SizedBox(height: AppSpacing.s16),
                               // Avatar
                               TextFormField(

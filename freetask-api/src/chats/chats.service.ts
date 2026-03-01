@@ -44,6 +44,21 @@ export class ChatsService {
       skip,
     });
 
+    const blockRecords = await this.prisma.userBlock.findMany({
+      where: {
+        OR: [{ blockerId: userId }, { blockedId: userId }],
+      },
+      select: { blockerId: true, blockedId: true },
+    });
+
+    const isUserBlocked = (otherId: number) => {
+      return blockRecords.some(
+        (b) =>
+          (b.blockerId === userId && b.blockedId === otherId) ||
+          (b.blockerId === otherId && b.blockedId === userId),
+      );
+    };
+
     return conversations.map((convo) => {
       const otherParticipant =
         convo.participants.find((p) => p.id !== userId) ||
@@ -68,6 +83,7 @@ export class ChatsService {
         lastAt: lastMsg?.createdAt ?? convo.updatedAt,
         jobStatus: 'ACTIVE' as any,
         unreadCount,
+        isBlocked: isUserBlocked(participantId),
       } satisfies ChatThreadDto;
     });
   }
@@ -126,6 +142,29 @@ export class ChatsService {
     const validatedContent: string = dto.content ?? '';
 
     await this.ensureConversationParticipant(conversationId, userId);
+
+    const convoBlockCheck = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: { participants: { select: { id: true } } },
+    });
+
+    const otherParticipantForBlock = convoBlockCheck?.participants.find((p) => p.id !== userId);
+
+    if (otherParticipantForBlock) {
+      const blockRecord = await this.prisma.userBlock.findFirst({
+        where: {
+          OR: [
+            { blockerId: userId, blockedId: otherParticipantForBlock.id },
+            { blockerId: otherParticipantForBlock.id, blockedId: userId },
+          ],
+        },
+      });
+
+      if (blockRecord) {
+        throw new ForbiddenException('Anda tidak boleh menghantar mesej kerana perbualan ini telah disekat.');
+      }
+    }
+
     const message = await this.prisma.$transaction(async (tx) => {
       const createdMessage = await tx.chatMessage.create({
         data: {
@@ -253,6 +292,16 @@ export class ChatsService {
     const otherParticipant = conversation.participants.find(
       (p) => p.id !== userId,
     );
+
+    const blockRecord = await this.prisma.userBlock.findFirst({
+      where: {
+        OR: [
+          { blockerId: userId, blockedId: otherUserId },
+          { blockerId: otherUserId, blockedId: userId },
+        ],
+      },
+    });
+
     return {
       id: conversation.id,
       jobTitle: 'Conversation',
@@ -263,6 +312,7 @@ export class ChatsService {
       lastAt: conversation.updatedAt,
       jobStatus: 'ACTIVE' as any,
       unreadCount: 0,
+      isBlocked: !!blockRecord,
     };
   }
 
