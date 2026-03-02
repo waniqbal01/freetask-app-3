@@ -47,6 +47,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isUploadingAvatar = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _agreedToTerms = false;
   String? _errorMessage;
   String? _selectedAvatarPath;
   String? _uploadedAvatarUrl;
@@ -73,6 +74,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (!_agreedToTerms) {
+      if (mounted) {
+        showErrorSnackBar(
+          context,
+          'Sila bersetuju dengan Terma Perkhidmatan dan Dasar Privasi (PDPA) sebelum mendaftar.',
+        );
+      }
       return;
     }
 
@@ -687,6 +698,53 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                               ),
                             ],
+                            const SizedBox(height: AppSpacing.s16),
+                            // Checkbox for Legal Terms
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Checkbox(
+                                  value: _agreedToTerms,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _agreedToTerms = value ?? false;
+                                    });
+                                  },
+                                ),
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 12),
+                                    child: GestureDetector(
+                                      onTap: () => context.push('/legal'),
+                                      child: RichText(
+                                        text: TextSpan(
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall,
+                                          children: [
+                                            const TextSpan(
+                                                text: 'Saya bersetuju dengan '),
+                                            TextSpan(
+                                              text:
+                                                  'Terma Perkhidmatan dan Dasar Privasi (PDPA)',
+                                              style: TextStyle(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .primary,
+                                                fontWeight: FontWeight.w600,
+                                                decoration:
+                                                    TextDecoration.underline,
+                                              ),
+                                            ),
+                                            const TextSpan(text: ' Freetask.'),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                             const SizedBox(height: AppSpacing.s24),
                             ElevatedButton(
                               onPressed: _isSubmitting ? null : _handleRegister,

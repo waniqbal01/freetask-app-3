@@ -1,3 +1,5 @@
+import '../core/utils/html_utils.dart';
+
 enum JobStatus {
   inquiry,
   pending,
@@ -59,13 +61,13 @@ class Job {
           json['serviceId']?.toString() ??
           serviceObj?['id']?.toString() ??
           '',
-      serviceTitle: json['serviceTitle']?.toString() ??
+      serviceTitle: HtmlUtils.unescape(json['serviceTitle']?.toString() ??
           json['service_title']?.toString() ??
           serviceObj?['title']?.toString() ??
-          'Servis ${json['service_id']?.toString() ?? json['serviceId']?.toString() ?? ''}',
+          'Servis ${json['service_id']?.toString() ?? json['serviceId']?.toString() ?? ''}'),
       serviceThumbnailUrl: json['serviceThumbnailUrl']?.toString() ??
           serviceObj?['thumbnailUrl']?.toString(),
-      description: json['description']?.toString(),
+      description: HtmlUtils.unescape(json['description']?.toString()),
       amount: parsedAmount.value,
       hasAmountIssue: parsedAmount.hadError,
       status: _parseStatus(json['status']),

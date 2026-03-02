@@ -287,4 +287,41 @@ class AdminRepository {
       return ApiResponse.error('An unexpected error occurred');
     }
   }
+
+  // Reports Management
+  Future<ApiResponse<Map<String, dynamic>>> getReportedUsers(
+      {int limit = 50, int offset = 0}) async {
+    try {
+      final response = await _dio.get(
+        '/admin/reports',
+        queryParameters: {'limit': limit, 'offset': offset},
+      );
+      return ApiResponse.success(response.data);
+    } on DioException catch (e) {
+      return ApiResponse.error(
+          e.response?.data['message'] ?? 'Failed to fetch reports');
+    } catch (e) {
+      return ApiResponse.error('An unexpected error occurred');
+    }
+  }
+
+  Future<ApiResponse<dynamic>> resolveReport({
+    required int reportId,
+    required String action,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        '/admin/reports/$reportId/resolve',
+        data: {
+          'action': action,
+        },
+      );
+      return ApiResponse.success(response.data);
+    } on DioException catch (e) {
+      return ApiResponse.error(
+          e.response?.data['message'] ?? 'Failed to resolve report');
+    } catch (e) {
+      return ApiResponse.error('An unexpected error occurred');
+    }
+  }
 }

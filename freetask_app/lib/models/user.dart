@@ -1,3 +1,4 @@
+import '../core/utils/html_utils.dart';
 import 'user_role.dart';
 
 class AppUser {
@@ -38,16 +39,16 @@ class AppUser {
     final roleStr = json['role']?.toString() ?? '';
     return AppUser(
       id: json['id']?.toString() ?? '',
-      name: json['name']?.toString() ?? '',
+      name: HtmlUtils.unescape(json['name']?.toString()),
       role: roleStr,
       roleEnum: UserRole.fromString(roleStr),
       avatarUrl:
           json['avatar_url']?.toString() ?? json['avatarUrl']?.toString(),
-      bio: json['bio']?.toString(),
+      bio: HtmlUtils.unescape(json['bio']?.toString()),
       skills: skills is List
           ? skills
               .map((dynamic skill) =>
-                  skill.toString().replaceAll('&amp;', '&').trim())
+                  HtmlUtils.unescape(skill.toString()).trim())
               .toList()
           : null,
       rate: (json['rate'] as num?)?.toDouble(),
@@ -73,7 +74,7 @@ class AppUser {
       serviceNames: services is List
           ? services
               .map((dynamic service) =>
-                  service['title']?.toString().replaceAll('&amp;', '&').trim())
+                  HtmlUtils.unescape(service['title']?.toString()).trim())
               .whereType<String>()
               .toList()
           : null,

@@ -32,6 +32,8 @@
     "@nestjs/throttler": "^5.0.0",
     "@nestjs/websockets": "^10.0.0",
     "@prisma/client": "^5.18.0",
+    "@sentry/node": "^10.40.0",
+    "@sentry/profiling-node": "^10.40.0",
     "@supabase/supabase-js": "^2.95.3",
     "@types/cron": "^2.0.1",
     "@types/jsonwebtoken": "^9.0.10",

@@ -141,9 +141,8 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     }
 
     // Hire Confirmation Bottom Sheet
-    final platformFeeRate = 0.02;
-    final platformFee = service.price * platformFeeRate;
-    final total = service.price + platformFee;
+    final platformFeeRate = 0.07;
+    final total = service.price;
 
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
@@ -186,9 +185,8 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
             ),
             const SizedBox(height: 10),
             _PriceRow(
-              label:
-                  '${AppStrings.hireConfirmPlatformFee} (${(platformFeeRate * 100).toStringAsFixed(0)}%)',
-              value: 'RM${platformFee.toStringAsFixed(2)}',
+              label: 'Caj Platform',
+              value: 'Termasuk dalam harga',
               isLight: true,
             ),
             const Padding(
@@ -199,6 +197,15 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
               label: AppStrings.hireConfirmTotal,
               value: 'RM${total.toStringAsFixed(2)}',
               isBold: true,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '*Pendapatan freelancer akan ditolak sebanyak ${(platformFeeRate * 100).toStringAsFixed(0)}% caj platform.',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.neutral400,
+                fontSize: 11,
+              ),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             FTButton(

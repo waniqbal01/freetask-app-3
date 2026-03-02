@@ -966,10 +966,10 @@ export class JobsService {
       ) {
         const amount = new Prisma.Decimal(existingJob.amount);
 
-        // Fee Calculation with Config Default to 0.1 (10%)
+        // Fee Calculation with Config Default to 0.07 (7%)
         const feePercent = this.configService.get<number>(
           'PLATFORM_FEE_PERCENT',
-          0.1,
+          0.07,
         );
         const platformShare = amount.mul(feePercent);
         const freelancerShare = amount.sub(platformShare);

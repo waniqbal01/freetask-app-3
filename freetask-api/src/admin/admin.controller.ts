@@ -17,6 +17,7 @@ import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { RejectServiceDto } from './dto/reject-service.dto';
 import { ResolveDisputeDto } from './dto/resolve-dispute.dto';
 import { ProcessWithdrawalDto } from './dto/process-withdrawal.dto';
+import { ResolveReportDto } from './dto/resolve-report.dto';
 import { JobStatus, WithdrawalStatus } from '@prisma/client';
 
 @Controller('admin')
@@ -261,6 +262,34 @@ export class AdminController {
       dto.refundAmount,
       dto.notes,
     );
+  }
+
+  // Report Management
+  @Get('reports')
+  async getReportedUsers(
+    @Request() req,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const limitNum = limit ? parseInt(limit, 10) : 50;
+    const offsetNum = offset ? parseInt(offset, 10) : 0;
+
+    await this.adminService.createAuditLog(
+      req.user.userId,
+      'VIEW_REPORTS',
+      'reports',
+    );
+
+    return this.adminService.getReportedUsers(limitNum, offsetNum);
+  }
+
+  @Patch('reports/:id/resolve')
+  async resolveReport(
+    @Request() req,
+    @Param('id', ParseIntPipe) blockId: number,
+    @Body() dto: ResolveReportDto,
+  ) {
+    return this.adminService.resolveReport(blockId, dto.action, req.user.userId);
   }
 
   // Audit Logs

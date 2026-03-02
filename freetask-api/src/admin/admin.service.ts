@@ -759,4 +759,80 @@ export class AdminService {
 
     return updatedJob;
   }
+
+  // Report Management
+  async getReportedUsers(limit = 50, offset = 0) {
+    const totalCount = await this.prisma.userBlock.count({
+      where: { isReported: true },
+    });
+
+    const reports = await this.prisma.userBlock.findMany({
+      where: { isReported: true },
+      take: limit,
+      skip: offset,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        blocker: {
+          select: { id: true, name: true, email: true, avatarUrl: true },
+        },
+        blocked: {
+          select: { id: true, name: true, email: true, avatarUrl: true },
+        },
+      },
+    });
+
+    return {
+      reports,
+      pagination: {
+        total: totalCount,
+        limit,
+        offset,
+      },
+    };
+  }
+
+  async resolveReport(blockId: number, action: 'DISMISS' | 'BAN', adminId: number) {
+    const report = await this.prisma.userBlock.findUnique({
+      where: { id: blockId },
+      include: {
+        blocked: {
+          select: { id: true, name: true },
+        },
+        blocker: {
+          select: { id: true, name: true },
+        }
+      }
+    });
+
+    if (!report || !report.isReported) {
+      throw new NotFoundException('Report not found or already resolved');
+    }
+
+    // Always toggle off isReported since we are resolving it
+    await this.prisma.userBlock.update({
+      where: { id: blockId },
+      data: { isReported: false },
+    });
+
+    if (action === 'BAN') {
+      await this.updateUserStatus(report.blockedId, false, adminId);
+      await this.createAuditLog(
+        adminId,
+        'RESOLVE_REPORT_BAN',
+        'report',
+        { blockId, blockedUserId: report.blockedId }
+      );
+      this.logger.log(`Admin ${adminId} resolved report ${blockId} by BANNING user ${report.blockedId}`);
+      return { message: `Report resolved. User ${report.blocked.name} has been banned.` };
+    } else {
+      await this.createAuditLog(
+        adminId,
+        'RESOLVE_REPORT_DISMISS',
+        'report',
+        { blockId, blockedUserId: report.blockedId }
+      );
+      this.logger.log(`Admin ${adminId} resolved report ${blockId} by DISMISSING it`);
+      return { message: `Report resolved and dismissed.` };
+    }
+  }
 }

@@ -7,6 +7,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/utils/error_utils.dart';
 import '../../core/utils/url_utils.dart';
@@ -810,19 +812,28 @@ class _CreateOfferFormState extends State<_CreateOfferForm> {
 
   Future<void> _pickImage() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-        withData: kIsWeb,
+      final picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70,
       );
-      if (result != null && result.files.isNotEmpty) {
+
+      if (image != null) {
+        final bytes = kIsWeb ? await image.readAsBytes() : null;
+        final platformFile = PlatformFile(
+          name: image.name,
+          size: await image.length(),
+          path: image.path,
+          bytes: bytes,
+        );
         setState(() {
-          _selectedImage = result.files.first;
+          _selectedImage = platformFile;
         });
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal memilih gambar: $e')),
+        SnackBar(content: Text('Gagal memilih gambar atau akses ditolak')),
       );
     }
   }
@@ -885,6 +896,27 @@ class _CreateOfferFormState extends State<_CreateOfferForm> {
                 if (num < 50) return 'Minimum tawaran adalah RM 50';
                 return null;
               },
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: Colors.blue),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Caj platform sebanyak 7% akan ditolak daripada jumlah ini apabila kerja selesai.',
+                      style: TextStyle(fontSize: 12, color: Colors.blue),
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -1197,26 +1229,48 @@ class _MessageBubble extends StatelessWidget {
                   ),
                 ),
               if (message.type == 'file' && message.attachmentUrl != null)
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  margin: const EdgeInsets.only(bottom: 4),
-                  decoration: BoxDecoration(
-                    color:
-                        isMe ? const Color(0xFFC8E6C9) : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.insert_drive_file,
-                          color: Colors.blueGrey),
-                      const SizedBox(width: 8),
-                      Expanded(
-                          child: Text(message.text,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Colors.black87))),
-                    ],
+                GestureDetector(
+                  onTap: () async {
+                    final url = Uri.parse(
+                        UrlUtils.resolveImageUrl(message.attachmentUrl));
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url,
+                          mode: LaunchMode.externalApplication);
+                    } else {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('Gagal membuka fail ini.')),
+                        );
+                      }
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    margin: const EdgeInsets.only(bottom: 4),
+                    decoration: BoxDecoration(
+                      color:
+                          isMe ? const Color(0xFFC8E6C9) : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.insert_drive_file,
+                            color: Colors.blueGrey),
+                        Expanded(
+                          child: Text(
+                            message.text,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.black87,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               if (message.type == 'offer')
@@ -1435,7 +1489,7 @@ class _MessageComposerState extends State<_MessageComposer> {
               label: 'Galeri',
               onTap: () {
                 Navigator.pop(context);
-                _pickFile(FileType.image);
+                _pickImage(ImageSource.gallery);
               },
             ),
             _AttachmentOption(
@@ -1444,7 +1498,7 @@ class _MessageComposerState extends State<_MessageComposer> {
               label: 'Kamera',
               onTap: () {
                 Navigator.pop(context);
-                _pickFile(FileType.image);
+                _pickImage(ImageSource.camera);
               },
             ),
             _AttachmentOption(
@@ -1482,6 +1536,34 @@ class _MessageComposerState extends State<_MessageComposer> {
     if (result != null && result.files.isNotEmpty) {
       final file = result.files.single;
       widget.onFileSelected(file, type);
+    }
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    final picker = ImagePicker();
+    try {
+      final XFile? image = await picker.pickImage(
+        source: source,
+        imageQuality: 70, // Convert to smaller file
+      );
+
+      if (image != null) {
+        // Convert XFile and call onFileSelected
+        final bytes = kIsWeb ? await image.readAsBytes() : null;
+        final platformFile = PlatformFile(
+          name: image.name,
+          size: await image.length(),
+          path: image.path,
+          bytes: bytes,
+        );
+        widget.onFileSelected(platformFile, FileType.image);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Kebenaran akses ditolak atau ralat: $e')),
+        );
+      }
     }
   }
 }
@@ -1864,7 +1946,8 @@ class _OfferBubbleContent extends ConsumerWidget {
                               try {
                                 await ref
                                     .read(chatRepositoryProvider)
-                                    .deleteCustomOffer(offerJobId);
+                                    .deleteCustomOffer(offerJobId,
+                                        conversationId: message.jobId);
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(

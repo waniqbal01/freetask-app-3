@@ -7,14 +7,30 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { getAllowedOrigins, normalizeOrigin } from './config/cors';
 import helmet from 'helmet';
 import { SanitizeInputInterceptor } from './common/interceptors/sanitize-input.interceptor';
-
 import { NestExpressApplication } from '@nestjs/platform-express';
+import * as Sentry from '@sentry/node';
+import { nodeProfilingIntegration } from '@sentry/profiling-node';
 
 // ---------------------------------------------------
 // Bootstrap NestJS App (Dev mode = restricted CORS)
 // ---------------------------------------------------
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
+
+  // Initialize Sentry early
+  if (process.env.SENTRY_DSN) {
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      integrations: [
+        nodeProfilingIntegration(),
+      ],
+      tracesSampleRate: 1.0,
+      profilesSampleRate: 1.0,
+      environment: process.env.NODE_ENV || 'development',
+    });
+    logger.log('Sentry monitoring initialized');
+  }
+
   try {
     if (!process.env.JWT_SECRET || process.env.JWT_SECRET.trim().length === 0) {
       throw new Error('JWT_SECRET is required to start the API server');
@@ -128,6 +144,12 @@ async function bootstrap() {
     const express = require('express');
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+    // RequestHandler creates a separate execution context, so that all
+    // transactions/spans/breadcrumbs are isolated across requests
+    if (process.env.SENTRY_DSN) {
+      Sentry.setupExpressErrorHandler(app.getHttpAdapter().getInstance());
+    }
 
     // ------------------------------
     // Global Filters & Interceptors

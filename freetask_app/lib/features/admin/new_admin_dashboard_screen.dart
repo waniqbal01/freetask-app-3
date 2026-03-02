@@ -29,7 +29,7 @@ class _NewAdminDashboardScreenState extends State<NewAdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 6,
+      length: 7,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Admin Dashboard'),
@@ -54,6 +54,7 @@ class _NewAdminDashboardScreenState extends State<NewAdminDashboardScreen> {
               Tab(icon: Icon(Icons.shopping_bag), text: 'Orders'),
               Tab(icon: Icon(Icons.money), text: 'Withdrawals'),
               Tab(icon: Icon(Icons.gavel), text: 'Disputes'),
+              Tab(icon: Icon(Icons.warning), text: 'Reports'),
             ],
           ),
         ),
@@ -65,6 +66,7 @@ class _NewAdminDashboardScreenState extends State<NewAdminDashboardScreen> {
             _OrdersTab(adminRepo: _adminRepo),
             _WithdrawalsTab(adminRepo: _adminRepo),
             _DisputesTab(adminRepo: _adminRepo),
+            _ReportsTab(adminRepo: _adminRepo),
           ],
         ),
       ),
@@ -1328,6 +1330,192 @@ class _DisputesTabState extends State<_DisputesTab>
                               foregroundColor: Colors.white,
                             ),
                           ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
+
+// ============================================================================
+// REPORTS TAB
+// ============================================================================
+class _ReportsTab extends StatefulWidget {
+  final AdminRepository adminRepo;
+  const _ReportsTab({required this.adminRepo});
+
+  @override
+  State<_ReportsTab> createState() => _ReportsTabState();
+}
+
+class _ReportsTabState extends State<_ReportsTab>
+    with AutomaticKeepAliveClientMixin {
+  List<dynamic> _reports = [];
+  bool _isLoading = true;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReports();
+  }
+
+  Future<void> _loadReports() async {
+    setState(() => _isLoading = true);
+
+    final response = await widget.adminRepo.getReportedUsers();
+
+    if (mounted && response.isSuccess) {
+      setState(() {
+        _reports = response.data?['reports'] ?? [];
+        _isLoading = false;
+      });
+    } else {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        showErrorSnackBar(context, response.error ?? 'Failed to load reports');
+      }
+    }
+  }
+
+  Future<void> _resolveReport(int reportId, String action) async {
+    final actionText = action == 'BAN' ? 'ban user ini' : 'abaikan report ini';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sahkan Tindakan'),
+        content: Text('Adakah anda pasti mahu $actionText?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Teruskan',
+              style: TextStyle(
+                color: action == 'BAN' ? Colors.red : Colors.blue,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      // Optimistic update
+      final int index = _reports.indexWhere((r) => r['id'] == reportId);
+      Map<String, dynamic>? removedReport;
+
+      if (index != -1) {
+        setState(() {
+          removedReport = _reports[index];
+          _reports.removeAt(index);
+        });
+      }
+
+      final response = await widget.adminRepo.resolveReport(
+        reportId: reportId,
+        action: action,
+      );
+
+      if (response.isSuccess) {
+        if (mounted) {
+          showSuccessSnackBar(
+              context, response.data?['message'] ?? 'Report diselesaikan.');
+        }
+      } else {
+        // Revert on failure
+        if (mounted && removedReport != null) {
+          setState(() {
+            _reports.insert(index, removedReport!);
+          });
+          showErrorSnackBar(
+              context, response.error ?? 'Gagal menyelesaikan report.');
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadReports,
+      child: _reports.isEmpty
+          ? const Center(child: Text('Tiada report baharu.'))
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _reports.length,
+              itemBuilder: (context, index) {
+                final report = _reports[index];
+                final blocked = report['blocked'];
+                final blocker = report['blocker'];
+
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Reported User: ${blocked['name']}',
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        Text('Email: ${blocked['email']}'),
+                        const SizedBox(height: 8),
+                        Text('Reported By: ${blocker['name']}'),
+                        if (report['reason'] != null &&
+                            report['reason'].trim().isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'Reason: "${report['reason']}"',
+                            style: const TextStyle(fontStyle: FontStyle.italic),
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () =>
+                                    _resolveReport(report['id'], 'DISMISS'),
+                                icon: const Icon(Icons.close),
+                                label: const Text('Dismiss'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.grey.shade200,
+                                  foregroundColor: Colors.black,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () =>
+                                    _resolveReport(report['id'], 'BAN'),
+                                icon: const Icon(Icons.block),
+                                label: const Text('Ban User'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

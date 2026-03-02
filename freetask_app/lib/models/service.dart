@@ -1,3 +1,5 @@
+import '../core/utils/html_utils.dart';
+
 class Service {
   Service({
     required this.id,
@@ -32,9 +34,9 @@ class Service {
     final freelancer = json['freelancer'];
     return Service(
       id: json['id']?.toString() ?? '',
-      title: json['title']?.toString() ?? '',
-      category: json['category']?.toString().replaceAll('&amp;', '&') ?? '',
-      description: json['description']?.toString() ?? '',
+      title: HtmlUtils.unescape(json['title']?.toString()),
+      category: HtmlUtils.unescape(json['category']?.toString()),
+      description: HtmlUtils.unescape(json['description']?.toString()),
       price: priceResult.value,
       hasPriceIssue: priceResult.hadError,
       freelancerId: json['freelancer_id']?.toString() ??

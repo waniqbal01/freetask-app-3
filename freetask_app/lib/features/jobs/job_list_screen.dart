@@ -1141,8 +1141,8 @@ class _JobsHeader extends StatelessWidget {
         // Overlapping Filter Card
         if (isFreelancer)
           Container(
-            margin:
-                const EdgeInsets.only(top: 130, left: 16, right: 16, bottom: 0),
+            margin: const EdgeInsets.only(
+                top: 130, left: 16, right: 16, bottom: 16),
             constraints: const BoxConstraints(minHeight: 100),
             decoration: const BoxDecoration(
               color: Colors.white,
@@ -1202,7 +1202,7 @@ class _FilterChip extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF2196F3) : Colors.grey.shade50,
           borderRadius: BorderRadius.circular(12),
@@ -1217,18 +1217,20 @@ class _FilterChip extends StatelessWidget {
             Icon(
               icon,
               color: isSelected ? Colors.white : Colors.grey.shade600,
-              size: 20,
+              size: 18,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 4),
             Flexible(
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.grey.shade700,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  fontSize: 14,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : Colors.grey.shade700,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    fontSize: 14,
+                  ),
                 ),
-                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

@@ -60,5 +60,11 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSCameraUsageDescription</key>
+		<string>Aplikasi memerlukan akses kamera untuk memuat naik gambar dalam perbualan.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Aplikasi memerlukan akses galeri untuk memilih gambar untuk dimuat naik.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Aplikasi memerlukan akses mikrofon untuk merakam video atau audio.</string>
 	</dict>
 </plist>

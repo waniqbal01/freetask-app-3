@@ -24,6 +24,8 @@ import '../features/users/public_profile_screen.dart';
 import '../features/services/create_service_screen.dart';
 import '../features/services/edit_service_screen.dart';
 import '../features/withdrawals/withdrawal_screen.dart';
+import '../features/settings/faq_screen.dart';
+import '../features/legal/legal_policies_screen.dart';
 import '../models/service.dart';
 
 import '../models/job.dart';
@@ -292,6 +294,18 @@ final appRouter = GoRouter(
         final httpClient = HttpClient();
         final repo = AdminRepository(dio: httpClient.dio);
         return AdminBankVerificationScreen(adminRepository: repo);
+      },
+    ),
+    GoRoute(
+      path: '/faq',
+      builder: (BuildContext context, GoRouterState state) {
+        return const FaqScreen();
+      },
+    ),
+    GoRoute(
+      path: '/legal',
+      builder: (BuildContext context, GoRouterState state) {
+        return const LegalPoliciesScreen();
       },
     ),
     GoRoute(

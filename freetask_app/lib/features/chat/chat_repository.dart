@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:dio/dio.dart';
@@ -513,12 +514,34 @@ class ChatRepository {
     }
   }
 
-  Future<void> deleteCustomOffer(String jobId) async {
+  Future<void> deleteCustomOffer(String jobId, {String? conversationId}) async {
     try {
       await _dio.delete<void>(
         '/jobs/custom-offer/$jobId',
         options: await _authorizedOptions(),
       );
+
+      // Optimistically remove the offer from local UI stream since the backend cascades deletion
+      if (conversationId != null) {
+        final msgs = _messages[conversationId];
+        if (msgs != null) {
+          final updatedMsgs = msgs.where((m) {
+            if (m.type == 'offer') {
+              try {
+                final data = jsonDecode(m.text) as Map<String, dynamic>;
+                if (data['offerJobId']?.toString() == jobId) {
+                  return false; // exclude this message
+                }
+              } catch (_) {}
+            }
+            return true;
+          }).toList();
+          if (updatedMsgs.length != msgs.length) {
+            _messages[conversationId] = updatedMsgs;
+            _emit(conversationId);
+          }
+        }
+      }
     } on DioException catch (error) {
       await _handleError(error);
       rethrow;

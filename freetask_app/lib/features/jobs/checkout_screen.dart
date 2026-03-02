@@ -396,6 +396,32 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
                                       style: AppTextStyles.bodySmall,
                                     ),
                                   ],
+                                  const SizedBox(height: AppSpacing.s16),
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary
+                                          .withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Icon(Icons.info_outline,
+                                            size: 16, color: AppColors.primary),
+                                        SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'Jumlah yang dimasukkan adalah harga akhir yang perlu dibayar. Caj platform sebanyak 7% akan ditolak daripada pendapatan freelancer.',
+                                            style: TextStyle(
+                                                fontSize: 12,
+                                                color: AppColors.primary),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),

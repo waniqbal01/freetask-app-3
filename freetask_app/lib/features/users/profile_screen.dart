@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/app_categories.dart';
 import '../../core/constants/app_strings.dart';
@@ -259,7 +260,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     if (_user != null) _buildUserInfo(_user!, isFreelancer),
                     const SizedBox(height: 24),
-
+                    _buildHelpSection(),
                     const SizedBox(height: 24),
                     OutlinedButton(
                       onPressed: _logout,
@@ -276,6 +277,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildHelpSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Pusat Bantuan',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).primaryColor,
+              ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            side: BorderSide(color: Colors.grey.shade200),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.email, color: Colors.blue),
+                title: const Text('Sokongan E-mel'),
+                subtitle: const Text('masterfirst935@gmail.com'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () async {
+                  final Uri emailLaunchUri = Uri(
+                    scheme: 'mailto',
+                    path: 'masterfirst935@gmail.com',
+                    query: 'subject=Sokongan%20Freetask',
+                  );
+                  if (await canLaunchUrl(emailLaunchUri)) {
+                    await launchUrl(emailLaunchUri);
+                  } else {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content:
+                                Text('Tidak dapat membuka aplikasi e-mel')),
+                      );
+                    }
+                  }
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.help_outline, color: Colors.orange),
+                title: const Text('Soalan Lazim (FAQ)'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  context.push('/faq');
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

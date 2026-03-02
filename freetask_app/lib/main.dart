@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'dart:ui';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 import 'app.dart';
 import 'core/notifications/fcm_service.dart';
@@ -16,6 +18,14 @@ void main() async {
     } else {
       await Firebase.initializeApp();
       debugPrint('Firebase initialized successfully');
+
+      // Initialize Crashlytics
+      FlutterError.onError =
+          FirebaseCrashlytics.instance.recordFlutterFatalError;
+      PlatformDispatcher.instance.onError = (error, stack) {
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+        return true;
+      };
 
       // Initialize FCM service
       await fcmService.initialize();
