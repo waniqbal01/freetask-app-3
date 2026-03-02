@@ -107,12 +107,7 @@ class HttpClient {
     }
   }
 
-  void _showForbiddenMessage() {
-    notificationService.messengerKey.currentState?.showSnackBar(
-      const SnackBar(
-          content: Text('Anda tidak dibenarkan untuk tindakan ini.')),
-    );
-  }
+  // Removed _showForbiddenMessage to let individual screens handle 403 using error_utils.dart
 
   Future<String?> _readTokenWithMigration() async {
     final token = await _storage.read(AuthRepository.tokenStorageKey);
@@ -291,9 +286,8 @@ class HttpClient {
             if (!_isAuthEndpoint(error.requestOptions)) {
               await _handleSessionExpired();
             }
-          } else if (status == 403) {
-            _showForbiddenMessage();
           }
+          // Removed global 403 interceptor to allow screens to display specific backend messages
 
           handler.next(error);
         },

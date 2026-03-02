@@ -350,8 +350,29 @@ export class JobsService {
       );
     }
 
-    // Send a system message to the chat so both parties know it was withdrawn
+    // Delete the offer message from chat history
     if (job.conversationId) {
+      const offerMessages = await this.prisma.chatMessage.findMany({
+        where: {
+          conversationId: job.conversationId,
+          type: 'offer',
+        },
+      });
+
+      for (const msg of offerMessages) {
+        if (!msg.content) continue;
+        try {
+          const data = JSON.parse(msg.content);
+          if (data.offerJobId === job.id) {
+            await this.prisma.chatMessage.delete({ where: { id: msg.id } });
+            break; // Found and deleted
+          }
+        } catch (e) {
+          // ignore JSON parse errors
+        }
+      }
+
+      // Send a system message to the chat so both parties know it was withdrawn
       await this.chatsService.postMessage(job.conversationId, userId, role, {
         content: `[SYSTEM] Tawaran "${job.title}" telah ditarik balik oleh freelancer.`,
         type: 'system',

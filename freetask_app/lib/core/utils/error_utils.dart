@@ -28,6 +28,28 @@ String resolveDioErrorMessage(
     return 'Email atau kata laluan salah.';
   }
 
+  // Try to extract backend error message first to provide specific feedback
+  final responseData = error.response?.data;
+  if (responseData is Map<String, dynamic>) {
+    final message = responseData['message'];
+    if (message is String && message.trim().isNotEmpty) {
+      // If it's a generic 401 or 404, we might still want local fallback, but explicit backend text wins
+      if (!(statusCode == 401 && message == 'Unauthorized')) {
+        return message.trim();
+      }
+    }
+    if (message is List) {
+      final joined = message
+          .whereType<String>()
+          .map((String item) => item.trim())
+          .where((String item) => item.isNotEmpty)
+          .join('\n');
+      if (joined.isNotEmpty) {
+        return joined;
+      }
+    }
+  }
+
   // UX-G-03: Enhanced error messages for common status codes
   if (statusCode == 401) {
     return 'Sesi anda tamat. Sila login semula.';
@@ -60,37 +82,7 @@ String resolveDioErrorMessage(
     debugPrint('🔴 SERVER ERROR $statusCode$endpoint');
     debugPrint('Response: ${error.response?.data}');
     debugPrint('Message: ${error.message}');
-
-    // Try to extract backend error message
-    final responseData = error.response?.data;
-    if (responseData is Map<String, dynamic>) {
-      final backendMsg = responseData['message'];
-      if (backendMsg is String && backendMsg.trim().isNotEmpty) {
-        return 'Ralat pelayan: ${backendMsg.trim()}';
-      }
-    }
-
     return 'Ralat pelayan$endpoint. Sila cuba sebentar lagi atau hubungi sokongan.';
-  }
-
-  // Extract message from response
-  final responseData = error.response?.data;
-
-  if (responseData is Map<String, dynamic>) {
-    final message = responseData['message'];
-    if (message is String && message.trim().isNotEmpty) {
-      return message.trim();
-    }
-    if (message is List) {
-      final joined = message
-          .whereType<String>()
-          .map((String item) => item.trim())
-          .where((String item) => item.isNotEmpty)
-          .join('\n');
-      if (joined.isNotEmpty) {
-        return joined;
-      }
-    }
   }
 
   // Fallback to error message from Dio

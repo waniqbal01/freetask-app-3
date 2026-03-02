@@ -1955,6 +1955,14 @@ class _OfferBubbleContent extends ConsumerWidget {
                                             'Tawaran berjaya ditarik balik.')),
                                   );
                                 }
+                              } on DioException catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text(
+                                            'Gagal: ${resolveDioErrorMessage(e)}')),
+                                  );
+                                }
                               } catch (e) {
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
