@@ -11,13 +11,21 @@ import {
 export class WithdrawalsService {
   private readonly logger = new Logger(WithdrawalsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async createWithdrawal(userId: number, dto: CreateWithdrawalDto) {
     // Get user's current balance
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { balance: true, role: true },
+      select: {
+        balance: true,
+        role: true,
+        bankVerified: true,
+        bankCode: true,
+        bankAccount: true,
+        bankHolderName: true,
+        name: true
+      },
     });
 
     if (!user) {
@@ -35,23 +43,31 @@ export class WithdrawalsService {
     }
 
     // Validate Bank Details
-    const { bankDetails } = dto;
-    if (!bankDetails.bankCode || !bankDetails.accountNumber) {
-      throw new BadRequestException('Incomplete bank details');
+    if (!user.bankVerified) {
+      throw new BadRequestException('Your bank account must be verified by an admin before requesting a withdrawal.');
     }
 
-    if (!isValidBankCode(bankDetails.bankCode)) {
+    if (!user.bankCode || !user.bankAccount) {
+      throw new BadRequestException('Incomplete bank details in your profile.');
+    }
+
+    if (!isValidBankCode(user.bankCode)) {
       throw new BadRequestException(
-        `Invalid bank code. Must be one of: ${BILLPLZ_BANK_CODES.join(', ')}`,
+        `Invalid bank code in profile. Must be one of: ${BILLPLZ_BANK_CODES.join(', ')}`,
       );
     }
 
-    // Create withdrawal request
+    // Create withdrawal request using the DB's bank details, ignoring any payload 'bankDetails' for security.
     const withdrawal = await this.prisma.withdrawal.create({
       data: {
         freelancerId: userId,
         amount: dto.amount,
-        bankDetails: dto.bankDetails,
+        bankDetails: {
+          bankCode: user.bankCode,
+          accountNumber: user.bankAccount,
+          bankName: user.bankCode,
+          accountName: user.bankHolderName || user.name,
+        },
         status: WithdrawalStatus.PENDING,
       },
     });

@@ -194,6 +194,23 @@ export class UsersService {
   async updateProfile(id: number, dto: UpdateUserDto) {
     const avatarUrl = dto.avatarUrl ?? dto.avatar;
 
+    // Fetch existing user to compare bank details
+    const existingUser = await this.prisma.user.findUnique({
+      where: { id },
+      select: { bankCode: true, bankAccount: true, bankHolderName: true },
+    });
+
+    let bankVerifiedUpdate: boolean | undefined = undefined;
+    if (existingUser) {
+      if (
+        (dto.bankCode !== undefined && dto.bankCode !== existingUser.bankCode) ||
+        (dto.bankAccount !== undefined && dto.bankAccount !== existingUser.bankAccount) ||
+        (dto.bankHolderName !== undefined && dto.bankHolderName !== existingUser.bankHolderName)
+      ) {
+        bankVerifiedUpdate = false;
+      }
+    }
+
     const user = await this.prisma.user.update({
       where: { id },
       data: {
@@ -214,6 +231,7 @@ export class UsersService {
         bankCode: dto.bankCode,
         bankAccount: dto.bankAccount,
         bankHolderName: dto.bankHolderName,
+        ...(bankVerifiedUpdate !== undefined ? { bankVerified: bankVerifiedUpdate } : {}),
       },
     });
 
@@ -290,6 +308,29 @@ export class UsersService {
         blockedId,
         reason,
         isReported: isReported ?? false,
+      },
+    });
+  }
+
+  async unblockUser(blockerId: number, blockedId: number) {
+    if (blockerId === blockedId) {
+      throw new BadRequestException('You cannot unblock yourself');
+    }
+
+    // Check if block exists
+    const blockRecord = await this.prisma.userBlock.findUnique({
+      where: {
+        blockerId_blockedId: { blockerId, blockedId },
+      },
+    });
+
+    if (!blockRecord) {
+      throw new NotFoundException('Block record not found');
+    }
+
+    return this.prisma.userBlock.delete({
+      where: {
+        blockerId_blockedId: { blockerId, blockedId },
       },
     });
   }

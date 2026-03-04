@@ -125,29 +125,64 @@ export class NotificationsService {
     });
 
     if (tokens.length > 0) {
-      try {
-        const admin = require('firebase-admin');
-        // Check if firebase is initialized
-        if (admin.apps.length > 0) {
-          const messages = tokens.map((t) => ({
+      // Fire and forget push notification to avoid blocking the API response
+      this.dispatchPushNotifications(tokens, dto).catch((error) => {
+        this.logger.error('Unhandled error in dispatchPushNotifications', error);
+      });
+    }
+
+    return notification;
+  }
+
+  private async dispatchPushNotifications(tokens: any[], dto: SendNotificationDto) {
+    try {
+      const admin = require('firebase-admin');
+      // Check if firebase is initialized
+      if (admin.apps.length > 0) {
+        const messages = tokens.map((t) => {
+          const isAndroid = t.platform?.toLowerCase() === 'android';
+
+          const payloadData: Record<string, string> = {
+            title: String(dto.title),
+            body: String(dto.body),
+            click_action: 'FLUTTER_NOTIFICATION_CLICK',
+          };
+
+          if (dto.data) {
+            Object.entries(dto.data).forEach(([key, value]) => {
+              if (value !== undefined && value !== null) {
+                payloadData[key] = String(value);
+              }
+            });
+          }
+
+          if (isAndroid) {
+            // Android: Data + Notification message to ensure OS delivers background notifications
+            return {
+              token: t.token,
+              notification: {
+                title: dto.title,
+                body: dto.body,
+              },
+              data: payloadData,
+              android: {
+                priority: 'high',
+                notification: {
+                  channelId: 'freetask_notifications',
+                  sound: 'default',
+                },
+              },
+            };
+          }
+
+          // iOS/Web: Standard notification + data (APNs correctly handles background wakes)
+          return {
             token: t.token,
             notification: {
               title: dto.title,
               body: dto.body,
             },
-            data: dto.data
-              ? {
-                ...dto.data,
-                click_action: 'FLUTTER_NOTIFICATION_CLICK',
-              }
-              : undefined,
-            android: {
-              priority: 'high',
-              notification: {
-                sound: 'default',
-                channelId: 'freetask_chat_channel',
-              },
-            },
+            data: payloadData,
             apns: {
               payload: {
                 aps: {
@@ -156,33 +191,31 @@ export class NotificationsService {
                 },
               },
             },
-          }));
+          };
+        });
 
-          const response = await admin.messaging().sendEach(messages);
-          this.logger.log(
-            `Sent notifications: ${response.successCount} success, ${response.failureCount} failure`,
-          );
+        const response = await admin.messaging().sendEach(messages);
+        this.logger.log(
+          `Sent notifications: ${response.successCount} success, ${response.failureCount} failure`,
+        );
 
-          // Clean up invalid tokens
-          if (response.failureCount > 0) {
-            const failedTokens = response.responses
-              .map((resp, idx) => (!resp.success ? tokens[idx].token : null))
-              .filter((t) => t !== null);
+        // Clean up invalid tokens
+        if (response.failureCount > 0) {
+          const failedTokens = response.responses
+            .map((resp, idx) => (!resp.success ? tokens[idx].token : null))
+            .filter((t) => t !== null);
 
-            // For now just log, implemented remove logic separately or here
-            this.logger.warn(`Failed tokens: ${failedTokens.join(', ')}`);
-          }
-        } else {
-          this.logger.warn(
-            'Firebase Admin not initialized, skipping push notification',
-          );
+          // For now just log, implemented remove logic separately or here
+          this.logger.warn(`Failed tokens: ${failedTokens.join(', ')}`);
         }
-      } catch (error) {
-        this.logger.error('Error sending push notification', error);
+      } else {
+        this.logger.warn(
+          'Firebase Admin not initialized, skipping push notification',
+        );
       }
+    } catch (error) {
+      this.logger.error('Error sending push notification', error);
     }
-
-    return notification;
   }
 
   async deleteToken(userId: number, token: string) {

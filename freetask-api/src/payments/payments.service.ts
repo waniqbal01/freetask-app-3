@@ -495,6 +495,20 @@ export class PaymentsService {
       return { status: 'failed', message: 'Missing bank details' };
     }
 
+    if (!job.freelancer.bankVerified) {
+      this.logger.warn(
+        `Bank details unverified for Job #${jobId}. Moving to PAYOUT_HOLD.`,
+      );
+      await this.prisma.job.update({
+        where: { id: jobId },
+        data: {
+          status: 'PAYOUT_HOLD',
+          payoutHoldReason: 'Bank details not verified by admin.',
+        },
+      });
+      return { status: 'held', message: 'Bank details unverified' };
+    }
+
     // TRUST SCORE CHECK
     const TRUST_THRESHOLD = 80; // Example threshold
     if (job.freelancer.trustScore < TRUST_THRESHOLD) {

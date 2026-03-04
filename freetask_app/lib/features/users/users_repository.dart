@@ -53,7 +53,9 @@ class UsersRepository {
     addIfPresent('phoneNumber', phoneNumber);
     addIfPresent('location', location);
     addIfPresent('state', state);
-    addIfPresent('district', district);
+    if (district != null) {
+      payload['district'] = district; // Allow empty string to reset district
+    }
     addIfPresent('latitude', latitude);
     addIfPresent('longitude', longitude);
     addIfPresent('coverageRadius', coverageRadius);

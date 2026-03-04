@@ -124,8 +124,13 @@ class ChatRepository {
   bool isInitialLoading(String conversationId) =>
       _isInitialLoading[conversationId] ?? false;
 
-  Future<List<ChatThread>> fetchThreads({String? limit, String? offset}) async {
+  Future<List<ChatThread>> fetchThreads(
+      {String? limit, String? offset, String? query}) async {
     final paginationQuery = _buildPagination(limit: limit, offset: offset);
+    // Fix 3: Add search query param if provided
+    if (query != null && query.isNotEmpty) {
+      paginationQuery['q'] = query;
+    }
     try {
       final response = await _dio.get<List<dynamic>>(
         '/chats',
@@ -144,11 +149,9 @@ class ChatRepository {
         ),
       );
 
-      // If fetching first page, update cache
-      if (offset == null || offset == '0' || offset == '') {
-        _threads =
-            threads; // Should be unmodifiable? We modify it in _onNewMessage
-        // So keep it modifiable
+      // Only update cache for first-page, non-search fetches
+      if (query == null && (offset == null || offset == '0' || offset == '')) {
+        _threads = threads;
         _threadsController.add(List<ChatThread>.unmodifiable(_threads));
       }
 
@@ -267,6 +270,12 @@ class ChatRepository {
         updatedMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
         _messages[conversationId] = updatedMessages;
         _emit(conversationId);
+
+        // If the message is from someone else, mark it as delivered
+        final myId = authRepository.currentUser?.id.toString();
+        if (myId != null && message.senderId != myId) {
+          SocketService.instance.markDelivered(message.id, conversationId);
+        }
       }
 
       // Update threads list (shows red badge in chat list)
@@ -604,6 +613,20 @@ class ChatRepository {
           if (reason != null && reason.isNotEmpty) 'reason': reason,
           'isReported': isReported,
         },
+        options: await _authorizedOptions(),
+      );
+      // Refresh threads to get the latest block status
+      fetchThreads();
+    } on DioException catch (error) {
+      await _handleError(error);
+      rethrow;
+    }
+  }
+
+  Future<void> unblockUser(String userId) async {
+    try {
+      await _dio.delete<void>(
+        '/users/$userId/block',
         options: await _authorizedOptions(),
       );
       // Refresh threads to get the latest block status

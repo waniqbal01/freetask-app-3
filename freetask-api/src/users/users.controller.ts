@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards, Query } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { GetUser } from '../auth/get-user.decorator';
 import { UsersService } from './users.service';
@@ -56,5 +56,13 @@ export class UsersController {
     @Body() dto: BlockUserDto,
   ) {
     return this.usersService.blockUser(userId, Number(blockedId), dto.reason, dto.isReported);
+  }
+
+  @Delete(':id/block')
+  async unblockUser(
+    @GetUser('userId') userId: number,
+    @Param('id') blockedId: string,
+  ) {
+    return this.usersService.unblockUser(userId, Number(blockedId));
   }
 }

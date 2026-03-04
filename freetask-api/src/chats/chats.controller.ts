@@ -26,7 +26,7 @@ export class ChatsController {
   constructor(
     private readonly chatsService: ChatsService,
     private readonly chatGateway: ChatGateway,
-  ) {}
+  ) { }
 
   @Get()
   @Throttle({ default: { limit: 15, ttl: 60000 } })
@@ -34,10 +34,12 @@ export class ChatsController {
     @GetUser('userId') userId: number,
     @GetUser('role') role: UserRole,
     @Query() query?: PaginationQueryDto,
+    @Query('q') search?: string,
   ) {
     return this.chatsService.listThreads(userId, role, {
       limit: query?.limit,
       offset: query?.offset,
+      search: search,
     });
   }
 

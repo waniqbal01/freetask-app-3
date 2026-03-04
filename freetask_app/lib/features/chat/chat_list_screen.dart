@@ -186,28 +186,10 @@ class ChatListScreen extends ConsumerWidget {
                           : 'Tiada mesej lagi.';
                       final lastAtLabel = _formatTimestamp(thread.lastAt);
 
-                      Color statusColor;
-                      // Determine status color based on thread status
-                      // 'ACTIVE' is the default for normal conversations
-                      switch (thread.status.toUpperCase()) {
-                        case 'PENDING':
-                          statusColor = Colors.orange;
-                          break;
-                        case 'IN_PROGRESS':
-                        case 'ACTIVE':
-                          statusColor = const Color(0xFF2196F3);
-                          break;
-                        case 'COMPLETED':
-                          statusColor = Colors.green;
-                          break;
-                        case 'CANCELLED':
-                        case 'REJECTED':
-                        case 'ARCHIVED':
-                          statusColor = Colors.red;
-                          break;
-                        default:
-                          statusColor = Colors.grey;
-                      }
+                      // Determine avatar border color based on online status
+                      final Color avatarBorderColor = thread.isOnline
+                          ? Colors.green.shade400
+                          : Colors.grey.shade300;
 
                       return Material(
                         color: Colors.white,
@@ -226,14 +208,7 @@ class ChatListScreen extends ConsumerWidget {
                                 Container(
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        statusColor.withOpacity(0.6),
-                                        statusColor,
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
+                                    color: avatarBorderColor,
                                   ),
                                   padding: const EdgeInsets.all(2),
                                   child: CircleAvatar(
@@ -260,7 +235,7 @@ class ChatListScreen extends ConsumerWidget {
                                                     .toUpperCase()
                                                 : '?',
                                             style: TextStyle(
-                                              color: statusColor,
+                                              color: avatarBorderColor,
                                               fontWeight: FontWeight.bold,
                                               fontSize: 20,
                                             ),
@@ -299,11 +274,11 @@ class ChatListScreen extends ConsumerWidget {
                                           ),
                                         ],
                                       ),
-                                      if (thread.title != 'Conversation' &&
-                                          thread.title.isNotEmpty) ...[
+                                      if (thread
+                                          .conversationTitle.isNotEmpty) ...[
                                         const SizedBox(height: 2),
                                         Text(
-                                          thread.title,
+                                          thread.conversationTitle,
                                           style: TextStyle(
                                             fontSize: 13,
                                             color: Colors.grey.shade700,
@@ -328,31 +303,18 @@ class ChatListScreen extends ConsumerWidget {
                                             ),
                                           ),
                                           const SizedBox(width: 8),
-                                          // Status badge
+                                          // Online status dot indicator
                                           Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 6, vertical: 2),
+                                            width: 10,
+                                            height: 10,
                                             decoration: BoxDecoration(
-                                              color:
-                                                  statusColor.withOpacity(0.15),
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
+                                              color: thread.isOnline
+                                                  ? Colors.green.shade400
+                                                  : Colors.grey.shade400,
+                                              shape: BoxShape.circle,
                                               border: Border.all(
-                                                color: statusColor
-                                                    .withOpacity(0.3),
-                                                width: 0.5,
-                                              ),
-                                            ),
-                                            child: Text(
-                                              thread.status
-                                                  .replaceAll('_', ' ')
-                                                  .toLowerCase(),
-                                              style: TextStyle(
-                                                fontSize: 9,
-                                                color: statusColor
-                                                    .withOpacity(0.9),
-                                                fontWeight: FontWeight.w700,
-                                                letterSpacing: 0.3,
+                                                color: Colors.white,
+                                                width: 1.5,
                                               ),
                                             ),
                                           ),
@@ -532,7 +494,7 @@ class _ChatHeader extends StatelessWidget {
         // 1. Background Gradient Container
         Container(
           width: double.infinity,
-          height: 260,
+          height: 180,
           padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
@@ -578,18 +540,7 @@ class _ChatHeader extends StatelessWidget {
                             const NotificationBellButton(color: Colors.white),
                       ),
                       const SizedBox(width: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          icon: const Icon(Icons.account_circle,
-                              color: Colors.white),
-                          onPressed: () => context.push('/profile'),
-                          tooltip: 'Profile',
-                        ),
-                      ),
+                      // Profile button removed - moved to bottom nav
                     ],
                   ),
                 ],
@@ -634,7 +585,7 @@ class _ChatHeader extends StatelessWidget {
         Container(
           width: double.infinity,
           margin:
-              const EdgeInsets.only(top: 220, left: 20, right: 20, bottom: 20),
+              const EdgeInsets.only(top: 140, left: 20, right: 20, bottom: 20),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: AppRadius.largeRadius,
@@ -650,81 +601,7 @@ class _ChatHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Toggle Buttons
-              Row(
-                children: [
-                  // Chat Button (Active)
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2196F3).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: const Color(0xFF2196F3).withOpacity(0.3),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.chat_bubble_rounded,
-                            color: Color(0xFF2196F3),
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Chat',
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelLarge
-                                ?.copyWith(
-                                  color: const Color(0xFF2196F3),
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Marketplace Button (Inactive)
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => context.go('/home'),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.store_mall_directory_outlined,
-                              color: Colors.grey.shade600,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Marketplace',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelLarge
-                                  ?.copyWith(
-                                    color: Colors.grey.shade600,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              // Toggle Buttons removed - moved to bottom nav
               const SizedBox(height: 16),
               // Search Bar
               InkWell(
@@ -815,19 +692,24 @@ class _ChatSearchDelegate extends SearchDelegate<String> {
   }
 
   Widget _buildSearchResults() {
-    final threadsAsync = ref.watch(chatThreadsProvider);
+    // Fix 3: search calls API instead of filtering in-memory
+    // This lets user find old conversations beyond the first 20 cached threads
+    return FutureBuilder<List<ChatThread>>(
+      future: ref
+          .read(chatRepositoryProvider)
+          .fetchThreads(query: query.trim().isEmpty ? null : query.trim()),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return const Center(child: Text('Ralat memuatkan chat'));
+        }
 
-    return threadsAsync.when(
-      data: (threads) {
-        final filtered = threads.where((thread) {
-          if (thread.lastMessage == null || thread.lastMessage!.isEmpty) {
-            return false;
-          }
-          final searchLower = query.toLowerCase();
-          return thread.participantName.toLowerCase().contains(searchLower) ||
-              thread.title.toLowerCase().contains(searchLower) ||
-              thread.lastMessage!.toLowerCase().contains(searchLower);
-        }).toList();
+        final threads = snapshot.data ?? [];
+        final filtered = threads
+            .where((t) => t.lastMessage != null && t.lastMessage!.isNotEmpty)
+            .toList();
 
         if (filtered.isEmpty) {
           return Center(
@@ -837,7 +719,7 @@ class _ChatSearchDelegate extends SearchDelegate<String> {
                 Icon(Icons.search_off, size: 64, color: Colors.grey.shade400),
                 const SizedBox(height: 16),
                 Text(
-                  'Tiada hasil untuk "$query"',
+                  query.isEmpty ? 'Tiada chat' : 'Tiada hasil untuk "$query"',
                   style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
                 ),
               ],
@@ -872,19 +754,19 @@ class _ChatSearchDelegate extends SearchDelegate<String> {
                       ),
               ),
               title: Text(thread.participantName),
-              subtitle: Text(thread.title),
+              subtitle: Text(
+                thread.lastMessage ?? thread.conversationTitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
               onTap: () {
                 close(context, '');
-                context.push('/chats/${thread.id}/messages');
+                context.push('/chats/${thread.id}/messages', extra: thread);
               },
             );
           },
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => const Center(
-        child: Text('Ralat memuatkan chat'),
-      ),
     );
   }
 }

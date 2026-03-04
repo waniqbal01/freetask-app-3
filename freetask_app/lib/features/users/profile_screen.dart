@@ -10,6 +10,7 @@ import '../../core/widgets/confirmation_dialog.dart';
 import '../../models/user.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/notification_bell_button.dart';
+import '../../widgets/app_bottom_nav.dart';
 import '../auth/auth_repository.dart';
 
 import 'package:file_picker/file_picker.dart';
@@ -244,11 +245,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Profil Saya'), actions: [
         const NotificationBellButton(),
-        IconButton(
+        PopupMenuButton<String>(
           icon: const Icon(Icons.settings),
-          onPressed: () {}, // Settings placeholder
+          onSelected: (value) {
+            if (value == 'settings') {
+              // Settings placeholder
+            } else if (value == 'logout') {
+              _logout();
+            }
+          },
+          itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+            const PopupMenuItem<String>(
+              value: 'settings',
+              child: Row(
+                children: [
+                  Icon(Icons.settings, size: 20, color: Colors.black87),
+                  SizedBox(width: 12),
+                  Text('Tetapan'),
+                ],
+              ),
+            ),
+            const PopupMenuItem<String>(
+              value: 'logout',
+              child: Row(
+                children: [
+                  Icon(Icons.logout, size: 20, color: Colors.red),
+                  SizedBox(width: 12),
+                  Text('Log Keluar', style: TextStyle(color: Colors.red)),
+                ],
+              ),
+            ),
+          ],
         ),
       ]),
+      bottomNavigationBar: const AppBottomNav(currentTab: AppTab.profile),
       body: _isLoadingUser
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -262,17 +292,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 24),
                     _buildHelpSection(),
                     const SizedBox(height: 24),
-                    OutlinedButton(
-                      onPressed: _logout,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
-                      ),
-                      child: const Text(AppStrings.btnLogout),
-                    ),
                     const SizedBox(height: 32), // Bottom padding
-
-                    const SizedBox(height: 24),
                   ],
                 ),
               ),

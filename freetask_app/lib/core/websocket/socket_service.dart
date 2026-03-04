@@ -308,22 +308,31 @@ class SocketService {
 
   /// Mark message as delivered
   void markDelivered(String messageId, String conversationId) {
-    emit('mark_delivered', {
-      'messageId': messageId,
-      'conversationId': conversationId,
-    });
+    final msgId = int.tryParse(messageId);
+    if (msgId != null) {
+      emit('mark_delivered', {
+        'messageId': msgId,
+        'conversationId': conversationId,
+      });
+    }
   }
 
   /// Mark message as read
   void markRead(String messageId, String conversationId) {
-    emit('mark_read', {
-      'messageId': messageId,
-      'conversationId': conversationId,
-    });
+    final msgId = int.tryParse(messageId);
+    if (msgId != null) {
+      emit('mark_read', {
+        'messageId': msgId,
+        'conversationId': conversationId,
+      });
+    }
   }
 
   /// Mark entire chat as read
   void markChatRead(String conversationId) {
-    emit('mark_chat_read', {'conversationId': conversationId});
+    final convId = int.tryParse(conversationId);
+    if (convId != null) {
+      emit('mark_chat_read', {'conversationId': convId});
+    }
   }
 }

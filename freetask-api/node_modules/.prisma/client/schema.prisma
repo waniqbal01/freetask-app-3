@@ -140,6 +140,8 @@ model Conversation {
   participants User[]
   messages     ChatMessage[]
   jobs         Job[]
+
+  @@index([updatedAt(sort: Desc)])
 }
 
 model Service {
@@ -240,6 +242,8 @@ model ChatMessage {
   @@index([conversationId])
   @@index([status])
   @@index([jobId, readAt])
+  @@index([conversationId, createdAt(sort: Desc)])
+  @@index([conversationId, senderId, readAt])
 }
 
 model Review {

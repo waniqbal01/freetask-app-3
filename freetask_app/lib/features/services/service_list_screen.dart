@@ -203,7 +203,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
     // final role = context.read<RequestsRepository>().userRole;
 
     return Scaffold(
-      bottomNavigationBar: const AppBottomNav(currentTab: AppTab.home),
+      bottomNavigationBar: const AppBottomNav(currentTab: AppTab.market),
       body: Container(
         color: Colors.white,
         child: SafeArea(
@@ -221,7 +221,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                             // 1. Background Gradient Container
                             Container(
                               width: double.infinity,
-                              height: 260,
+                              height: 180,
                               padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
@@ -278,21 +278,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                                                       color: Colors.white),
                                             ),
                                             const SizedBox(width: 8),
-                                            Container(
-                                              decoration: BoxDecoration(
-                                                color: Colors.white
-                                                    .withOpacity(0.15),
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: IconButton(
-                                                icon: const Icon(
-                                                    Icons.account_circle,
-                                                    color: Colors.white),
-                                                onPressed: () =>
-                                                    context.push('/profile'),
-                                                tooltip: 'Profile',
-                                              ),
-                                            ),
+                                            // Profile button removed - moved to bottom nav
                                           ],
                                         ),
                                       ],
@@ -329,15 +315,6 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                                         ],
                                       ),
                                     ),
-                                    const SizedBox(height: 8),
-                                    const Text(
-                                      'Uruskan projek anda dengan freelancer yang tepat.',
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 16,
-                                        height: 1.4,
-                                      ),
-                                    ),
                                   ],
                                 ),
                               ),
@@ -345,7 +322,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                             // 2. Overlapping Search Card
                             Container(
                               margin: const EdgeInsets.only(
-                                  top: 220, left: 20, right: 20, bottom: 20),
+                                  top: 140, left: 20, right: 20, bottom: 20),
                               child: _SearchAndFilterCard(
                                 searchController: _searchController,
                                 onSearchChanged: _onSearchChanged,
@@ -629,76 +606,7 @@ class _SearchAndFilterCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Toggle Buttons
-          Row(
-            children: [
-              // Chat Button (Inactive)
-              Expanded(
-                child: InkWell(
-                  onTap: () => context.go('/chats'),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.chat_bubble_outline,
-                          color: Colors.grey.shade600,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Chat',
-                          style:
-                              Theme.of(context).textTheme.labelLarge?.copyWith(
-                                    color: Colors.grey.shade600,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Marketplace Button (Active)
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2196F3).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFF2196F3).withOpacity(0.3),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.store_mall_directory_outlined,
-                        color: Color(0xFF2196F3),
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Marketplace',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: const Color(0xFF2196F3),
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+          // Toggle Buttons removed - moved to bottom nav
           const SizedBox(height: 16),
           TextField(
             controller: searchController,

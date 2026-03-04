@@ -93,9 +93,10 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
       }
     });
 
+    final bool initialIsOnline = widget.initialThread?.isOnline == true;
+    final DateTime? initialLastSeen = widget.initialThread?.lastSeen;
+
     _presenceSub = SocketService.instance.presenceStream.listen((presence) {
-      // If we don't know otherId, we can't reliably update presence.
-      // But assuming presence is for the other user.
       if (otherId != null && presence.userId == otherId) {
         if (mounted) {
           setState(() {
@@ -105,6 +106,13 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
         }
       }
     });
+
+    if (mounted) {
+      setState(() {
+        _isOtherOnline = initialIsOnline;
+        _otherLastSeen = initialLastSeen;
+      });
+    }
   }
 
   void _onTextChanged() {
@@ -160,7 +168,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                 widget.initialThread ??
                 const ChatThread(
                   id: 'unknown',
-                  title: 'Chat',
+                  conversationTitle: 'Chat',
                   participantName: 'Pengguna',
                 ),
           ),
@@ -168,7 +176,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
               widget.initialThread ??
               const ChatThread(
                 id: 'unknown',
-                title: 'Chat',
+                conversationTitle: 'Chat',
                 participantName: 'Pengguna',
               ),
         );
@@ -230,24 +238,18 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                     const SizedBox(height: 2),
                     Row(
                       children: [
+                        // Online status dot indicator (replaces legacy job status badge)
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 1),
+                          width: 8,
+                          height: 8,
                           decoration: BoxDecoration(
-                            color: _getStatusColor(thread.status),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            thread.status.replaceAll('_', ' ').toLowerCase(),
-                            style: const TextStyle(
-                                fontSize: 9,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.3),
+                            color: _isOtherOnline
+                                ? Colors.greenAccent.shade400
+                                : Colors.white54,
+                            shape: BoxShape.circle,
                           ),
                         ),
-                        // Online status placeholder (will update via WebSocket)
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         if (_isOtherOnline)
                           Text(
                             'online',
@@ -279,13 +281,21 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
             onSelected: (value) {
               if (value == 'block') {
                 _showBlockUserDialog(context, thread);
+              } else if (value == 'unblock') {
+                _handleUnblockUser(context, thread);
               }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
-                value: 'block',
-                child: Text('Sekat / Lapor Pengguna'),
-              ),
+              if (thread.isBlocked)
+                const PopupMenuItem<String>(
+                  value: 'unblock',
+                  child: Text('Batal Sekat Pengguna'),
+                )
+              else
+                const PopupMenuItem<String>(
+                  value: 'block',
+                  child: Text('Sekat / Lapor Pengguna'),
+                ),
             ],
           ),
         ],
@@ -629,27 +639,28 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     }
   }
 
-  Color _getStatusColor(String status) {
-    switch (status.toUpperCase()) {
-      case 'PENDING':
-        return Colors.orangeAccent;
-      case 'IN_PROGRESS':
-        return Colors.lightBlueAccent;
-      case 'COMPLETED':
-        return Colors.lightGreenAccent.shade400;
-      case 'CANCELLED':
-      case 'REJECTED':
-      case 'DISPUTED':
-        return Colors.redAccent;
-      default:
-        return Colors.white24;
-    }
-  }
-
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  void _handleUnblockUser(BuildContext context, ChatThread thread) async {
+    if (thread.participantId == null || thread.participantId!.isEmpty) return;
+
+    try {
+      setState(() => _isUploading = true);
+      await ref.read(chatRepositoryProvider).unblockUser(thread.participantId!);
+      if (mounted) {
+        _showSnackBar('Pengguna berjaya dinyahsekat.');
+      }
+    } on DioException catch (error) {
+      if (mounted) _showSnackBar(resolveDioErrorMessage(error));
+    } catch (e) {
+      if (mounted) _showSnackBar('Gagal menyahsekat pengguna: $e');
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
   }
 
   void _showBlockUserDialog(BuildContext context, ChatThread thread) {
@@ -736,8 +747,11 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     final threads = ref.read(chatRepositoryProvider).currentThreads;
     final thread = threads.firstWhere(
       (t) => t.id == widget.chatId,
-      orElse: () => ChatThread(
-          id: '', participantName: '', participantId: '0', title: ''),
+      orElse: () => const ChatThread(
+          id: '',
+          participantName: '',
+          participantId: '0',
+          conversationTitle: ''),
     );
     final clientId = thread.participantId?.toString() ?? '0';
 

@@ -125,19 +125,17 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       return;
     }
 
-    if (combinedDescription.length < jobMinDescLen ||
-        parsedAmount == null ||
-        parsedAmount < jobMinAmount) {
+    if (parsedAmount == null || parsedAmount < jobMinAmount) {
       setState(() {
-        _messageError = combinedDescription.length < jobMinDescLen
-            ? 'Minimum $jobMinDescLen aksara diperlukan.'
-            : null;
-        _amountError = parsedAmount == null || parsedAmount < jobMinAmount
-            ? 'Minimum RM${jobMinAmount.toStringAsFixed(2)} diperlukan.'
-            : null;
+        _amountError =
+            'Minimum RM${jobMinAmount.toStringAsFixed(2)} diperlukan.';
       });
       return;
     }
+
+    final finalDescription = combinedDescription.isNotEmpty
+        ? combinedDescription
+        : 'Tempahan untuk: ${_title.isNotEmpty ? _title : _serviceId}';
 
     setState(() {
       _isSubmitting = true;
@@ -148,7 +146,7 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
       final job = await jobsRepository.createOrder(
         serviceId,
         parsedAmount,
-        combinedDescription, // Send message as description
+        finalDescription, // Send final description
         serviceTitle:
             _title.isEmpty ? _summary['serviceTitle']?.toString() : _title,
         attachments: _attachments.isNotEmpty ? _attachments : null,
@@ -349,12 +347,11 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
                                     controller: _messageController,
                                     maxLines: 3,
                                     decoration: InputDecoration(
-                                      labelText:
-                                          'Mesej / Arahan kepada freelancer',
+                                      labelText: 'Mesej / Arahan (Opsyenal)',
                                       hintText:
                                           'Sila nyatakan keperluan job anda...',
                                       helperText: _messageError ??
-                                          'Minimum $jobMinDescLen aksara.',
+                                          'Maklumat tambahan untuk rujukan freelancer.',
                                       helperStyle: TextStyle(
                                         color: _messageError != null
                                             ? AppColors.error
@@ -748,11 +745,11 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
                                   ),
                                   SizedBox(height: AppSpacing.s8),
                                   Text(
-                                    'Perincikan skop tambahan dalam ruangan penerangan supaya freelancer jelas tentang tugasan.',
+                                    'Perincikan keperluan tambahan (jika ada) dalam ruangan mesej supaya freelancer jelas tentang tugasan.',
                                   ),
                                   SizedBox(height: AppSpacing.s8),
                                   Text(
-                                    'Dana anda akan dipegang secara escrow dan hanya dilepaskan apabila job selesai atau selepas 7 hari.',
+                                    'Pembayaran anda dilindungi. Kami hanya akan melepaskan dana kepada freelancer selepas tugasan disahkan selesai atau selepas 7 hari.',
                                     style: AppTextStyles.bodySmall,
                                   ),
                                 ],
@@ -779,7 +776,7 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
                       const SizedBox(height: AppSpacing.s12),
                     ],
                     FTButton(
-                      label: 'Create Order (Escrow Hold)',
+                      label: 'Bayar & Tempah',
                       isLoading: _isSubmitting,
                       onPressed: _isSubmitting ? null : _createOrder,
                     ),

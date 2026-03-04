@@ -1,24 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/user.dart';
 import '../../models/service.dart';
+import '../../models/user_role.dart';
 import '../../core/utils/url_utils.dart';
+import '../auth/auth_providers.dart';
 import '../reviews/reviews_repository.dart';
 import 'users_repository.dart';
 import '../chat/chat_repository.dart';
 
 import 'package:flutter/services.dart';
 
-class PublicProfileScreen extends StatefulWidget {
+class PublicProfileScreen extends ConsumerStatefulWidget {
   const PublicProfileScreen({super.key, required this.userId});
 
   final String userId;
 
   @override
-  State<PublicProfileScreen> createState() => _PublicProfileScreenState();
+  ConsumerState<PublicProfileScreen> createState() =>
+      _PublicProfileScreenState();
 }
 
-class _PublicProfileScreenState extends State<PublicProfileScreen> {
+class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
   late Future<({Map<String, dynamic> user, List<Review> reviews})> _dataFuture;
 
   @override
@@ -166,6 +170,11 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   }
 
   Widget _buildMessageButton(AppUser user) {
+    // Only show for clients — freelancers should not message each other
+    final currentUser = ref.watch(currentUserProvider);
+    final viewerRole = currentUser.value?.roleEnum;
+    if (viewerRole != UserRole.client) return const SizedBox.shrink();
+
     return FilledButton.icon(
       onPressed: () => _handleProfileMessage(user),
       icon: const Icon(Icons.chat),

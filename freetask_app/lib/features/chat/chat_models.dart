@@ -3,22 +3,26 @@ import '../../models/chat_enums.dart';
 class ChatThread {
   const ChatThread({
     required this.id,
-    required this.title,
+    required this.conversationTitle,
     required this.participantName,
     this.participantId,
     this.participantAvatarUrl,
     this.lastMessage,
     this.lastAt,
-    this.status = 'ACTIVE',
     this.unreadCount = 0,
     this.isBlocked = false,
+    this.isOnline = false,
+    this.lastSeen,
   });
 
   factory ChatThread.fromJson(Map<String, dynamic> json) {
     return ChatThread(
       id: json['id']?.toString() ?? '',
-      title:
-          json['jobTitle']?.toString() ?? json['job_title']?.toString() ?? '',
+      conversationTitle: json['conversationTitle']?.toString() ??
+          json['conversation_title']?.toString() ??
+          // Fallback: kalau still ada data lama
+          json['jobTitle']?.toString() ??
+          '',
       participantName: json['participantName']?.toString() ??
           json['participant_name']?.toString() ??
           '',
@@ -31,9 +35,6 @@ class ChatThread {
       lastAt: DateTime.tryParse(
         json['lastAt']?.toString() ?? json['last_at']?.toString() ?? '',
       ),
-      status: json['jobStatus']?.toString() ??
-          json['job_status']?.toString() ??
-          'ACTIVE',
       unreadCount: int.tryParse(
             json['unreadCount']?.toString() ??
                 json['unread_count']?.toString() ??
@@ -41,43 +42,50 @@ class ChatThread {
           ) ??
           0,
       isBlocked: json['isBlocked'] == true || json['is_blocked'] == true,
+      isOnline: json['isOnline'] == true || json['is_online'] == true,
+      lastSeen: json['lastSeen'] != null
+          ? DateTime.tryParse(json['lastSeen'].toString())
+          : null,
     );
   }
 
   final String id;
-  final String title;
+  final String conversationTitle;
   final String participantName;
   final String? participantId;
   final String? participantAvatarUrl;
   final String? lastMessage;
   final DateTime? lastAt;
-  final String status;
   final int unreadCount;
   final bool isBlocked;
+  final bool isOnline;
+  final DateTime? lastSeen;
 
   ChatThread copyWith({
     String? id,
-    String? title,
+    String? conversationTitle,
     String? participantName,
     String? participantId,
     String? participantAvatarUrl,
     String? lastMessage,
     DateTime? lastAt,
-    String? status,
     int? unreadCount,
     bool? isBlocked,
+    bool? isOnline,
+    DateTime? lastSeen,
   }) {
     return ChatThread(
       id: id ?? this.id,
-      title: title ?? this.title,
+      conversationTitle: conversationTitle ?? this.conversationTitle,
       participantName: participantName ?? this.participantName,
       participantId: participantId ?? this.participantId,
       participantAvatarUrl: participantAvatarUrl ?? this.participantAvatarUrl,
       lastMessage: lastMessage ?? this.lastMessage,
       lastAt: lastAt ?? this.lastAt,
-      status: status ?? this.status,
       unreadCount: unreadCount ?? this.unreadCount,
       isBlocked: isBlocked ?? this.isBlocked,
+      isOnline: isOnline ?? this.isOnline,
+      lastSeen: lastSeen ?? this.lastSeen,
     );
   }
 }

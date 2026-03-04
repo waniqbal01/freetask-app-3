@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../theme/app_theme.dart';
 
-enum AppTab { chats, jobs, home }
+enum AppTab { chats, market, jobs, profile }
 
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({super.key, required this.currentTab});
@@ -12,17 +12,33 @@ class AppBottomNav extends StatelessWidget {
 
   void _onDestinationSelected(BuildContext context, int index) {
     if (index == 0) {
-      // By default, the Home tab goes to chats. The user can toggle to marketplace from there.
       context.go('/chats');
     } else if (index == 1) {
+      context.go('/home');
+    } else if (index == 2) {
       context.go('/jobs');
+    } else if (index == 3) {
+      context.go('/profile');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Both chats and home tab will highlight the first 'Home' button
-    final int selectedIndex = currentTab == AppTab.jobs ? 1 : 0;
+    int selectedIndex;
+    switch (currentTab) {
+      case AppTab.chats:
+        selectedIndex = 0;
+        break;
+      case AppTab.market:
+        selectedIndex = 1;
+        break;
+      case AppTab.jobs:
+        selectedIndex = 2;
+        break;
+      case AppTab.profile:
+        selectedIndex = 3;
+        break;
+    }
 
     return SafeArea(
       top: false,
@@ -42,9 +58,19 @@ class AppBottomNav extends StatelessWidget {
             label: 'Home',
           ),
           NavigationDestination(
+            icon: Icon(Icons.store_mall_directory_outlined),
+            selectedIcon: Icon(Icons.store_mall_directory_rounded),
+            label: 'Market',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.work_outline),
             selectedIcon: Icon(Icons.work_rounded),
             label: 'Jobs',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person_rounded),
+            label: 'Profile',
           ),
         ],
       ),

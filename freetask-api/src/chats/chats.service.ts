@@ -11,6 +11,7 @@ import { ChatMessageDto } from './dto/chat-message.dto';
 import { ChatThreadDto } from './dto/chat-thread.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 
+
 @Injectable()
 export class ChatsService {
   constructor(
@@ -21,22 +22,44 @@ export class ChatsService {
   async listThreads(
     userId: number,
     role: UserRole,
-    pagination?: { limit?: number; offset?: number },
+    pagination?: { limit?: number; offset?: number; search?: string },
   ): Promise<ChatThreadDto[]> {
     const take = Math.min(Math.max(pagination?.limit ?? 20, 1), 50);
     const skip = Math.max(pagination?.offset ?? 0, 0);
+    const search = pagination?.search?.trim();
 
     const conversations = await this.prisma.conversation.findMany({
       where: {
         participants: { some: { id: userId } },
+        // Fix 3: search by other participant's name (case-insensitive)
+        ...(search
+          ? {
+            participants: {
+              some: {
+                id: { not: userId },
+                name: { contains: search, mode: 'insensitive' },
+              },
+            },
+          }
+          : {}),
       },
       include: {
         participants: {
-          select: { id: true, name: true, avatarUrl: true },
+          select: { id: true, name: true, avatarUrl: true, isOnline: true, lastSeen: true },
         },
         messages: {
           orderBy: { createdAt: 'desc' },
           take: 1,
+        },
+        _count: {
+          select: {
+            messages: {
+              where: {
+                senderId: { not: userId },
+                readAt: null,
+              },
+            },
+          },
         },
       },
       orderBy: { updatedAt: 'desc' },
@@ -67,23 +90,23 @@ export class ChatsService {
       const participantId = otherParticipant?.id || 0;
       const participantAvatarUrl = otherParticipant?.avatarUrl || null;
 
-      // Unread count: We can implement a more efficient query later
-      // For now, let's keep it 0 or basic check if needed
-      const unreadCount = 0;
+      const unreadCount = convo._count.messages;
 
       const lastMsg = convo.messages[0];
       return {
         id: convo.id,
-        jobTitle: 'Conversation',
+        // Fix 1 & 2: Meaningful title using participant name, no legacy jobStatus
+        conversationTitle: `Chat dengan ${participantName}`,
         participantName,
         participantId,
         participantAvatarUrl,
         lastMessage:
           lastMsg?.content ?? (lastMsg?.attachmentUrl ? 'Attachment' : null),
         lastAt: lastMsg?.createdAt ?? convo.updatedAt,
-        jobStatus: 'ACTIVE' as any,
         unreadCount,
         isBlocked: isUserBlocked(participantId),
+        isOnline: otherParticipant?.isOnline,
+        lastSeen: otherParticipant?.lastSeen,
       } satisfies ChatThreadDto;
     });
   }
@@ -264,19 +287,34 @@ export class ChatsService {
       throw new BadRequestException('Cannot chat with yourself');
     }
 
-    // Try to find existing conversation
-    // Optimization: Find conversations of user, simplified
-    const clientConvos = await this.prisma.conversation.findMany({
-      where: { participants: { some: { id: userId } } },
+    // Role validation: prevent two freelancers from messaging each other
+    const [initiator, recipient] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: userId }, select: { id: true, role: true } }),
+      this.prisma.user.findUnique({ where: { id: otherUserId }, select: { id: true, role: true } }),
+    ]);
+
+    if (!initiator || !recipient) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (initiator.role === UserRole.FREELANCER && recipient.role === UserRole.FREELANCER) {
+      throw new ForbiddenException(
+        'Freelancer tidak boleh memulakan perbualan dengan freelancer lain. Hanya klien boleh menghubungi freelancer.',
+      );
+    }
+
+    let conversation = await this.prisma.conversation.findFirst({
+      where: {
+        AND: [
+          { participants: { some: { id: userId } } },
+          { participants: { some: { id: otherUserId } } },
+        ]
+      },
       include: {
         participants: true,
         messages: { take: 1, orderBy: { createdAt: 'desc' } },
       },
     });
-
-    let conversation = clientConvos.find((c) =>
-      c.participants.some((p) => p.id === otherUserId),
-    );
 
     if (!conversation) {
       conversation = await this.prisma.conversation.create({
@@ -302,17 +340,20 @@ export class ChatsService {
       },
     });
 
+    const recipientName = otherParticipant?.name || 'Unknown';
     return {
       id: conversation.id,
-      jobTitle: 'Conversation',
-      participantName: otherParticipant?.name || 'Unknown',
+      // Fix 1 & 2: Meaningful title, no legacy jobStatus
+      conversationTitle: `Chat dengan ${recipientName}`,
+      participantName: recipientName,
       participantId: otherParticipant?.id || 0,
       participantAvatarUrl: otherParticipant?.avatarUrl || null,
       lastMessage: conversation.messages[0]?.content ?? null,
       lastAt: conversation.updatedAt,
-      jobStatus: 'ACTIVE' as any,
       unreadCount: 0,
       isBlocked: !!blockRecord,
+      isOnline: otherParticipant?.isOnline,
+      lastSeen: otherParticipant?.lastSeen,
     };
   }
 
