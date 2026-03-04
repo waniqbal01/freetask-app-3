@@ -494,7 +494,7 @@ class _ChatHeader extends StatelessWidget {
         // 1. Background Gradient Container
         Container(
           width: double.infinity,
-          height: 180,
+          height: 140,
           padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
@@ -545,39 +545,9 @@ class _ChatHeader extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
-              // Personalized Greeting
-              RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'Hello, ',
-                      style:
-                          Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: Colors.white.withOpacity(0.9),
-                                fontWeight: FontWeight.w500,
-                              ),
-                    ),
-                    TextSpan(
-                      text: userName?.split(' ').first ?? 'Tetamu',
-                      style:
-                          Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                    ),
-                  ],
-                ),
-              ),
+              // Greeting removed
               const SizedBox(height: 8),
-              const Text(
-                'Uruskan projek anda dengan freelancer yang tepat.',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 16,
-                  height: 1.4,
-                ),
-              ),
+              // Subtitle removed
             ],
           ),
         ),
@@ -585,7 +555,7 @@ class _ChatHeader extends StatelessWidget {
         Container(
           width: double.infinity,
           margin:
-              const EdgeInsets.only(top: 140, left: 20, right: 20, bottom: 20),
+              const EdgeInsets.only(top: 100, left: 20, right: 20, bottom: 20),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: AppRadius.largeRadius,

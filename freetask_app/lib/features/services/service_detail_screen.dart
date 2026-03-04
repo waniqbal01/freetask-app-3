@@ -531,6 +531,8 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
           final dist = _calculatedDistance;
           final radius = service.freelancerCoverageRadius;
 
+          final isFreelancer = _currentUser?.roleEnum.isFreelancer ?? false;
+
           if (dist != null && radius != null && dist > radius) {
             if (service.freelancerAcceptsOutstation) {
               coverageMessage =
@@ -543,7 +545,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
           }
 
           final priceIssue = service.isPriceUnavailable;
-          final disableHire = priceIssue || isOutOfRange;
+          final disableHire = priceIssue || isOutOfRange || isFreelancer;
 
           return SafeArea(
             top: false,
@@ -582,14 +584,15 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.s12),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton.icon(
-                        onPressed: () => GoRouter.of(context).go('/chats'),
-                        icon: const Icon(Icons.support_agent_outlined),
-                        label: const Text('Chat sokongan'),
+                    if (!isFreelancer)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: () => GoRouter.of(context).go('/chats'),
+                          icon: const Icon(Icons.support_agent_outlined),
+                          label: const Text('Chat sokongan'),
+                        ),
                       ),
-                    ),
                   ],
                   if (coverageMessage != null) ...[
                     Container(
@@ -631,15 +634,19 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   ],
                   if (disableHire) ...[
                     FTButton(
-                      label:
-                          priceIssue ? 'Minta sebut harga' : 'Di Luar Kawasan',
+                      label: isFreelancer
+                          ? 'Penyebutan harga & tempahan hanya untuk Klien'
+                          : (priceIssue
+                              ? 'Minta sebut harga'
+                              : 'Di Luar Kawasan'),
                       isLoading: _isHireLoading,
-                      onPressed:
-                          priceIssue ? () => _handleHire(service) : () {},
+                      onPressed: isFreelancer
+                          ? null
+                          : (priceIssue ? () => _handleHire(service) : () {}),
                     ),
                     const SizedBox(height: AppSpacing.s8),
                     OutlinedButton.icon(
-                      onPressed: _handleMessage,
+                      onPressed: isFreelancer ? null : _handleMessage,
                       icon: const Icon(Icons.chat_bubble_outline),
                       label: const Text('Mesej Penyedia'),
                     ),

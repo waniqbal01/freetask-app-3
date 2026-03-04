@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../models/service.dart';
 import '../theme/app_theme.dart';
 import 'freelancer_avatar.dart';
 import '../core/utils/url_utils.dart';
+import '../features/auth/auth_providers.dart';
 
-class ServiceCard extends StatelessWidget {
+class ServiceCard extends ConsumerWidget {
   const ServiceCard({
     required this.service,
     required this.onTap,
@@ -17,8 +19,10 @@ class ServiceCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final textTheme = Theme.of(context).textTheme;
+    final currentUser = ref.watch(currentUserProvider).value;
+    final isFreelancer = currentUser?.roleEnum.isFreelancer ?? false;
 
     return Container(
       decoration: BoxDecoration(
@@ -30,7 +34,7 @@ class ServiceCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onTap,
+          onTap: isFreelancer ? null : onTap,
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.s16),
             child: Row(
@@ -40,12 +44,14 @@ class ServiceCard extends StatelessWidget {
                 FreelancerAvatar(
                   avatarUrl: service.freelancerAvatarUrl,
                   size: 50,
-                  onTap: () {
-                    if (service.freelancerId.isNotEmpty) {
-                      GoRouter.of(context)
-                          .push('/users/${service.freelancerId}');
-                    }
-                  },
+                  onTap: isFreelancer
+                      ? null
+                      : () {
+                          if (service.freelancerId.isNotEmpty) {
+                            GoRouter.of(context)
+                                .push('/users/${service.freelancerId}');
+                          }
+                        },
                 ),
                 const SizedBox(width: AppSpacing.s12),
 

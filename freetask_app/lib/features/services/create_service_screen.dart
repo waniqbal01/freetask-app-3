@@ -262,6 +262,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
 
               // Category
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 initialValue: _selectedCategory,
                 decoration: const InputDecoration(
                   labelText: 'Kategori',
@@ -272,7 +273,10 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                 items: _categories.map((category) {
                   return DropdownMenuItem(
                     value: category,
-                    child: Text(category),
+                    child: Text(
+                      category,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   );
                 }).toList(),
                 onChanged: (value) {

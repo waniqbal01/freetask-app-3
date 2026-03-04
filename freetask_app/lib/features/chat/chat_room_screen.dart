@@ -266,6 +266,14 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                               fontSize: 10,
                               color: Colors.white.withOpacity(0.7),
                             ),
+                          )
+                        else
+                          Text(
+                            'Luar talian',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.white.withOpacity(0.7),
+                            ),
                           ),
                       ],
                     ),

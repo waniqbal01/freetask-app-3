@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,8 @@ import '../../models/user.dart';
 import '../../models/service.dart';
 import '../../models/user_role.dart';
 import '../../core/utils/url_utils.dart';
+import '../../core/utils/time_utils.dart';
+import '../../core/websocket/socket_service.dart';
 import '../auth/auth_providers.dart';
 import '../reviews/reviews_repository.dart';
 import 'users_repository.dart';
@@ -25,10 +28,33 @@ class PublicProfileScreen extends ConsumerStatefulWidget {
 class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
   late Future<({Map<String, dynamic> user, List<Review> reviews})> _dataFuture;
 
+  // Presence state
+  bool _isOnline = false;
+  DateTime? _lastSeen;
+  StreamSubscription? _presenceSub;
+
   @override
   void initState() {
     super.initState();
     _loadData();
+
+    // Listen for presence updates
+    _presenceSub = SocketService.instance.presenceStream.listen((presence) {
+      if (presence.userId == widget.userId) {
+        if (mounted) {
+          setState(() {
+            _isOnline = presence.isOnline;
+            _lastSeen = presence.lastSeen;
+          });
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _presenceSub?.cancel();
+    super.dispose();
   }
 
   void _loadData() {
@@ -116,6 +142,16 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
           final data = snapshot.data!;
           final userMap = data.user;
           final user = AppUser.fromJson(userMap);
+
+          // Initialize presence if it hasn't been updated yet
+          if (_presenceSub == null || (!_isOnline && _lastSeen == null)) {
+            _isOnline =
+                userMap['isOnline'] == true || userMap['is_online'] == true;
+            if (userMap['lastSeen'] != null) {
+              _lastSeen = DateTime.tryParse(userMap['lastSeen'].toString());
+            }
+          }
+
           final reviews = data.reviews;
           final servicesData = (userMap['services'] as List<dynamic>?) ?? [];
           final services = servicesData
@@ -241,6 +277,60 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                 ),
             textAlign: TextAlign.center,
           ),
+
+          // Presence Status Row
+          const SizedBox(height: 8),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: _isOnline
+                      ? Colors.greenAccent.shade400
+                      : Colors.grey.shade400,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 1.5),
+                  boxShadow: [
+                    if (_isOnline)
+                      BoxShadow(
+                        color: Colors.greenAccent.withValues(alpha: 0.4),
+                        blurRadius: 4,
+                        spreadRadius: 1,
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (_isOnline)
+                const Text(
+                  'Dalam talian',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.green,
+                    fontWeight: FontWeight.w600,
+                  ),
+                )
+              else if (_lastSeen != null)
+                Text(
+                  'Aktif ${TimeUtils.formatLastSeen(_lastSeen!)}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey.shade600,
+                  ),
+                )
+              else
+                Text(
+                  'Luar talian',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+            ],
+          ),
+
           if (user.roleEnum.isFreelancer) ...[
             const SizedBox(height: 12),
             _buildLevelBadge(user.level),
@@ -428,6 +518,9 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
   }
 
   Widget _buildServiceList(List<Service> services) {
+    final currentUser = ref.watch(currentUserProvider).value;
+    final isFreelancer = currentUser?.roleEnum.isFreelancer ?? false;
+
     return ListView.builder(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
@@ -443,9 +536,11 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
           ),
           margin: const EdgeInsets.only(bottom: 12),
           child: InkWell(
-            onTap: () {
-              context.push('/service/${service.id}');
-            },
+            onTap: isFreelancer
+                ? null
+                : () {
+                    context.push('/service/${service.id}');
+                  },
             borderRadius: BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.all(12),

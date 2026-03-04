@@ -1044,7 +1044,7 @@ class _JobsHeader extends StatelessWidget {
         // Gradient background
         Container(
           width: double.infinity,
-          height: 180,
+          height: 140,
           padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
@@ -1072,37 +1072,13 @@ class _JobsHeader extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.2),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.work_outline_rounded,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Jobs',
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelLarge
-                                ?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                        ],
+                    const Text(
+                      'freetask',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
                       ),
                     ),
                     Row(
@@ -1115,20 +1091,6 @@ class _JobsHeader extends StatelessWidget {
                           child:
                               const NotificationBellButton(color: Colors.white),
                         ),
-                        if (isFreelancer) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                            ),
-                            child: IconButton(
-                              icon: const Icon(Icons.add, color: Colors.white),
-                              onPressed: () => context.push('/services/create'),
-                              tooltip: 'Create Service',
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ],
@@ -1142,7 +1104,7 @@ class _JobsHeader extends StatelessWidget {
         if (isFreelancer)
           Container(
             margin: const EdgeInsets.only(
-                top: 130, left: 16, right: 16, bottom: 16),
+                top: 100, left: 16, right: 16, bottom: 16),
             constraints: const BoxConstraints(minHeight: 100),
             decoration: const BoxDecoration(
               color: Colors.white,
@@ -1174,6 +1136,11 @@ class _JobsHeader extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 16),
+                FTButton(
+                  label: 'Cipta Servis Baru',
+                  onPressed: () => context.push('/services/create'),
                 ),
               ],
             ),

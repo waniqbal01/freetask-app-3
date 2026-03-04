@@ -41,8 +41,8 @@ class FCMService {
   String? _fcmToken;
   String? get fcmToken => _fcmToken;
 
-  static const _channelId = 'freetask_chat_channel';
-  static const _channelName = 'FreeTask Chat';
+  static const _channelId = 'freetask_notifications';
+  static const _channelName = 'FreeTask Notifications';
 
   Future<void> initialize() async {
     // FCM not supported on web
@@ -202,6 +202,8 @@ class FCMService {
   }
 
   void _handleNotificationTap(RemoteMessage message) {
+    debugPrint('[FCM] Notification tapped. Data: ${message.data}');
+
     // 1. If payload explicitly defines a route:
     final route = message.data['route'];
     if (route != null && route.toString().isNotEmpty) {
@@ -209,11 +211,22 @@ class FCMService {
       return;
     }
 
-    // 2. Fallback to conversationId
+    // 2. Check for jobId (Job Details navigation)
+    final jobId = message.data['jobId'];
+    if (jobId != null) {
+      _navigateToJobDetails(jobId.toString());
+      return;
+    }
+
+    // 3. Fallback to conversationId (Chat Room navigation)
     final conversationId = message.data['conversationId'];
     if (conversationId != null) {
       _navigateToChat(conversationId.toString());
     }
+  }
+
+  void _navigateToJobDetails(String jobId) {
+    appRouter.push('/jobs/$jobId');
   }
 
   void _navigateToRoute(String route) {

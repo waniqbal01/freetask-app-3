@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user.dart';
 import '../theme/app_theme.dart';
 import 'freelancer_avatar.dart';
+import '../features/auth/auth_providers.dart';
 
-class FreelancerCard extends StatelessWidget {
+class FreelancerCard extends ConsumerWidget {
   const FreelancerCard({
     required this.user,
     required this.onTap,
@@ -16,8 +18,10 @@ class FreelancerCard extends StatelessWidget {
   final VoidCallback? onAvatarTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final textTheme = Theme.of(context).textTheme;
+    final currentUser = ref.watch(currentUserProvider).value;
+    final isFreelancer = currentUser?.roleEnum.isFreelancer ?? false;
 
     return Container(
       decoration: BoxDecoration(
@@ -29,7 +33,7 @@ class FreelancerCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onTap,
+          onTap: isFreelancer ? null : onTap,
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.s16),
             child: Column(
@@ -41,7 +45,7 @@ class FreelancerCard extends StatelessWidget {
                     FreelancerAvatar(
                       avatarUrl: user.avatarUrl,
                       size: 64,
-                      onTap: onAvatarTap ?? onTap,
+                      onTap: isFreelancer ? null : (onAvatarTap ?? onTap),
                     ),
                     const SizedBox(width: AppSpacing.s16),
                     Expanded(

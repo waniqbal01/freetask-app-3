@@ -221,7 +221,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                             // 1. Background Gradient Container
                             Container(
                               width: double.infinity,
-                              height: 180,
+                              height: 140,
                               padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
@@ -283,38 +283,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 24),
-                                    // Personalized Greeting
-                                    RichText(
-                                      text: TextSpan(
-                                        children: [
-                                          TextSpan(
-                                            text: 'Hello, ',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .headlineSmall
-                                                ?.copyWith(
-                                                  color: Colors.white
-                                                      .withOpacity(0.9),
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                          ),
-                                          TextSpan(
-                                            text: _currentUser?.name
-                                                    .split(' ')
-                                                    .first ??
-                                                'Tetamu',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .headlineSmall
-                                                ?.copyWith(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                                    // Greeting removed
                                   ],
                                 ),
                               ),
@@ -322,7 +291,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                             // 2. Overlapping Search Card
                             Container(
                               margin: const EdgeInsets.only(
-                                  top: 140, left: 20, right: 20, bottom: 20),
+                                  top: 100, left: 20, right: 20, bottom: 20),
                               child: _SearchAndFilterCard(
                                 searchController: _searchController,
                                 onSearchChanged: _onSearchChanged,
