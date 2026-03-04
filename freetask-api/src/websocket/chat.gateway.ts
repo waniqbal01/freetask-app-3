@@ -72,8 +72,7 @@ export class ChatGateway
         });
 
         // Attach user info to socket
-        client.userId = payload.userId;
-        client.userName = payload.name;
+        client.userId = payload.sub;
 
       } catch (e) {
         this.logger.warn(`Connection rejected: Invalid token - ${e.message}`);
