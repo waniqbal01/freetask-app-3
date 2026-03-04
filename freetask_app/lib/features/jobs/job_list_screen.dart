@@ -1104,13 +1104,19 @@ class _JobsHeader extends StatelessWidget {
         if (isFreelancer)
           Container(
             margin: const EdgeInsets.only(
-                top: 100, left: 16, right: 16, bottom: 16),
+                top: 115, left: 16, right: 16, bottom: 16),
             constraints: const BoxConstraints(minHeight: 100),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(20),
-              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                  spreadRadius: 2,
+                ),
+              ],
             ),
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -1137,10 +1143,47 @@ class _JobsHeader extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                FTButton(
-                  label: 'Cipta Servis Baru',
-                  onPressed: () => context.push('/services/create'),
+                const SizedBox(height: 20),
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF2196F3).withValues(alpha: 0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton.icon(
+                    onPressed: () => context.push('/services/create'),
+                    icon: const Icon(Icons.add_circle_outline,
+                        color: Colors.white, size: 22),
+                    label: const Text(
+                      'Cipta Servis Baru',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
