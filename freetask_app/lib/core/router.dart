@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 import '../features/admin/admin_dashboard_screen.dart';
 import '../features/admin/admin_unauthorized_screen.dart';
@@ -36,6 +37,7 @@ import 'storage/storage.dart';
 import 'utils/query_utils.dart';
 import '../features/jobs/filtered_job_list_screen.dart';
 
+final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
 final authRefreshNotifier = ValueNotifier<DateTime>(DateTime.now());
 final AppStorage _storage = appStorage;
 
@@ -57,6 +59,9 @@ Future<bool> hasToken() async {
 
 final appRouter = GoRouter(
   initialLocation: '/',
+  observers: [
+    FirebaseAnalyticsObserver(analytics: analytics),
+  ],
   refreshListenable: authRefreshNotifier,
   redirect: (context, state) async {
     final location = state.uri.path;

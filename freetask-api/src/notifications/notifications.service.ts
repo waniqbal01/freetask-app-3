@@ -119,6 +119,25 @@ export class NotificationsService {
       data: dto.data,
     });
 
+    // --- Spam Control (Rate Limiting) ---
+    // Pre-flight check: Prevent sending the exact same type of push notification
+    // within a 3-second window (e.g., when 5 messages arrive at the same time).
+    const threeSecondsAgo = new Date(Date.now() - 3000);
+    const recentDuplicatePush = await this.prisma.notification.findFirst({
+      where: {
+        userId: dto.userId,
+        type: dto.type,
+        createdAt: { gte: threeSecondsAgo },
+        id: { not: notification.id }, // Ignore the one we just saved
+      },
+      select: { id: true },
+    });
+
+    if (recentDuplicatePush && dto.type) {
+      this.logger.log(`[SPAM CONTROL] Suppressing push dispatch for ${dto.type} to user ${dto.userId} (too rapid)`);
+      return notification; // Return DB-saved notification without vibrating the user
+    }
+
     // Get user's device tokens
     const tokens = await this.prisma.deviceToken.findMany({
       where: { userId: dto.userId },
@@ -172,6 +191,9 @@ export class NotificationsService {
                   sound: 'default',
                 },
               },
+              fcmOptions: {
+                analyticsLabel: String(dto.type || 'freetask_notification').substring(0, 50),
+              },
             };
           }
 
@@ -191,6 +213,9 @@ export class NotificationsService {
                 },
               },
             },
+            fcmOptions: {
+              analyticsLabel: String(dto.type || 'freetask_notification').substring(0, 50),
+            },
           };
         });
 
@@ -199,14 +224,30 @@ export class NotificationsService {
           `Sent notifications: ${response.successCount} success, ${response.failureCount} failure`,
         );
 
-        // Clean up invalid tokens
+        // --- Error Handling (Invalid/Expired Tokens Cleanup) ---
         if (response.failureCount > 0) {
-          const failedTokens = response.responses
-            .map((resp, idx) => (!resp.success ? tokens[idx].token : null))
-            .filter((t) => t !== null);
+          const failedTokens: string[] = [];
+          response.responses.forEach((resp: any, idx: number) => {
+            if (!resp.success && resp.error) {
+              const errorCode = resp.error.code;
+              // Detect unregistered or invalid tokens and queue them for deletion
+              if (
+                errorCode === 'messaging/invalid-registration-token' ||
+                errorCode === 'messaging/registration-token-not-registered'
+              ) {
+                failedTokens.push(tokens[idx].token);
+              }
+            }
+          });
 
-          // For now just log, implemented remove logic separately or here
-          this.logger.warn(`Failed tokens: ${failedTokens.join(', ')}`);
+          if (failedTokens.length > 0) {
+            this.logger.warn(`Removing ${failedTokens.length} expired/invalid device tokens from DB.`);
+            await this.prisma.deviceToken.deleteMany({
+              where: { token: { in: failedTokens } },
+            }).catch((err) => {
+              this.logger.error('Error cleaning up invalid tokens', err);
+            });
+          }
         }
       } else {
         this.logger.warn(
