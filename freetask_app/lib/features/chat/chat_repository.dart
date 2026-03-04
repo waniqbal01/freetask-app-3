@@ -203,11 +203,8 @@ class ChatRepository {
   Future<void> _onListenToConversation(String conversationId) async {
     _isInitialLoading[conversationId] = true;
 
-    // Run socket connect AND HTTP message load in parallel — don't wait for socket
-    final baseUrl = await HttpClient().currentBaseUrl();
-    unawaited(SocketService.instance.connect(baseUrl).then((_) {
-      SocketService.instance.joinRoom(conversationId);
-    }));
+    // Join room directly since global AppLifecycleManager handles the connection
+    SocketService.instance.joinRoom(conversationId);
 
     // Load messages via HTTP immediately (don't wait for socket)
     await _loadMessages(conversationId)
