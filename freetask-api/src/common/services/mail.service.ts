@@ -5,16 +5,25 @@ import { Resend } from 'resend';
 @Injectable()
 export class MailService {
     private readonly logger = new Logger(MailService.name);
-    private resend: Resend;
+    private resend: Resend | null = null;
     private defaultFrom: string;
 
     constructor(private readonly configService: ConfigService) {
         const apiKey = this.configService.get<string>('RESEND_API_KEY');
-        this.resend = new Resend(apiKey);
+        if (apiKey) {
+            this.resend = new Resend(apiKey);
+            this.logger.log('MailService initialized with Resend API key');
+        } else {
+            this.logger.warn('RESEND_API_KEY not set — email sending will be disabled');
+        }
         this.defaultFrom = this.configService.get<string>('RESEND_FROM_EMAIL') || 'Freetask <noreply@freetask.app>';
     }
 
     async sendOtpEmail(to: string, otpCode: string, name: string) {
+        if (!this.resend) {
+            this.logger.warn(`Cannot send OTP email to ${to} — RESEND_API_KEY not configured`);
+            return null;
+        }
         try {
             const data = await this.resend.emails.send({
                 from: this.defaultFrom,
