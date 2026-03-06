@@ -78,6 +78,9 @@ class SocketService {
             .setReconnectionAttempts(_maxReconnectAttempts)
             .setReconnectionDelay(1000)
             .setReconnectionDelayMax(5000)
+            .setAuth({
+              'token': token
+            }) // Add this so the NestJS backend can extract it from handshake.auth
             .setExtraHeaders({'Authorization': 'Bearer $token'})
             .build(),
       );
