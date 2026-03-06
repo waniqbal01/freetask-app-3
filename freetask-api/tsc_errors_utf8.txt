@@ -1,0 +1,20 @@
+﻿src/chats/chats.service.ts(444,73): error TS2345: Argument of type 'number | null' is not assignable to parameter of type 'number'.
+  Type 'null' is not assignable to type 'number'.
+src/jobs/jobs.service.spec.ts(59,15): error TS2554: Expected 6 arguments, but got 2.
+src/jobs/jobs.service.spec.ts(85,25): error TS2339: Property 'ACCEPTED' does not exist on type '{ INQUIRY: "INQUIRY"; PENDING: "PENDING"; AWAITING_PAYMENT: "AWAITING_PAYMENT"; IN_PROGRESS: "IN_PROGRESS"; SUBMITTED: "SUBMITTED"; IN_REVIEW: "IN_REVIEW"; IN_REVISION: "IN_REVISION"; ... 8 more ...; EXPIRED: "EXPIRED"; }'.
+src/jobs/jobs.service.spec.ts(92,27): error TS2339: Property 'ACCEPTED' does not exist on type '{ INQUIRY: "INQUIRY"; PENDING: "PENDING"; AWAITING_PAYMENT: "AWAITING_PAYMENT"; IN_PROGRESS: "IN_PROGRESS"; SUBMITTED: "SUBMITTED"; IN_REVIEW: "IN_REVIEW"; IN_REVISION: "IN_REVISION"; ... 8 more ...; EXPIRED: "EXPIRED"; }'.
+src/jobs/jobs.service.spec.ts(98,35): error TS2339: Property 'ACCEPTED' does not exist on type '{ INQUIRY: "INQUIRY"; PENDING: "PENDING"; AWAITING_PAYMENT: "AWAITING_PAYMENT"; IN_PROGRESS: "IN_PROGRESS"; SUBMITTED: "SUBMITTED"; IN_REVIEW: "IN_REVIEW"; IN_REVISION: "IN_REVISION"; ... 8 more ...; EXPIRED: "EXPIRED"; }'.
+src/jobs/jobs.service.spec.ts(101,42): error TS2339: Property 'ACCEPTED' does not exist on type '{ INQUIRY: "INQUIRY"; PENDING: "PENDING"; AWAITING_PAYMENT: "AWAITING_PAYMENT"; IN_PROGRESS: "IN_PROGRESS"; SUBMITTED: "SUBMITTED"; IN_REVIEW: "IN_REVIEW"; IN_REVISION: "IN_REVISION"; ... 8 more ...; EXPIRED: "EXPIRED"; }'.
+src/jobs/jobs.service.spec.ts(138,29): error TS2339: Property 'ACCEPTED' does not exist on type '{ INQUIRY: "INQUIRY"; PENDING: "PENDING"; AWAITING_PAYMENT: "AWAITING_PAYMENT"; IN_PROGRESS: "IN_PROGRESS"; SUBMITTED: "SUBMITTED"; IN_REVIEW: "IN_REVIEW"; IN_REVISION: "IN_REVISION"; ... 8 more ...; EXPIRED: "EXPIRED"; }'.
+src/reviews/reviews.controller.spec.ts(1,37): error TS2307: Cannot find module '@nestjs/testing' or its corresponding type declarations.
+src/reviews/reviews.controller.spec.ts(169,39): error TS2339: Property 'find' does not exist on type 'ReviewsController'.
+src/uploads/uploads.controller.spec.ts(1,37): error TS2307: Cannot find module '@nestjs/testing' or its corresponding type declarations.
+src/uploads/uploads.controller.spec.ts(7,26): error TS2307: Cannot find module 'supertest' or its corresponding type declarations.
+src/uploads/uploads.controller.spec.ts(91,13): error TS2339: Property 'ensureUploadsDir' does not exist on type 'UploadsService'.
+src/uploads/uploads.controller.spec.ts(105,15): error TS2339: Property 'ensureUploadsDir' does not exist on type 'UploadsService'.
+src/uploads/uploads.controller.spec.ts(118,15): error TS2339: Property 'ensureUploadsDir' does not exist on type 'UploadsService'.
+src/uploads/uploads.controller.spec.ts(131,15): error TS2339: Property 'ensureUploadsDir' does not exist on type 'UploadsService'.
+src/uploads/uploads.controller.spec.ts(150,15): error TS2339: Property 'ensureUploadsDir' does not exist on type 'UploadsService'.
+src/uploads/uploads.controller.spec.ts(164,15): error TS2339: Property 'ensureUploadsDir' does not exist on type 'UploadsService'.
+src/uploads/uploads.controller.spec.ts(178,15): error TS2339: Property 'ensureUploadsDir' does not exist on type 'UploadsService'.
+src/uploads/uploads.controller.spec.ts(192,15): error TS2339: Property 'ensureUploadsDir' does not exist on type 'UploadsService'.

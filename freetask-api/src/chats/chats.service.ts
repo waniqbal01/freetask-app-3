@@ -432,13 +432,20 @@ export class ChatsService {
     }
 
     const msg = message as any;
-    return this.prisma.chatMessage.update({
+    const updated = await this.prisma.chatMessage.update({
       where: { id: messageId },
       data: {
         readAt: new Date(),
         deliveredAt: msg.deliveredAt || new Date(),
       } as any,
     });
+
+    // Clear push notifications for this chat
+    if (updated.conversationId) {
+      await this.notificationsService.markChatNotificationsAsRead(userId, updated.conversationId);
+    }
+
+    return updated;
   }
 
   async markChatRead(conversationId: number, userId: number) {
@@ -449,6 +456,9 @@ export class ChatsService {
         AND "senderId" != ${userId}
         AND "readAt" IS NULL
     `;
+
+    // Clear push notifications for this chat so they don't linger
+    await this.notificationsService.markChatNotificationsAsRead(userId, conversationId);
 
     return { count: result };
   }

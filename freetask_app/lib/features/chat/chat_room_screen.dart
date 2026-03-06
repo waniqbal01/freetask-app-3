@@ -1511,48 +1511,68 @@ class _MessageComposerState extends State<_MessageComposer> {
   void _showAttachmentMenu() {
     showModalBottomSheet(
       context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
             _AttachmentOption(
-              icon: Icons.image,
+              icon: Icons.image_outlined,
               color: Colors.purple,
-              label: 'Galeri',
+              title: 'Galeri Gambar',
+              subtitle: 'Pilih gambar dari galeri anda',
               onTap: () {
                 Navigator.pop(context);
                 _pickImage(ImageSource.gallery);
               },
             ),
             _AttachmentOption(
-              icon: Icons.camera_alt,
+              icon: Icons.camera_alt_outlined,
               color: Colors.pink,
-              label: 'Kamera',
+              title: 'Kamera',
+              subtitle: 'Ambil gambar baru',
               onTap: () {
                 Navigator.pop(context);
                 _pickImage(ImageSource.camera);
               },
             ),
             _AttachmentOption(
-              icon: Icons.insert_drive_file,
+              icon: Icons.insert_drive_file_outlined,
               color: Colors.indigo,
-              label: 'Dokumen',
+              title: 'Dokumen / Fail',
+              subtitle: 'Pilih dokumen dari peranti anda',
               onTap: () {
                 Navigator.pop(context);
                 _pickFile(FileType.any);
               },
             ),
-            if (widget.isFreelancer)
+            if (widget.isFreelancer) ...[
+              const Divider(height: 16),
               _AttachmentOption(
-                icon: Icons.local_offer,
+                icon: Icons.local_offer_outlined,
                 color: Colors.orange,
-                label: 'Tawaran',
+                title: 'Bina Tawaran Custom',
+                subtitle: 'Hantar tawaran harga khas kepada pelanggan',
+                isProminent: true,
                 onTap: () {
                   Navigator.pop(context);
                   widget.onCreateOffer?.call();
                 },
               ),
+            ],
+            const SizedBox(height: 16),
           ],
         ),
       ),
@@ -1605,31 +1625,47 @@ class _AttachmentOption extends StatelessWidget {
   const _AttachmentOption({
     required this.icon,
     required this.color,
-    required this.label,
+    required this.title,
+    required this.subtitle,
     required this.onTap,
+    this.isProminent = false,
   });
 
   final IconData icon;
   final Color color;
-  final String label;
+  final String title;
+  final String subtitle;
   final VoidCallback onTap;
+  final bool isProminent;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          CircleAvatar(
-            radius: 25,
-            backgroundColor: color,
-            child: Icon(icon, color: Colors.white),
-          ),
-          const SizedBox(height: 8),
-          Text(label, style: const TextStyle(fontSize: 12)),
-        ],
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+      leading: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: isProminent ? color.withOpacity(0.1) : Colors.grey.shade100,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: color, size: 24),
       ),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: isProminent ? FontWeight.bold : FontWeight.w500,
+          color: isProminent ? color.withOpacity(0.9) : Colors.black87,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(
+          fontSize: 12,
+          color: Colors.grey.shade600,
+        ),
+      ),
+      onTap: onTap,
     );
   }
 }

@@ -92,6 +92,44 @@ export class NotificationsService {
     });
   }
 
+  async markChatNotificationsAsRead(userId: number, conversationId: number) {
+    try {
+      // Find all unread chat notifications for this user and conversation
+      const notifications = await this.prisma.notification.findMany({
+        where: {
+          userId,
+          type: 'CHAT_MESSAGE',
+          read: false,
+        },
+      });
+
+      const targetNotificationIds = notifications
+        .filter((n) => {
+          if (!n.data) return false;
+          try {
+            const dataObj = typeof n.data === 'string' ? JSON.parse(n.data) : n.data;
+            return dataObj.conversationId === conversationId.toString();
+          } catch (e) {
+            return false;
+          }
+        })
+        .map((n) => n.id);
+
+      if (targetNotificationIds.length > 0) {
+        return await this.prisma.notification.updateMany({
+          where: {
+            id: { in: targetNotificationIds },
+          },
+          data: { read: true },
+        });
+      }
+      return { count: 0 };
+    } catch (error) {
+      this.logger.error('Failed to mark chat notifications as read', error);
+      return { count: 0 };
+    }
+  }
+
   async getUnreadCount(userId: number): Promise<number> {
     return this.prisma.notification.count({
       where: { userId, read: false },
