@@ -6,6 +6,8 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 import { GetUser } from './get-user.decorator';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { ResendOtpDto } from './dto/resend-otp.dto';
 
 @UseGuards(ThrottlerGuard)
 @Controller('auth')
@@ -22,6 +24,18 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 300000 } })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Post('verify-otp')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.authService.verifyOtp(dto);
+  }
+
+  @Post('resend-otp')
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  resendOtp(@Body() dto: ResendOtpDto) {
+    return this.authService.resendOtp(dto);
   }
 
   @Post('refresh')

@@ -15,12 +15,16 @@ import { LoginDto } from './dto/login.dto';
 import { AuthUser } from './types/auth-user.type';
 import { toAppUser } from '../users/user.mapper';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { MailService } from '../common/services/mail.service';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { ResendOtpDto } from './dto/resend-otp.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly mailService: MailService,
   ) { }
 
   private readonly logger = new Logger(AuthService.name);
@@ -37,7 +41,7 @@ export class AuthService {
 
   async register(
     dto: RegisterDto,
-  ): Promise<{ accessToken: string; refreshToken: string; user: AuthUser }> {
+  ): Promise<{ message: string }> {
     const email = dto.email.toLowerCase();
     const roleRaw = dto.role?.toString().toUpperCase();
     if (!['CLIENT', 'FREELANCER'].includes(roleRaw)) {
@@ -61,6 +65,9 @@ export class AuthService {
     const avatarUrl = dto.avatarUrl;
 
     const hashed = await bcrypt.hash(dto.password, 10);
+    const otpCode = this.generateOtp();
+    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
     const user = await this.prisma.user.create({
       data: {
         email,
@@ -74,10 +81,15 @@ export class AuthService {
         skills: dto.skills,
         rate: dto.rate,
         phoneNumber: dto.phoneNumber,
+        isEmailVerified: false,
+        otpCode,
+        otpExpiresAt,
       },
     });
 
-    return this.buildAuthResponse(user);
+    await this.mailService.sendOtpEmail(user.email, otpCode, user.name);
+
+    return { message: 'Pendaftaran berjaya. Sila semak e-mel anda untuk kod OTP.' };
   }
 
   async login(
@@ -91,12 +103,73 @@ export class AuthService {
       throw new UnauthorizedException('Email atau password salah');
     }
 
+    if (!user.isEmailVerified) {
+      throw new UnauthorizedException('Sila sahkan e-mel anda dahulu');
+    }
+
     const valid = await bcrypt.compare(dto.password, user.password);
     if (!valid) {
       throw new UnauthorizedException('Email atau password salah');
     }
 
     return this.buildAuthResponse(user);
+  }
+
+  async verifyOtp(dto: VerifyOtpDto): Promise<{ accessToken: string; refreshToken: string; user: AuthUser }> {
+    const email = dto.email.toLowerCase();
+    const user = await this.prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      throw new BadRequestException('Pengguna tidak dijumpai');
+    }
+
+    if (user.isEmailVerified) {
+      throw new BadRequestException('E-mel ini telah disahkan');
+    }
+
+    if (user.otpCode !== dto.otp) {
+      throw new BadRequestException('Kod OTP tidak sah');
+    }
+
+    if (!user.otpExpiresAt || user.otpExpiresAt.getTime() < Date.now()) {
+      throw new BadRequestException('Kod OTP telah luput. Sila minta kod baharu.');
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isEmailVerified: true,
+        otpCode: null,
+        otpExpiresAt: null,
+      },
+    });
+
+    return this.buildAuthResponse(updatedUser);
+  }
+
+  async resendOtp(dto: ResendOtpDto): Promise<{ message: string }> {
+    const email = dto.email.toLowerCase();
+    const user = await this.prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      throw new BadRequestException('Pengguna tidak dijumpai');
+    }
+
+    if (user.isEmailVerified) {
+      throw new BadRequestException('E-mel ini telah disahkan');
+    }
+
+    const otpCode = this.generateOtp();
+    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { otpCode, otpExpiresAt },
+    });
+
+    await this.mailService.sendOtpEmail(user.email, otpCode, user.name);
+
+    return { message: 'Kod OTP baharu telah dihantar ke e-mel anda.' };
   }
 
   async getMe(userId: number): Promise<AuthUser> {
@@ -264,6 +337,10 @@ export class AuthService {
       w: 7 * 24 * 60 * 60 * 1000,
     };
     return value * (factor[unit] || 1);
+  }
+
+  private generateOtp(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
   }
 
   private generateSecureToken() {

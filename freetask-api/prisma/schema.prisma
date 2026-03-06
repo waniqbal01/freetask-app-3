@@ -112,6 +112,11 @@ model User {
   lastSeen             DateTime?
   isOnline             Boolean         @default(false)
 
+  // Auth & Verification
+  isEmailVerified      Boolean         @default(false)
+  otpCode              String?
+  otpExpiresAt         DateTime?
+
   // Freelancer Level & Stats
   level                 FreelancerLevel @default(NEWBIE)
   totalCompletedJobs    Int             @default(0)
