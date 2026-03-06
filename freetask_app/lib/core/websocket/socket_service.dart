@@ -74,13 +74,10 @@ class SocketService {
         io.OptionBuilder()
             .setTransports(['websocket'])
             .enableAutoConnect()
-            .enableReconnection()
-            .setReconnectionAttempts(_maxReconnectAttempts)
-            .setReconnectionDelay(1000)
-            .setReconnectionDelayMax(5000)
-            .setAuth({
-              'token': token
-            }) // Add this so the NestJS backend can extract it from handshake.auth
+            // Disable built-in reconnect — we handle it manually in _scheduleReconnect
+            // to ensure token is always re-checked before reconnecting
+            .disableReconnection()
+            .setAuth({'token': token})
             .setExtraHeaders({'Authorization': 'Bearer $token'})
             .build(),
       );
@@ -218,7 +215,9 @@ class SocketService {
     });
   }
 
-  /// Schedule reconnection with exponential backoff
+  /// Schedule reconnection with exponential backoff.
+  /// Always re-checks for a valid token before reconnecting to avoid
+  /// the "No token provided" spam when the user is logged out.
   void _scheduleReconnect() {
     _reconnectTimer?.cancel();
 
@@ -233,11 +232,20 @@ class SocketService {
     debugPrint(
         'SocketService: Scheduling reconnect in ${delay.inSeconds}s (attempt $_reconnectAttempts)');
 
-    _reconnectTimer = Timer(delay, () {
-      if (_socket?.connected != true) {
-        debugPrint('SocketService: Attempting reconnect...');
-        _socket?.connect();
+    _reconnectTimer = Timer(delay, () async {
+      if (_socket?.connected == true) return;
+
+      // Check token before reconnecting — avoids spamming server when logged out
+      final token = await appStorage.read(AuthRepository.tokenStorageKey);
+      if (token == null || token.isEmpty) {
+        debugPrint(
+            'SocketService: Reconnect cancelled — no auth token available');
+        _reconnectAttempts = 0; // Reset counter so future login can reconnect
+        return;
       }
+
+      debugPrint('SocketService: Attempting reconnect...');
+      _socket?.connect();
     });
   }
 
@@ -274,6 +282,7 @@ class SocketService {
     debugPrint('SocketService: Disconnecting');
     _heartbeatTimer?.cancel();
     _reconnectTimer?.cancel();
+    _reconnectAttempts = 0; // Reset so next login starts fresh
     _socket?.disconnect();
     _socket?.dispose();
     _socket = null;

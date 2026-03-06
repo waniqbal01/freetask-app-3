@@ -146,14 +146,24 @@ export class ChatGateway
     this.socketUsers.delete(client.id);
   }
 
+  /**
+   * Safe getter for userId — falls back to socketUsers map
+   * because @UseGuards on SubscribeMessage may not populate client.userId
+   * in all reconnection scenarios.
+   */
+  private getUserId(client: AuthenticatedSocket): number | undefined {
+    return client.userId ?? this.socketUsers.get(client.id);
+  }
+
   @SubscribeMessage('join_room')
   handleJoinRoom(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { conversationId: string },
   ) {
+    const userId = this.getUserId(client);
     const roomName = `conversation:${data.conversationId}`;
     client.join(roomName);
-    this.logger.log(`User ${client.userId} joined room: ${roomName}`);
+    this.logger.log(`User ${userId} joined room: ${roomName}`);
     return {
       event: 'room_joined',
       data: { conversationId: data.conversationId },
@@ -165,9 +175,10 @@ export class ChatGateway
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { conversationId: string },
   ) {
+    const userId = this.getUserId(client);
     const roomName = `conversation:${data.conversationId}`;
     client.leave(roomName);
-    this.logger.log(`User ${client.userId} left room: ${roomName}`);
+    this.logger.log(`User ${userId} left room: ${roomName}`);
     return {
       event: 'room_left',
       data: { conversationId: data.conversationId },
@@ -179,10 +190,11 @@ export class ChatGateway
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { conversationId: string },
   ) {
+    const userId = this.getUserId(client);
     const roomName = `conversation:${data.conversationId}`;
     // Broadcast to everyone in room except sender
     client.to(roomName).emit('typing_start', {
-      userId: client.userId,
+      userId,
       conversationId: data.conversationId,
     });
   }
@@ -192,9 +204,10 @@ export class ChatGateway
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { conversationId: string },
   ) {
+    const userId = this.getUserId(client);
     const roomName = `conversation:${data.conversationId}`;
     client.to(roomName).emit('typing_stop', {
-      userId: client.userId,
+      userId,
       conversationId: data.conversationId,
     });
   }
@@ -213,10 +226,12 @@ export class ChatGateway
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { messageId: number; conversationId: string },
   ) {
+    const userId = this.getUserId(client);
+    if (!userId) return;
     try {
       await this.chatsService.markMessageDelivered(
         data.messageId,
-        client.userId,
+        userId,
       );
 
       // Notify message sender
@@ -237,8 +252,10 @@ export class ChatGateway
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { messageId: number; conversationId: string },
   ) {
+    const userId = this.getUserId(client);
+    if (!userId) return;
     try {
-      await this.chatsService.markMessageRead(data.messageId, client.userId);
+      await this.chatsService.markMessageRead(data.messageId, userId);
 
       // Notify message sender
       const message = await this.chatsService.getMessage(data.messageId);
@@ -258,10 +275,12 @@ export class ChatGateway
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { conversationId: number },
   ) {
+    const userId = this.getUserId(client);
+    if (!userId) return;
     try {
       const result = await this.chatsService.markChatRead(
         data.conversationId,
-        client.userId,
+        userId,
       );
 
       // Find the conversation to get the other participant's ID
@@ -273,20 +292,20 @@ export class ChatGateway
       if (conversation) {
         const readPayload = {
           conversationId: data.conversationId,
-          readByUserId: client.userId,
+          readByUserId: userId,
           markedCount: result.count,
         };
 
         // 1. Notify the OTHER participant (the message sender) so they see blue ticks
         const otherParticipant = conversation.participants.find(
-          (p) => p.id !== client.userId,
+          (p) => p.id !== userId,
         );
         if (otherParticipant) {
           this.emitToUser(otherParticipant.id, 'chat_read_update', readPayload);
         }
 
         // 2. Notify all OTHER devices of the current user for multi-device unread sync
-        const mySocketIds = this.userSockets.get(client.userId);
+        const mySocketIds = this.userSockets.get(userId);
         if (mySocketIds) {
           mySocketIds.forEach((socketId) => {
             if (socketId !== client.id) {
