@@ -45,7 +45,7 @@ export class ChatsService {
       },
       include: {
         participants: {
-          select: { id: true, name: true, avatarUrl: true, isOnline: true, lastSeen: true },
+          select: { id: true, name: true, avatarUrl: true, isOnline: true, lastSeen: true, isAvailable: true },
         },
         messages: {
           orderBy: { createdAt: 'desc' },
@@ -107,6 +107,7 @@ export class ChatsService {
         isBlocked: isUserBlocked(participantId),
         isOnline: otherParticipant?.isOnline,
         lastSeen: otherParticipant?.lastSeen,
+        isAvailable: otherParticipant?.isAvailable ?? true,
       } satisfies ChatThreadDto;
     });
   }
@@ -168,12 +169,16 @@ export class ChatsService {
 
     const convoBlockCheck = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
-      include: { participants: { select: { id: true } } },
+      include: { participants: { select: { id: true, isAvailable: true } } },
     });
 
     const otherParticipantForBlock = convoBlockCheck?.participants.find((p) => p.id !== userId);
 
     if (otherParticipantForBlock) {
+      if (!otherParticipantForBlock.isAvailable) {
+        throw new ForbiddenException('Pengguna ini tidak aktif dan tidak boleh menerima mesej.');
+      }
+
       const blockRecord = await this.prisma.userBlock.findFirst({
         where: {
           OR: [
@@ -290,11 +295,15 @@ export class ChatsService {
     // Role validation: prevent two freelancers from messaging each other
     const [initiator, recipient] = await Promise.all([
       this.prisma.user.findUnique({ where: { id: userId }, select: { id: true, role: true } }),
-      this.prisma.user.findUnique({ where: { id: otherUserId }, select: { id: true, role: true } }),
+      this.prisma.user.findUnique({ where: { id: otherUserId }, select: { id: true, role: true, isAvailable: true } }),
     ]);
 
     if (!initiator || !recipient) {
       throw new NotFoundException('User not found');
+    }
+
+    if (!recipient.isAvailable) {
+      throw new ForbiddenException('Pengguna ini tidak aktif dan tidak boleh menerima mesej baru.');
     }
 
     if (initiator.role === UserRole.FREELANCER && recipient.role === UserRole.FREELANCER) {
@@ -354,6 +363,7 @@ export class ChatsService {
       isBlocked: !!blockRecord,
       isOnline: otherParticipant?.isOnline,
       lastSeen: otherParticipant?.lastSeen,
+      isAvailable: otherParticipant?.isAvailable ?? true,
     };
   }
 

@@ -499,6 +499,17 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                 style: TextStyle(color: Colors.black54),
               ),
             )
+          else if (!thread.isAvailable)
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Colors.grey.shade200,
+              alignment: Alignment.center,
+              child: const Text(
+                'Pengguna ini tidak aktif dan chat telah ditutup.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.black54),
+              ),
+            )
           else
             _MessageComposer(
               controller: _controller,

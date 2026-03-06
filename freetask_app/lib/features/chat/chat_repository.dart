@@ -231,12 +231,22 @@ class ChatRepository {
 
   /// Emit socket event to mark all messages in a conversation as read.
   /// Also resets the local unread count so the badge disappears.
-  void markChatAsRead(String conversationId) {
+  Future<void> markChatAsRead(String conversationId) async {
     final conversationIntId = int.tryParse(conversationId);
     if (conversationIntId != null) {
       SocketService.instance.emit('mark_chat_read', {
         'conversationId': conversationIntId,
       });
+
+      // Send REST API call as well as a reliable fallback for disconnected/connecting state
+      try {
+        await _dio.post<void>(
+          '/chats/$conversationId/mark-read',
+          options: await _authorizedOptions(),
+        );
+      } catch (e) {
+        debugPrint('REST API fallback markChatRead failed: $e');
+      }
     }
     // Reset unread count locally so badge clears immediately
     final index = _threads.indexWhere((t) => t.id == conversationId);

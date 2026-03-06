@@ -143,6 +143,31 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
           final userMap = data.user;
           final user = AppUser.fromJson(userMap);
 
+          if (!user.isAvailable) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.person_off,
+                        size: 64, color: Colors.grey.shade400),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Profil ini telah ditutup oleh pengguna.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
           // Initialize presence if it hasn't been updated yet
           if (_presenceSub == null || (!_isOnline && _lastSeen == null)) {
             _isOnline =

@@ -13,6 +13,7 @@ class ChatThread {
     this.isBlocked = false,
     this.isOnline = false,
     this.lastSeen,
+    this.isAvailable = true,
   });
 
   factory ChatThread.fromJson(Map<String, dynamic> json) {
@@ -46,6 +47,9 @@ class ChatThread {
       lastSeen: json['lastSeen'] != null
           ? DateTime.tryParse(json['lastSeen'].toString())
           : null,
+      isAvailable: json['isAvailable'] == null
+          ? true
+          : (json['isAvailable'] == true || json['is_available'] == true),
     );
   }
 
@@ -60,6 +64,7 @@ class ChatThread {
   final bool isBlocked;
   final bool isOnline;
   final DateTime? lastSeen;
+  final bool isAvailable;
 
   ChatThread copyWith({
     String? id,
@@ -73,6 +78,7 @@ class ChatThread {
     bool? isBlocked,
     bool? isOnline,
     DateTime? lastSeen,
+    bool? isAvailable,
   }) {
     return ChatThread(
       id: id ?? this.id,
@@ -86,6 +92,7 @@ class ChatThread {
       isBlocked: isBlocked ?? this.isBlocked,
       isOnline: isOnline ?? this.isOnline,
       lastSeen: lastSeen ?? this.lastSeen,
+      isAvailable: isAvailable ?? this.isAvailable,
     );
   }
 }

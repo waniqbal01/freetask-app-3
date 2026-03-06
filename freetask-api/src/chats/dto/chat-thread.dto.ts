@@ -10,4 +10,5 @@ export interface ChatThreadDto {
   isBlocked?: boolean;
   isOnline?: boolean;
   lastSeen?: Date | null;
+  isAvailable?: boolean;
 }
