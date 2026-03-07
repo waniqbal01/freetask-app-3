@@ -85,6 +85,51 @@ class AuthRepository {
     }
   }
 
+  Future<bool> verifyOtp(String email, String otp) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/auth/verify-otp',
+        data: <String, dynamic>{
+          'email': email,
+          'otp': otp,
+        },
+      );
+      final data = response.data;
+      final token = data?['accessToken']?.toString();
+      final refreshToken = data?['refreshToken']?.toString();
+      if (token != null &&
+          token.isNotEmpty &&
+          refreshToken != null &&
+          refreshToken.isNotEmpty) {
+        await _saveTokens(token, refreshToken);
+      }
+      final userJson = data?['user'];
+      if (userJson is Map<String, dynamic>) {
+        _cachedUser = AppUser.fromJson(userJson);
+      }
+
+      // Register FCM token
+      fcmService.refreshToken().ignore();
+      return true;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<bool> resendOtp(String email) async {
+    try {
+      await _dio.post<void>(
+        '/auth/resend-otp',
+        data: <String, dynamic>{
+          'email': email,
+        },
+      );
+      return true;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<AppUser?> getCurrentUser({bool forceRefresh = false}) async {
     if (_cachedUser != null && !forceRefresh) {
       return _cachedUser;

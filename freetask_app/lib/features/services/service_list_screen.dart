@@ -13,7 +13,6 @@ import '../../models/user.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/freelancer_card.dart';
 import '../../widgets/app_bottom_nav.dart';
-import 'package:geolocator/geolocator.dart';
 import '../../widgets/notification_bell_button.dart';
 import '../auth/auth_repository.dart';
 import 'services_repository.dart';
@@ -41,9 +40,6 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
   String? _selectedSortOption;
   String? _selectedState;
   String? _selectedDistrict;
-  bool _isNearMeEnabled = false;
-  double? _userLat;
-  double? _userLng;
   Timer? _debounce;
   AppUser? _currentUser;
 
@@ -89,11 +85,6 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
 
     final t0 = DateTime.now();
     try {
-      // If "Near Me" is enabled, we need GPS location
-      if (_isNearMeEnabled && (_userLat == null || _userLng == null)) {
-        await _fetchGPSForNearMe();
-      }
-
       final freelancersList = await usersRepository.getFreelancers(
         q: _searchController.text,
         category: _selectedCategory == 'Semua' ? null : _selectedCategory,
@@ -149,39 +140,6 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
     } catch (error) {
       if (!mounted) return;
       showErrorSnackBar(context, 'Gagal memuat kategori: $error');
-    }
-  }
-
-  Future<void> _fetchGPSForNearMe() async {
-    try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          throw Exception('Keizinan lokasi diperlukan untuk ciri ini.');
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        throw Exception('Keizinan lokasi ditolak kekal. Sila ubah di tetapan.');
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
-      );
-
-      if (!mounted) return;
-      setState(() {
-        _userLat = position.latitude;
-        _userLng = position.longitude;
-      });
-    } catch (e) {
-      if (mounted) {
-        showErrorSnackBar(context, 'Gagal mendapatkan GPS: $e');
-        setState(() {
-          _isNearMeEnabled = false; // Turn off if it fails
-        });
-      }
     }
   }
 
@@ -317,11 +275,6 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                                 selectedDistrict: _selectedDistrict,
                                 onDistrictSelected: (String? value) {
                                   setState(() => _selectedDistrict = value);
-                                  _fetchFreelancers();
-                                },
-                                isNearMeEnabled: _isNearMeEnabled,
-                                onNearMeToggled: (bool value) {
-                                  setState(() => _isNearMeEnabled = value);
                                   _fetchFreelancers();
                                 },
                               ),
@@ -474,8 +427,6 @@ class _SearchAndFilterCard extends StatelessWidget {
     required this.onStateSelected,
     required this.selectedDistrict,
     required this.onDistrictSelected,
-    required this.isNearMeEnabled,
-    required this.onNearMeToggled,
   });
 
   final TextEditingController searchController;
@@ -489,8 +440,6 @@ class _SearchAndFilterCard extends StatelessWidget {
   final ValueChanged<String?> onStateSelected;
   final String? selectedDistrict;
   final ValueChanged<String?> onDistrictSelected;
-  final bool isNearMeEnabled;
-  final ValueChanged<bool> onNearMeToggled;
 
   void _showCategorySelector(BuildContext context) {
     showModalBottomSheet<void>(

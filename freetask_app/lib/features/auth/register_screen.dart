@@ -136,13 +136,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
             'Pendaftaran berjaya, sila log masuk.',
           );
           if (mounted) {
-            showErrorSnackBar(
+            showSuccessSnackBar(
               context,
-              'Pendaftaran berjaya, sila log masuk.',
+              'Pendaftaran berjaya. Sila sahkan e-mel anda.',
             );
           }
           if (mounted) {
-            context.go('/login');
+            context.go(
+                '/verify-otp?email=${Uri.encodeComponent(_emailController.text.trim())}');
           }
         }
       } else if (mounted) {

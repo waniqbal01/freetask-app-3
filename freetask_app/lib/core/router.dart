@@ -12,6 +12,7 @@ import '../services/http_client.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/auth/startup_screen.dart';
+import '../features/auth/verify_otp_screen.dart';
 
 import '../features/chat/chat_list_screen.dart';
 import '../features/chat/chat_room_screen.dart';
@@ -75,7 +76,8 @@ final appRouter = GoRouter(
   redirect: (context, state) async {
     final location = state.uri.path;
     final isAuthPage =
-        ['/login', '/register', '/role-selection'].contains(location);
+        ['/login', '/register', '/role-selection'].contains(location) ||
+            location.startsWith('/verify-otp');
     final isStartup = location == '/startup' || location == '/';
     final isAdminUnauthorized = location == '/admin/unauthorized';
     final needsAuth = location.startsWith('/jobs') ||
@@ -165,6 +167,13 @@ final appRouter = GoRouter(
         final roleFromQuery = state.uri.queryParameters['role'];
         final role = (state.extra ?? roleFromQuery) as String?;
         return RegisterScreen(role: role);
+      },
+    ),
+    GoRoute(
+      path: '/verify-otp',
+      builder: (BuildContext context, GoRouterState state) {
+        final email = state.uri.queryParameters['email'] ?? '';
+        return VerifyOtpScreen(email: email);
       },
     ),
     GoRoute(

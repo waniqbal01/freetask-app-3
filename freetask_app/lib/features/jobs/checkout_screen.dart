@@ -410,7 +410,7 @@ class _JobCheckoutScreenState extends State<JobCheckoutScreen> {
                                         SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
-                                            'Jumlah yang dimasukkan adalah harga akhir yang perlu dibayar. Caj platform sebanyak 7% akan ditolak daripada pendapatan freelancer.',
+                                            'Jumlah yang dimasukkan adalah harga akhir yang perlu dibayar.',
                                             style: TextStyle(
                                                 fontSize: 12,
                                                 color: AppColors.primary),

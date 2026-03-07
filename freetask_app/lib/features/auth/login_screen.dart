@@ -171,6 +171,25 @@ class _LoginScreenState extends State<LoginScreen> {
   void _handleLoginError(Object error) {
     if (error is DioException) {
       final message = resolveDioErrorMessage(error);
+
+      // Check for unverified email to redirect them to OTP verification
+      if (message.toLowerCase().contains('sahkan e-mel') ||
+          message.toLowerCase().contains('verify your email')) {
+        setState(() {
+          _errorMessage = message;
+        });
+        showErrorSnackBar(context, message);
+        final email = _emailController.text.trim();
+        if (email.isNotEmpty) {
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              context.push('/verify-otp?email=${Uri.encodeComponent(email)}');
+            }
+          });
+        }
+        return;
+      }
+
       setState(() {
         if (error.response?.statusCode == 429 ||
             message.toLowerCase().contains('too many requests')) {
@@ -178,7 +197,9 @@ class _LoginScreenState extends State<LoginScreen> {
               'Had percubaan log masuk dicapai. Sila tunggu 5 minit sebelum cuba lagi.';
         } else {
           _errorMessage = error.response?.statusCode == 401 ||
-                  message.toLowerCase().contains('unauthorized')
+                  message.toLowerCase().contains('unauthorized') ||
+                  message.toLowerCase().contains('invalid credentials') ||
+                  message.toLowerCase().contains('email atau password salah')
               ? 'Email atau kata laluan tidak sah. Sila cuba lagi.'
               : message;
         }

@@ -10,6 +10,8 @@ import '../../models/job.dart';
 import '../auth/auth_repository.dart';
 
 import '../escrow/escrow_repository.dart';
+import '../services/edit_service_screen.dart';
+import '../services/services_repository.dart';
 import '../chat/chat_repository.dart';
 
 import 'jobs_repository.dart';
@@ -847,6 +849,32 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
   }
 
+  Future<void> _navigateToEditService(Job job) async {
+    setState(() => _isProcessing = true);
+    try {
+      final service = await servicesRepository.getServiceById(job.serviceId);
+      if (!mounted) return;
+      final result = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => EditServiceScreen(service: service),
+        ),
+      );
+      if (result == true && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Servis berjaya dikemaskini!')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memuatkan servis: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -1084,6 +1112,72 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               ),
             ),
             const SizedBox(height: 12),
+
+            // Edit Service Card (Freelancer only)
+            if (!_isClientView &&
+                _userRole?.toUpperCase() == 'FREELANCER' &&
+                job.freelancerId == _userId)
+              _buildInfoCard(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.indigo.shade50,
+                      ),
+                      child: Icon(
+                        Icons.edit_outlined,
+                        color: Colors.indigo.shade600,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Servis Anda',
+                            style: textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            job.serviceTitle,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: Colors.grey.shade600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton.icon(
+                      onPressed: _isProcessing
+                          ? null
+                          : () => _navigateToEditService(job),
+                      icon: const Icon(Icons.edit, size: 16),
+                      label: const Text('Edit'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.indigo.shade600,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (!_isClientView &&
+                _userRole?.toUpperCase() == 'FREELANCER' &&
+                job.freelancerId == _userId)
+              const SizedBox(height: 12),
 
             // Description
             if (job.description?.isNotEmpty ?? false)
